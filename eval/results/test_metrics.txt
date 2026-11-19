@@ -1,0 +1,20 @@
+PPE Compliance Detection: Final Test-Split Results
+Model: YOLOv8n (fine-tuned), 100 epochs, imgsz 640, batch 16
+Test set: 82 images, 760 boxes
+Dataset: Construction Site Safety v28 (Roboflow), CC BY 4.0
+
+TEST  mAP50=0.754  mAP50-95=0.465  P=0.874  R=0.702
+
+Class           P      R      AP50   AP50-95
+Hardhat         0.959  0.809  0.905  0.593
+Mask            0.971  0.750  0.783  0.559
+NO-Hardhat      0.807  0.561  0.545  0.281
+NO-Mask         0.777  0.671  0.732  0.333
+NO-Safety Vest  0.930  0.739  0.799  0.475
+Person          0.884  0.786  0.857  0.533
+Safety Cone     0.796  0.424  0.442  0.203
+Safety Vest     0.896  0.849  0.902  0.597
+machinery       0.915  0.795  0.861  0.623
+vehicle         0.810  0.634  0.715  0.449
+
+Speed per image: 1.8 ms preprocess, 6.8 ms inference, 2.3 ms postprocess (Tesla T4)
