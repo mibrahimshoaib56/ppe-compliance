@@ -15,14 +15,18 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 HEAD_ZONE_TOP: float = 0.0
 HEAD_ZONE_BOTTOM: float = 0.35  # Top ~35% of the person box
 
-TORSO_ZONE_TOP: float = 0.20  # Torso zone starts at ~20% of person box
-TORSO_ZONE_BOTTOM: float = 0.65  # Torso zone ends at ~65% of person box
+# Widened torso zone covering the middle 15% to 75% of person height.
+# This accommodates workers wearing tool bags, backpacks, or equipment harnesses
+# over their vests, as well as partial vest detections.
+TORSO_ZONE_TOP: float = 0.15
+TORSO_ZONE_BOTTOM: float = 0.75
 
-# Minimum overlap required to associate a gear detection with a body zone.
-# Metric used: Intersection over Gear Area (IoG = intersection_area / gear_area).
-# This is preferred over IoU because gear boxes (hardhat/vest) are much smaller
-# than person body zones.
-OVERLAP_THRESHOLD: float = 0.20
+# Minimum overlap ratio required to associate a gear detection with a body zone.
+# Metric: Intersection over Gear Area (IoG = intersection_area / gear_box_area),
+# which measures how much of the gear box lies inside the person's anatomical zone
+# instead of standard IoU. A named threshold of 0.30 ensures partial gear detections
+# (e.g. vests partially occluded by bags) are reliably captured.
+OVERLAP_THRESHOLD: float = 0.30
 
 # Site safety status rating thresholds based on compliance rate percentage
 SITE_SAFE_THRESHOLD: float = 85.0  # >= 85% compliant -> Safe
@@ -300,8 +304,10 @@ def evaluate_site_compliance(
                 worker["status"] = "Missing vest"
             elif h_stat == "present" and v_stat == "present":
                 worker["status"] = "Compliant"
+            elif v_stat == "unknown":
+                # Workers without confirmed vest evidence require manual on-site review
+                worker["status"] = "Vest not visible: manual check"
             else:
-                # If neither is confirmed missing, but at least one is unknown
                 worker["status"] = "Unknown"
         else:
             # Hardhat only
@@ -318,7 +324,10 @@ def evaluate_site_compliance(
     violation_count = sum(
         1 for w in workers if w["status"] in ("Missing hardhat", "Missing vest", "Missing both")
     )
-    unknown_count = sum(1 for w in workers if w["status"] == "Unknown")
+    needs_review_count = sum(
+        1 for w in workers if w["status"] in ("Vest not visible: manual check", "Unknown")
+    )
+    unknown_count = needs_review_count
 
     if total_workers > 0:
         compliance_rate = round((compliant_count / total_workers) * 100.0, 1)
@@ -338,6 +347,7 @@ def evaluate_site_compliance(
         "total_workers": total_workers,
         "compliant_count": compliant_count,
         "violation_count": violation_count,
+        "needs_review_count": needs_review_count,
         "unknown_count": unknown_count,
         "compliance_rate": compliance_rate,
         "site_status": site_status,

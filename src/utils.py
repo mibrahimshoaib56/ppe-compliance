@@ -166,14 +166,137 @@ def format_worker_table(workers: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """Format worker list into records suitable for a pandas DataFrame."""
     records = []
     for w in workers:
+        vest_raw = w["vest_status"]
+        vest_display = (
+            "Not visible — check manually"
+            if vest_raw == "unknown"
+            else vest_raw.capitalize()
+        )
         records.append({
             "Worker ID": f"Worker #{w['worker_id']}",
             "Overall Status": w["status"],
             "Hardhat": w["hardhat_status"].capitalize(),
-            "Safety Vest": w["vest_status"].capitalize(),
+            "Safety Vest": vest_display,
             "Confidence": f"{int(w.get('confidence', 1.0) * 100)}%",
         })
     return records
+
+
+def crop_worker_roi(
+    image: Union[str, np.ndarray, Image.Image],
+    worker: Dict[str, Any],
+    padding_pct: float = 0.08,
+    show_zones: bool = True,
+) -> np.ndarray:
+    """Extract a cropped view of an individual worker with zone and gear overlays.
+
+    Args:
+        image: Original RGB image.
+        worker: Worker dictionary containing box, head_zone, torso_zone, and assigned_gear.
+        padding_pct: Percentage of width/height to pad around the person crop.
+        show_zones: Whether to outline the anatomical head and torso zones on the crop.
+
+    Returns:
+        np.ndarray: Cropped and annotated RGB image for the selected worker.
+    """
+    canvas = ensure_rgb_numpy(image)
+    h, w, _ = canvas.shape
+
+    px1, py1, px2, py2 = [int(v) for v in worker["box"]]
+    pw = max(1, px2 - px1)
+    ph = max(1, py2 - py1)
+
+    pad_x = int(pw * padding_pct)
+    pad_y = int(ph * padding_pct)
+
+    crop_x1 = max(0, px1 - pad_x)
+    crop_y1 = max(0, py1 - pad_y)
+    crop_x2 = min(w, px2 + pad_x)
+    crop_y2 = min(h, py2 + pad_y)
+
+    crop = canvas[crop_y1:crop_y2, crop_x1:crop_x2].copy()
+
+    # Offset helper to map full-image coordinates to crop coordinates
+    def to_crop(box: List[float]) -> Tuple[int, int, int, int]:
+        bx1, by1, bx2, by2 = [int(v) for v in box]
+        return (
+            max(0, bx1 - crop_x1),
+            max(0, by1 - crop_y1),
+            min(crop.shape[1], bx2 - crop_x1),
+            min(crop.shape[0], by2 - crop_y1),
+        )
+
+    # Draw anatomical zones
+    if show_zones:
+        hx1, hy1, hx2, hy2 = to_crop(worker["head_zone"])
+        tx1, ty1, tx2, ty2 = to_crop(worker["torso_zone"])
+
+        # Head zone overlay (blue outline)
+        cv2.rectangle(crop, (hx1, hy1), (hx2, hy2), (0, 180, 255), 2)
+        draw_label_tag(crop, "Head Zone (0-35%)", (hx1, hy1), bg_color=(0, 180, 255), font_scale=0.35)
+
+        # Torso zone overlay (purple outline)
+        cv2.rectangle(crop, (tx1, ty1), (tx2, ty2), (180, 100, 255), 2)
+        draw_label_tag(crop, "Torso Zone (15-75%)", (tx1, hy1), bg_color=(180, 100, 255), font_scale=0.35)
+
+    # Draw assigned gear inside this crop
+    for gear in worker.get("assigned_gear", []):
+        gx1, gy1, gx2, gy2 = to_crop(gear["box"])
+        g_name = gear["class_name"]
+        g_color = COLOR_GEAR_NEG if "NO-" in g_name else COLOR_GEAR_POS
+
+        cv2.rectangle(crop, (gx1, gy1), (gx2, gy2), g_color, 2)
+        draw_label_tag(
+            crop,
+            f"{g_name} ({int(gear.get('confidence', 1.0) * 100)}%)",
+            (gx1, gy1),
+            bg_color=g_color,
+            font_scale=0.35,
+        )
+
+    return crop
+
+
+def generate_csv_report(
+    summary: Dict[str, Any],
+    workers: List[Dict[str, Any]],
+    timestamp_str: str,
+) -> str:
+    """Generate a CSV safety inspection audit report string."""
+    lines = [
+        "CONSTRUCTION SITE PPE COMPLIANCE AUDIT REPORT",
+        f"Generated At,{timestamp_str}",
+        f"Site Status,{summary.get('site_status', 'N/A')}",
+        f"Compliance Rate,{summary.get('compliance_rate', 0.0)}%",
+        f"Total Workers Detected,{summary.get('total_workers', 0)}",
+        f"Compliant Workers,{summary.get('compliant_count', 0)}",
+        f"Violations,{summary.get('violation_count', 0)}",
+        f"Needs Review (Manual Check),{summary.get('needs_review_count', summary.get('unknown_count', 0))}",
+        "",
+        "INDIVIDUAL WORKER AUDIT BREAKDOWN",
+        "Worker ID,Overall Status,Hardhat Status,Vest Status,Confidence,Assigned Gear",
+    ]
+
+    for w in workers:
+        gear_names = "; ".join([g["class_name"] for g in w.get("assigned_gear", [])])
+        if not gear_names:
+            gear_names = "None"
+        lines.append(
+            f"Worker #{w['worker_id']},{w['status']},{w['hardhat_status'].capitalize()},"
+            f"{w['vest_status'].capitalize()},{int(w.get('confidence', 1.0) * 100)}%,\"{gear_names}\""
+        )
+
+    return "\n".join(lines)
+
+
+def encode_image_bytes(image: np.ndarray, format_ext: str = "JPEG") -> bytes:
+    """Convert an RGB numpy array to downloadable image bytes."""
+    pil_img = Image.fromarray(image)
+    import io
+    buf = io.BytesIO()
+    save_fmt = "PNG" if format_ext.upper() == "PNG" else "JPEG"
+    pil_img.save(buf, format=save_fmt, quality=95)
+    return buf.getvalue()
 
 
 def get_action_recommendation(summary: Dict[str, Any]) -> str:

@@ -24,14 +24,14 @@ def base_person_box():
 
 
 def test_zone_extraction(base_person_box):
-    """Verify head (0% to 35%) and torso (20% to 65%) zone calculation."""
+    """Verify head (0% to 35%) and widened torso (15% to 75%) zone calculation."""
     head_zone, torso_zone = extract_person_zones(base_person_box)
 
     # Height = 200. Head zone: py1 + (0.0 to 0.35) * 200 = 100 to 170
     assert head_zone == [100.0, 100.0, 200.0, 170.0]
 
-    # Torso zone: py1 + (0.20 to 0.65) * 200 = 140 to 230
-    assert torso_zone == [100.0, 140.0, 200.0, 230.0]
+    # Widened torso zone: py1 + (0.15 to 0.75) * 200 = 130 to 250
+    assert torso_zone == [100.0, 130.0, 200.0, 250.0]
 
 
 def test_fully_compliant_worker(base_person_box):
@@ -142,12 +142,14 @@ def test_unknown_evidence(base_person_box):
     w = workers[0]
     assert w["hardhat_status"] == "unknown"
     assert w["vest_status"] == "unknown"
-    assert w["status"] == "Unknown"
+    # vest unknown with no hardhat missing -> "Vest not visible: manual check"
+    assert w["status"] == "Vest not visible: manual check"
 
     assert summary["total_workers"] == 1
     assert summary["compliant_count"] == 0
     assert summary["violation_count"] == 0
-    assert summary["unknown_count"] == 1
+    assert summary["needs_review_count"] == 1
+    assert summary["unknown_count"] == 1  # unknown_count mirrors needs_review_count
 
 
 def test_one_gear_box_near_two_people():
@@ -202,3 +204,95 @@ def test_no_persons_detected():
     assert summary["violation_count"] == 0
     assert summary["compliance_rate"] == 100.0
     assert summary["site_status"] == "Safe"
+
+
+def test_small_partial_vest_fully_inside_torso_zone(base_person_box):
+    """Verify that a small partial vest box (e.g. worker wearing a bag over vest)
+    is successfully assigned using intersection / gear box area (IoG).
+
+    Person box: [100, 100, 200, 300], Torso zone: [100, 130, 200, 250].
+    Small partial vest box: [120, 140, 160, 180] (area = 1600).
+    IoG = 1600 / 1600 = 1.0 >= 0.3 named threshold.
+    """
+    small_partial_vest = [120.0, 140.0, 160.0, 180.0]
+    hardhat = [120.0, 105.0, 180.0, 150.0]
+
+    detections = [
+        {"class_name": CLASS_PERSON, "confidence": 0.95, "box": base_person_box},
+        {"class_name": CLASS_HARDHAT, "confidence": 0.90, "box": hardhat},
+        {"class_name": CLASS_VEST, "confidence": 0.85, "box": small_partial_vest},
+    ]
+
+    result = evaluate_site_compliance(detections)
+    workers = result["workers"]
+    summary = result["summary"]
+
+    assert len(workers) == 1
+    w = workers[0]
+    assert w["hardhat_status"] == "present"
+    assert w["vest_status"] == "present"
+    assert w["status"] == "Compliant"
+    assert len(w["assigned_gear"]) == 2
+
+    # Check that IoG overlap ratio recorded is 1.0 (100% of gear is in torso zone)
+    vest_entry = [g for g in w["assigned_gear"] if g["class_name"] == CLASS_VEST][0]
+    assert vest_entry["overlap"] == 1.0
+
+    assert summary["compliant_count"] == 1
+    assert summary["violation_count"] == 0
+    assert summary["site_status"] == "Safe"
+
+
+def test_small_partial_vest_straddling_torso_boundary(base_person_box):
+    """Verify partial vest box overlapping torso zone boundary by >= 30% is assigned.
+
+    Person box: [100, 100, 200, 300], Torso zone: [100, 130, 200, 250].
+    Partial vest box: [120, 115, 160, 160] (width=40, height=45, area=1800).
+    Intersection with torso zone (y from 130 to 160 = 30):
+    Intersection area = 40 * 30 = 1200.
+    IoG = 1200 / 1800 = 0.667 >= 0.3 named threshold.
+    """
+    partial_vest = [120.0, 115.0, 160.0, 160.0]
+    hardhat = [120.0, 105.0, 180.0, 150.0]
+
+    detections = [
+        {"class_name": CLASS_PERSON, "confidence": 0.95, "box": base_person_box},
+        {"class_name": CLASS_HARDHAT, "confidence": 0.92, "box": hardhat},
+        {"class_name": CLASS_VEST, "confidence": 0.88, "box": partial_vest},
+    ]
+
+    result = evaluate_site_compliance(detections)
+    w = result["workers"][0]
+
+    assert w["vest_status"] == "present"
+    assert w["status"] == "Compliant"
+    vest_entry = [g for g in w["assigned_gear"] if g["class_name"] == CLASS_VEST][0]
+    assert pytest.approx(vest_entry["overlap"], 0.01) == 0.667
+
+
+def test_partial_vest_below_overlap_threshold(base_person_box):
+    """Verify partial gear box with < 30% area inside torso zone is rejected.
+
+    Person box: [100, 100, 200, 300], Torso zone: [100, 130, 200, 250].
+    Stray/partial box: [120, 240, 160, 290] (width=40, height=50, area=2000).
+    Intersection with torso zone (y from 240 to 250 = 10):
+    Intersection area = 40 * 10 = 400.
+    IoG = 400 / 2000 = 0.20 < 0.30 named threshold.
+    """
+    stray_vest = [120.0, 240.0, 160.0, 290.0]
+    hardhat = [120.0, 105.0, 180.0, 150.0]
+
+    detections = [
+        {"class_name": CLASS_PERSON, "confidence": 0.95, "box": base_person_box},
+        {"class_name": CLASS_HARDHAT, "confidence": 0.92, "box": hardhat},
+        {"class_name": CLASS_VEST, "confidence": 0.80, "box": stray_vest},
+    ]
+
+    result = evaluate_site_compliance(detections)
+    w = result["workers"][0]
+
+    # Vest is not assigned because IoG 0.20 < 0.30
+    assert w["vest_status"] == "unknown"
+    assert len(w["assigned_gear"]) == 1
+    assert len(result["unassigned_gear"]) == 1
+
