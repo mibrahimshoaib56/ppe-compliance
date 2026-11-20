@@ -45,6 +45,21 @@ from src.detector import (
     run_detection,
     verify_model_classes,
 )
+import tempfile
+from src.video import (
+    FALLBACK_FPS,
+    MAX_SAMPLED_FRAMES,
+    MAX_VIDEO_SECONDS,
+    SAMPLE_FPS,
+    TOP_VIOLATION_FRAMES_COUNT,
+    calculate_video_duration,
+    compute_sample_frame_indices,
+    extract_rgb_frame_at_index,
+    generate_video_csv_report,
+    read_video_metadata,
+    summarize_video_results,
+    validate_and_get_fps,
+)
 from src.utils import (
     annotate_image,
     crop_worker_roi,
@@ -91,6 +106,12 @@ def init_session_state():
 
     if "nav_radio" not in st.session_state:
         st.session_state.nav_radio = "Dashboard"
+
+    if "inspection_mode" not in st.session_state:
+        st.session_state.inspection_mode = "Image"
+
+    if "video_results" not in st.session_state:
+        st.session_state.video_results = None
 
     if "strict_hardhat" not in st.session_state:
         st.session_state.strict_hardhat = True  # mirrors STRICT_HARDHAT_POLICY default
@@ -1176,6 +1197,384 @@ def render_settings(model: Any, is_model_verified: bool):
 
 
 # ============================================================================
+# 13. PAGE: VIDEO PPE INSPECTION
+# ============================================================================
+def render_video_inspection(model: Any):
+    """Render the Video PPE Compliance Inspection page."""
+    st.markdown("### 🎥 Video PPE Compliance Inspection")
+    st.caption("Upload site surveillance footage to sample and analyze worker compliance second-by-second on CPU.")
+
+    # Methodology & Limitation Notice
+    st.info(
+        "ℹ️ **Video Inspection Methodology & Limitations:**\n\n"
+        "• **Per-Frame Evaluation:** Video processing samples one frame every second (up to 60 frames max). "
+        "Each frame is evaluated independently using spatial body zones.\n"
+        "• **No Inter-Frame Tracking:** Workers are not tracked or re-identified across consecutive frames.\n"
+        "• **Image Model Constraints:** All single-image limitations apply (e.g. overhead angles, crouching, "
+        "heavy occlusions, and distant small figures are flagged for manual review rather than strictly judged)."
+    )
+
+    # If results are already stored in session state, display them directly
+    cached_results = st.session_state.get("video_results")
+    if cached_results is not None:
+        render_video_results_view(cached_results)
+        return
+
+    # Upload and Configuration Columns
+    c_upload, c_config = st.columns([3, 2])
+
+    with c_upload:
+        st.markdown("#### 1. Upload Video Footage")
+        uploaded_video = st.file_uploader(
+            "Select Surveillance Video (.mp4, .avi, .mov)",
+            type=["mp4", "avi", "mov"],
+            help=f"Upload site surveillance video. Videos longer than {MAX_VIDEO_SECONDS}s will be warned/capped at {MAX_SAMPLED_FRAMES} sampled frames.",
+        )
+
+        if uploaded_video is not None:
+            file_mb = round(uploaded_video.size / (1024 * 1024), 2)
+            st.markdown(
+                f"""
+                <div class='sv-panel' style='padding: 12px; margin-top: 8px;'>
+                    <strong>Selected Video:</strong> <code>{uploaded_video.name}</code><br>
+                    <strong>File Size:</strong> <code>{file_mb} MB</code>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+    with c_config:
+        st.markdown("#### 2. Detection & PPE Rules")
+        gear_choice = st.radio(
+            "Mandatory Site Equipment",
+            ["Hardhat + Safety Vest (Both Mandatory)", "Hardhat Only"],
+            index=0,
+            key="video_gear_choice",
+            help="Select PPE requirements enforced for this video scan.",
+        )
+        required_gear_mode = "both" if "Both" in gear_choice else "hardhat_only"
+
+        conf_threshold = st.slider(
+            "Confidence Threshold",
+            min_value=0.10,
+            max_value=0.90,
+            value=0.25,
+            step=0.05,
+            key="video_conf_slider",
+            help="Scales per-class thresholds (Base: Person 0.30, Hardhat 0.30, NO-Hardhat 0.20, Safety Vest 0.20).",
+        )
+        show_gear_boxes = st.checkbox("Draw Gear Bounding Boxes", value=True, key="video_gear_box_cb")
+        show_zones = st.checkbox("Outline Body Zones (Head / Torso)", value=False, key="video_zones_cb")
+
+    st.markdown("<div style='margin-top: 20px;'></div>", unsafe_allow_html=True)
+
+    # Run Video Inspection Action
+    run_disabled = uploaded_video is None
+    if st.button("🎬 Run Video Compliance Inspection", type="primary", use_container_width=True, disabled=run_disabled):
+        process_video_upload(
+            uploaded_video=uploaded_video,
+            model=model,
+            required_gear=required_gear_mode,
+            conf_threshold=conf_threshold,
+            show_gear_boxes=show_gear_boxes,
+            show_zones=show_zones,
+        )
+
+
+def process_video_upload(
+    uploaded_video: Any,
+    model: Any,
+    required_gear: str,
+    conf_threshold: float,
+    show_gear_boxes: bool,
+    show_zones: bool,
+):
+    """Process an uploaded video through temporary file decoding and frame inference."""
+    suffix = os.path.splitext(uploaded_video.name)[1]
+    if not suffix:
+        suffix = ".mp4"
+
+    # Use NamedTemporaryFile with delete=False, closed before cv2.VideoCapture opens it
+    temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
+    temp_path = temp_file.name
+
+    try:
+        # Write bytes and explicitly close file handle
+        temp_file.write(uploaded_video.getbuffer())
+        temp_file.close()
+
+        # Read metadata and validate video
+        try:
+            metadata = read_video_metadata(temp_path)
+        except Exception as e:
+            st.error(f"❌ Could not open or decode video file: {e}")
+            return
+
+        total_frames = metadata["total_frames"]
+        safe_fps = metadata["safe_fps"]
+        duration_sec = metadata["duration_sec"]
+
+        if total_frames <= 0:
+            st.error("❌ Video file reports zero playable frames.")
+            return
+
+        # Check duration warning
+        if duration_sec > MAX_VIDEO_SECONDS:
+            st.warning(
+                f"⚠️ Video length ({duration_sec:.1f}s) exceeds MAX_VIDEO_SECONDS ({MAX_VIDEO_SECONDS}s). "
+                f"Only the first {MAX_SAMPLED_FRAMES} sampled frames will be processed."
+            )
+
+        # Compute sample indices (1 frame every second up to 60 frames)
+        sample_indices = compute_sample_frame_indices(
+            total_frames=total_frames,
+            fps=safe_fps,
+            sample_fps=SAMPLE_FPS,
+            max_frames=MAX_SAMPLED_FRAMES,
+        )
+
+        if not sample_indices:
+            st.error("❌ Could not compute frame sampling indices.")
+            return
+
+        # Open video capture
+        cap = cv2.VideoCapture(temp_path)
+        if not cap.isOpened():
+            st.error("❌ Failed to open video stream with OpenCV.")
+            return
+
+        # Progress UI
+        st.markdown("---")
+        st.markdown("#### ⏳ Processing Video Frames...")
+        prog_bar = st.progress(0.0)
+        status_line = st.empty()
+        preview_container = st.empty()
+
+        frame_records: List[Dict[str, Any]] = []
+
+        try:
+            for step_i, frame_idx in enumerate(sample_indices):
+                rgb_frame = extract_rgb_frame_at_index(cap, frame_idx)
+                if rgb_frame is None:
+                    continue
+
+                timestamp_sec = round(frame_idx / safe_fps, 1)
+
+                # 1. Run inference on CPU
+                detections = run_detection(
+                    image=rgb_frame,
+                    model=model,
+                    conf_threshold=conf_threshold,
+                    device="cpu",
+                )
+
+                # 2. Evaluate compliance
+                evaluation = evaluate_site_compliance(
+                    detections=detections,
+                    required_gear=required_gear,
+                    image_height=float(rgb_frame.shape[0]),
+                    strict_hardhat=st.session_state.strict_hardhat,
+                )
+
+                # 3. Generate annotated image
+                annotated_frame = annotate_image(
+                    image=rgb_frame,
+                    workers=evaluation["workers"],
+                    unassigned_gear=evaluation["unassigned_gear"],
+                    show_gear_boxes=show_gear_boxes,
+                    show_zones=show_zones,
+                )
+
+                total_w = evaluation["summary"]["total_workers"]
+                comp_w = evaluation["summary"]["compliant_count"]
+                viol_w = evaluation["summary"]["violation_count"]
+                review_w = evaluation["summary"]["needs_review_count"]
+                # For frames with zero workers, compliance_rate is None (do not treat as 100% compliant)
+                rate = evaluation["summary"]["compliance_rate"] if total_w > 0 else None
+
+                frame_records.append({
+                    "frame_number": frame_idx,
+                    "timestamp_sec": timestamp_sec,
+                    "total_workers": total_w,
+                    "compliant_count": comp_w,
+                    "violation_count": viol_w,
+                    "needs_review_count": review_w,
+                    "compliance_rate": rate,
+                    "annotated_image": annotated_frame,
+                })
+
+                # Update progress and live preview
+                pct = (step_i + 1) / len(sample_indices)
+                prog_bar.progress(pct)
+                status_line.caption(
+                    f"Sample {step_i + 1}/{len(sample_indices)} | Frame #{frame_idx} (t={timestamp_sec}s) | "
+                    f"Workers: {total_w} | Violations: {viol_w}"
+                )
+                preview_container.image(
+                    annotated_frame,
+                    caption=f"Live Preview — t={timestamp_sec}s (Workers: {total_w}, Violations: {viol_w})",
+                    use_container_width=True,
+                )
+
+        finally:
+            cap.release()
+
+        if not frame_records:
+            st.error("❌ Zero valid frames could be read or analyzed from the video.")
+            return
+
+        # Aggregate summary metrics
+        summary = summarize_video_results(frame_records)
+
+        # Save to session state so results persist across reruns
+        st.session_state.video_results = {
+            "video_filename": uploaded_video.name,
+            "metadata": metadata,
+            "summary": summary,
+            "frame_records": frame_records,
+        }
+
+        st.success(f"✅ Video analysis complete! Processed {len(frame_records)} sampled frames.")
+        st.rerun()
+
+    finally:
+        # Guarantee deletion of the temporary file in a finally block
+        if os.path.exists(temp_path):
+            try:
+                os.remove(temp_path)
+            except OSError:
+                pass
+
+
+def render_video_results_view(video_results: Dict[str, Any]):
+    """Render the comprehensive video compliance audit results."""
+    summary = video_results["summary"]
+    frames = video_results["frame_records"]
+    meta = video_results["metadata"]
+    filename = video_results.get("video_filename", "Uploaded Video")
+
+    # Header Panel
+    st.markdown(
+        f"""
+        <div class='sv-panel' style='padding: 12px 18px; margin-bottom: 16px;'>
+            <strong>Source Video:</strong> <code>{filename}</code> &nbsp;|&nbsp;
+            <strong>Recorded Duration:</strong> <code>{meta['duration_sec']:.1f}s</code> &nbsp;|&nbsp;
+            <strong>Native FPS:</strong> <code>{meta['safe_fps']} fps</code> &nbsp;|&nbsp;
+            <strong>Sampled Frames:</strong> <code>{summary['total_frames_analyzed']} frames (1 frame/sec)</code>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    # 1. KPI Metric Row
+    k1, k2, k3, k4, k5 = st.columns(5)
+    with k1:
+        st.markdown(
+            f"<div class='metric-card'><div class='metric-card-title'>Frames Analyzed</div>"
+            f"<div class='metric-card-value'>{summary['total_frames_analyzed']}</div></div>",
+            unsafe_allow_html=True,
+        )
+    with k2:
+        st.markdown(
+            f"<div class='metric-card'><div class='metric-card-title'>Frames With Workers</div>"
+            f"<div class='metric-card-value' style='color:#38bdf8;'>{summary['frames_with_workers']}</div></div>",
+            unsafe_allow_html=True,
+        )
+    with k3:
+        st.markdown(
+            f"<div class='metric-card'><div class='metric-card-title'>Frames No Workers</div>"
+            f"<div class='metric-card-value' style='color:#94a3b8;'>{summary['frames_without_workers']}</div></div>",
+            unsafe_allow_html=True,
+        )
+    with k4:
+        viol_color = "#ef4444" if summary["frames_with_violations"] > 0 else "#22c55e"
+        st.markdown(
+            f"<div class='metric-card'><div class='metric-card-title'>Frames With Violations</div>"
+            f"<div class='metric-card-value' style='color:{viol_color};'>{summary['frames_with_violations']}</div></div>",
+            unsafe_allow_html=True,
+        )
+    with k5:
+        rate_display = f"{summary['average_compliance_rate']}%" if summary["has_worker_frames"] else "N/A"
+        rate_color = "#22c55e" if (summary["has_worker_frames"] and summary["average_compliance_rate"] >= 85.0) else ("#f59e0b" if summary["has_worker_frames"] and summary["average_compliance_rate"] >= 60.0 else "#ef4444")
+        st.markdown(
+            f"<div class='metric-card'><div class='metric-card-title'>Avg Compliance Rate</div>"
+            f"<div class='metric-card-value' style='color:{rate_color};'>{rate_display}</div></div>",
+            unsafe_allow_html=True,
+        )
+
+    st.markdown("<div style='margin-top: 20px;'></div>", unsafe_allow_html=True)
+
+    # 2. Line Chart of Compliance Rate Over Time
+    st.markdown("#### 📈 Compliance Rate Over Time (Sampled Every 1s)")
+    chart_data = []
+    for f in frames:
+        # Exclude empty frames from rate chart or display rate for worker frames
+        r_val = f["compliance_rate"] if f["total_workers"] > 0 else None
+        chart_data.append({
+            "Timestamp (s)": f"{f['timestamp_sec']:.1f}s",
+            "Compliance Rate (%)": r_val,
+        })
+    df_chart = pd.DataFrame(chart_data).set_index("Timestamp (s)")
+    if summary["has_worker_frames"]:
+        st.line_chart(df_chart, color="#2563eb", height=240)
+    else:
+        st.info("ℹ️ No workers were detected in any sampled frames to plot compliance trends.")
+
+    # 3. Top Violation Frames Gallery (Top 3 Highest Risk Moments)
+    st.markdown("---")
+    st.markdown("#### 🚨 Top Risk Frames (Most Violations)")
+    top_frames = summary.get("top_violation_frames", [])
+    if top_frames:
+        st.caption(f"Displaying up to {TOP_VIOLATION_FRAMES_COUNT} frames with the highest count of non-compliant workers:")
+        g_cols = st.columns(len(top_frames))
+        for col, f in zip(g_cols, top_frames):
+            with col:
+                st.image(
+                    f["annotated_image"],
+                    caption=f"Frame #{f['frame_number']} (t={f['timestamp_sec']:.1f}s) | Violations: {f['violation_count']} | Workers: {f['total_workers']}",
+                    use_container_width=True,
+                )
+    else:
+        st.success("✅ Clean Video Surveillance: Zero PPE violations detected across all sampled frames!")
+
+    # 4. Per-Frame Breakdown Table with CSV Export
+    st.markdown("---")
+    st.markdown("#### 📋 Frame-by-Frame Inspection Table")
+    table_rows = []
+    for idx, f in enumerate(frames, start=1):
+        rate_cell = f"{f['compliance_rate']:.1f}%" if f["total_workers"] > 0 and f["compliance_rate"] is not None else "N/A (No Workers)"
+        table_rows.append({
+            "Sample #": idx,
+            "Frame #": f["frame_number"],
+            "Time (s)": f"{f['timestamp_sec']:.1f}s",
+            "Workers": f["total_workers"],
+            "Compliant": f["compliant_count"],
+            "Violations": f["violation_count"],
+            "Needs Review": f["needs_review_count"],
+            "Compliance Rate": rate_cell,
+        })
+
+    df_table = pd.DataFrame(table_rows)
+    st.dataframe(df_table, use_container_width=True)
+
+    # CSV Download Button & Reset Action
+    c_csv, c_reset = st.columns([2, 1])
+    with c_csv:
+        csv_content = generate_video_csv_report(frames, summary, filename)
+        st.download_button(
+            "📥 Download Video Audit CSV Report",
+            data=csv_content,
+            file_name=f"video_ppe_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+            mime="text/csv",
+            use_container_width=True,
+        )
+    with c_reset:
+        if st.button("🔄 Analyze Another Video", use_container_width=True):
+            st.session_state.video_results = None
+            st.rerun()
+
+
+# ============================================================================
 # 13. MAIN APPLICATION ORCHESTRATOR
 # ============================================================================
 def main():
@@ -1208,6 +1607,27 @@ def main():
             """,
             unsafe_allow_html=True,
         )
+
+        st.markdown("<hr style='margin: 8px 0 12px 0; border: none; border-top: 1px solid rgba(148,163,184,0.2);'>", unsafe_allow_html=True)
+
+        # ── Inspection Mode Selector (Image vs Video) ────────────────────
+        st.markdown(
+            "<span style='font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;'>"
+            "Inspection Mode</span>",
+            unsafe_allow_html=True,
+        )
+        mode_options = ["Image", "Video"]
+        curr_mode = st.session_state.get("inspection_mode", "Image")
+        selected_mode = st.radio(
+            "Mode Selector",
+            options=mode_options,
+            index=mode_options.index(curr_mode) if curr_mode in mode_options else 0,
+            horizontal=True,
+            label_visibility="collapsed",
+        )
+        if selected_mode != st.session_state.inspection_mode:
+            st.session_state.inspection_mode = selected_mode
+            st.rerun()
 
         st.markdown("<hr style='margin: 8px 0 16px 0; border: none; border-top: 1px solid rgba(148,163,184,0.2);'>", unsafe_allow_html=True)
 
@@ -1267,7 +1687,12 @@ def main():
     # ------------------------------------------------------------------------
     render_top_navbar(st.session_state.current_page, is_model_verified)
 
-    # Route to selected page
+    # Route to selected page based on mode and navigation
+    if st.session_state.inspection_mode == "Video":
+        render_video_inspection(model)
+        return
+
+    # Image Mode: route to selected page (stays exactly as it was)
     active_insp = st.session_state.active_inspection
     history_list = st.session_state.inspection_history
 
