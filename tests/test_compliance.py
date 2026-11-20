@@ -11,6 +11,11 @@ from src.compliance import (
     CLASS_NO_VEST,
     CLASS_PERSON,
     CLASS_VEST,
+    STRICT_HARDHAT_POLICY,
+    MIN_PERSON_CONF,
+    MIN_PERSON_HEIGHT_FRAC,
+    MIN_UPRIGHT_ASPECT,
+    assess_person_reliability,
     evaluate_site_compliance,
     extract_person_zones,
     compute_overlap_ratio,
@@ -129,12 +134,16 @@ def test_missing_both(base_person_box):
 
 
 def test_unknown_evidence(base_person_box):
-    """Test worker with no gear detections in either head or torso zone."""
+    """With strict_hardhat=False, no-gear worker stays UNKNOWN (not a violation).
+
+    This tests the non-strict path: reliable person + no gear boxes.
+    With strict OFF, hardhat stays unknown; vest stays unknown -> Vest not visible.
+    """
     detections = [
         {"class_name": CLASS_PERSON, "confidence": 0.95, "box": base_person_box},
     ]
 
-    result = evaluate_site_compliance(detections)
+    result = evaluate_site_compliance(detections, strict_hardhat=False)
     workers = result["workers"]
     summary = result["summary"]
 
@@ -142,8 +151,9 @@ def test_unknown_evidence(base_person_box):
     w = workers[0]
     assert w["hardhat_status"] == "unknown"
     assert w["vest_status"] == "unknown"
-    # vest unknown with no hardhat missing -> "Vest not visible: manual check"
+    # reliable person, strict OFF: status is "Vest not visible: manual check"
     assert w["status"] == "Vest not visible: manual check"
+    assert w["reliability_reason"] == ""  # person IS reliable; strict is just off
 
     assert summary["total_workers"] == 1
     assert summary["compliant_count"] == 0
@@ -169,7 +179,11 @@ def test_one_gear_box_near_two_people():
         {"class_name": CLASS_HARDHAT, "confidence": 0.90, "box": shared_hardhat},
     ]
 
-    result = evaluate_site_compliance(detections, required_gear="hardhat_only")
+    # Pass strict_hardhat=False so worker_b (no hardhat box) stays "Unknown"
+    # rather than being promoted to "Missing hardhat" by the strict policy.
+    result = evaluate_site_compliance(
+        detections, required_gear="hardhat_only", strict_hardhat=False
+    )
     workers = result["workers"]
 
     assert len(workers) == 2
@@ -296,3 +310,340 @@ def test_partial_vest_below_overlap_threshold(base_person_box):
     assert len(w["assigned_gear"]) == 1
     assert len(result["unassigned_gear"]) == 1
 
+
+
+# =============================================================================
+# NEW TESTS: Strict Hardhat Policy & Person Reliability
+# =============================================================================
+
+def test_strict_on_reliable_person_no_hardhat(base_person_box):
+    """Strict ON + reliable person + no hardhat box -> hardhat_status = 'missing'.
+
+    base_person_box: [100, 100, 200, 300] -> width=100, height=200, aspect=2.0 >= 1.2.
+    image_height=1000 -> height_frac=0.20 >= 0.12. confidence=0.90 >= 0.40.
+    Person is reliable -> strict ON promotes unknown to missing -> violation.
+    """
+    detections = [
+        {"class_name": CLASS_PERSON, "confidence": 0.90, "box": base_person_box},
+        # No hardhat or NO-hardhat box in scene
+    ]
+    result = evaluate_site_compliance(
+        detections,
+        image_height=1000.0,
+        strict_hardhat=True,
+    )
+    w = result["workers"][0]
+    summary = result["summary"]
+
+    assert w["hardhat_status"] == "missing"       # promoted by strict policy
+    assert w["reliability_reason"] == ""          # person is reliable
+    assert "Missing" in w["status"]               # counted as violation
+    assert summary["violation_count"] == 1
+    assert summary["compliant_count"] == 0
+
+
+def test_strict_off_reliable_person_no_hardhat(base_person_box):
+    """Strict OFF: even a reliable person with no hardhat box stays UNKNOWN (not a violation)."""
+    detections = [
+        {"class_name": CLASS_PERSON, "confidence": 0.90, "box": base_person_box},
+    ]
+    result = evaluate_site_compliance(
+        detections,
+        image_height=1000.0,
+        strict_hardhat=False,
+    )
+    w = result["workers"][0]
+    summary = result["summary"]
+
+    assert w["hardhat_status"] == "unknown"       # stays unknown; strict is off
+    assert w["reliability_reason"] == ""          # person IS reliable
+    assert "Missing" not in w["status"]           # must NOT be a violation
+    assert summary["violation_count"] == 0
+    assert summary["needs_review_count"] == 1
+
+
+def test_small_person_stays_unknown():
+    """Small person box (height < MIN_PERSON_HEIGHT_FRAC * image_height) -> unreliable.
+
+    Box: [0, 0, 50, 100] -> height=100, width=50, aspect=2.0 (upright OK).
+    image_height=2000 -> height_frac = 100/2000 = 0.05 < 0.12 -> "small".
+    Even with strict ON, small person stays UNKNOWN (needs review), not a violation.
+    """
+    small_box = [0.0, 0.0, 50.0, 100.0]  # height=100, width=50, aspect=2.0
+    detections = [
+        {"class_name": CLASS_PERSON, "confidence": 0.90, "box": small_box},
+    ]
+    result = evaluate_site_compliance(
+        detections,
+        image_height=2000.0,
+        strict_hardhat=True,
+    )
+    w = result["workers"][0]
+    summary = result["summary"]
+
+    assert w["hardhat_status"] == "unknown"
+    assert w["reliability_reason"] == "small"
+    assert w["status"] == "Needs review: small"
+    assert summary["violation_count"] == 0
+    assert summary["needs_review_count"] == 1
+
+
+def test_low_confidence_person_stays_unknown():
+    """Low-confidence person detection (< MIN_PERSON_CONF) -> unreliable -> UNKNOWN.
+
+    Box: [0, 0, 100, 300] -> aspect=3.0, height_frac=0.30, but conf=0.35 < 0.40.
+    Strict ON still cannot promote to violation because reliability fails.
+    """
+    low_conf_box = [0.0, 0.0, 100.0, 300.0]  # aspect=3.0, height_frac=0.30
+    detections = [
+        {"class_name": CLASS_PERSON, "confidence": 0.35, "box": low_conf_box},
+    ]
+    result = evaluate_site_compliance(
+        detections,
+        image_height=1000.0,
+        strict_hardhat=True,
+    )
+    w = result["workers"][0]
+    summary = result["summary"]
+
+    assert w["hardhat_status"] == "unknown"
+    assert w["reliability_reason"] == "low confidence"
+    assert w["status"] == "Needs review: low confidence"
+    assert summary["violation_count"] == 0
+    assert summary["needs_review_count"] == 1
+
+
+def test_squashed_person_box_stays_unknown_vest_overridden():
+    """Squashed / overhead-view person box (aspect < MIN_UPRIGHT_ASPECT=1.2).
+
+    Box: [0, 0, 300, 150] -> height=150, width=300, aspect=0.5 < 1.2 -> 'view not upright'.
+    Expected:
+      - hardhat stays UNKNOWN (not reliable -> strict cannot promote)
+      - vest is OVERRIDDEN to UNKNOWN even though a vest box is successfully
+        assigned to the torso zone (geometry is unreliable for non-upright persons)
+      - status = 'Needs review: view not upright'
+      - NOT counted as a violation
+    """
+    squashed_box = [0.0, 0.0, 300.0, 150.0]   # height=150, width=300, aspect=0.5
+    # Vest box that falls inside the torso zone of the squashed person:
+    # Torso zone: y = 0.15*150=22.5 to 0.75*150=112.5; full x span
+    # Vest: [50, 25, 250, 110] -> intersection with torso [50, 25, 250, 110] = 200*85=17000
+    # Vest area = 200*85 = 17000; IoG = 1.0 >= 0.30 -> would normally be assigned
+    vest_box = [50.0, 25.0, 250.0, 110.0]
+    detections = [
+        {"class_name": CLASS_PERSON, "confidence": 0.90, "box": squashed_box},
+        {"class_name": CLASS_VEST,   "confidence": 0.80, "box": vest_box},
+    ]
+    result = evaluate_site_compliance(
+        detections,
+        image_height=1000.0,
+        strict_hardhat=True,
+    )
+    w = result["workers"][0]
+    summary = result["summary"]
+
+    # Hardhat stays unknown (not reliable due to non-upright)
+    assert w["hardhat_status"] == "unknown"
+
+    # Vest overridden to unknown despite vest box being assigned to torso zone
+    assert w["vest_status"] == "unknown"
+    # Vest box IS in assigned_gear (assignment happened before override)
+    assert any(g["class_name"] == CLASS_VEST for g in w["assigned_gear"])
+
+    assert w["reliability_reason"] == "view not upright"
+    assert w["status"] == "Needs review: view not upright"
+    assert summary["violation_count"] == 0        # NOT a violation
+    assert summary["needs_review_count"] == 1
+
+
+# =============================================================================
+# NEW TESTS: Conflicting Detections (Positive + Negative for same item)
+# =============================================================================
+
+def test_conflicting_hardhat_detections(base_person_box):
+    """When both Hardhat and NO-Hardhat match the head zone, mark hardhat as UNKNOWN
+    with reason 'conflicting detections', and overall status as
+    'Needs review: conflicting detections'. Do not choose by confidence.
+    """
+    from src.utils import format_worker_table
+
+    # Positive confidence is HIGHER than negative, but confidence must NOT be used to choose.
+    detections = [
+        {"class_name": CLASS_PERSON, "confidence": 0.95, "box": base_person_box},
+        {"class_name": CLASS_HARDHAT, "confidence": 0.95, "box": [120.0, 105.0, 180.0, 150.0]},
+        {"class_name": CLASS_NO_HARDHAT, "confidence": 0.70, "box": [125.0, 110.0, 175.0, 145.0]},
+        {"class_name": CLASS_VEST, "confidence": 0.90, "box": [110.0, 150.0, 190.0, 220.0]},
+    ]
+    result = evaluate_site_compliance(detections)
+    w = result["workers"][0]
+    summary = result["summary"]
+
+    assert w["hardhat_status"] == "unknown"
+    assert w["hardhat_reason"] == "conflicting detections"
+    assert w["vest_status"] == "present"
+    assert w["status"] == "Needs review: conflicting detections"
+    assert summary["compliant_count"] == 0
+    assert summary["violation_count"] == 0
+    assert summary["needs_review_count"] == 1
+
+    # Verify formatting in worker table
+    table_records = format_worker_table(result["workers"])
+    assert table_records[0]["Hardhat"] == "Needs review: conflicting detections"
+    assert table_records[0]["Safety Vest"] == "Present"
+    assert table_records[0]["Overall Status"] == "Needs review: conflicting detections"
+
+
+def test_conflicting_vest_detections(base_person_box):
+    """When both Safety Vest and NO-Safety Vest match the torso zone, mark vest as UNKNOWN
+    with reason 'conflicting detections', and overall status as
+    'Needs review: conflicting detections'. Do not choose by confidence.
+    """
+    from src.utils import format_worker_table
+
+    # Safety Vest confidence is HIGHER than NO-Safety Vest, but must not choose by confidence.
+    detections = [
+        {"class_name": CLASS_PERSON, "confidence": 0.95, "box": base_person_box},
+        {"class_name": CLASS_HARDHAT, "confidence": 0.90, "box": [120.0, 105.0, 180.0, 150.0]},
+        {"class_name": CLASS_VEST, "confidence": 0.92, "box": [110.0, 150.0, 190.0, 220.0]},
+        {"class_name": CLASS_NO_VEST, "confidence": 0.65, "box": [115.0, 155.0, 185.0, 215.0]},
+    ]
+    result = evaluate_site_compliance(detections)
+    w = result["workers"][0]
+    summary = result["summary"]
+
+    assert w["hardhat_status"] == "present"
+    assert w["vest_status"] == "unknown"
+    assert w["vest_reason"] == "conflicting detections"
+    assert w["status"] == "Needs review: conflicting detections"
+    assert summary["compliant_count"] == 0
+    assert summary["violation_count"] == 0
+    assert summary["needs_review_count"] == 1
+
+    table_records = format_worker_table(result["workers"])
+    assert table_records[0]["Hardhat"] == "Present"
+    assert table_records[0]["Safety Vest"] == "Needs review: conflicting detections"
+    assert table_records[0]["Overall Status"] == "Needs review: conflicting detections"
+
+
+def test_conflicting_both_hardhat_and_vest(base_person_box):
+    """When both Hardhat/NO-Hardhat and Vest/NO-Vest match, both items are UNKNOWN
+    with reason 'conflicting detections'.
+    """
+    from src.utils import format_worker_table
+
+    detections = [
+        {"class_name": CLASS_PERSON, "confidence": 0.95, "box": base_person_box},
+        {"class_name": CLASS_HARDHAT, "confidence": 0.88, "box": [120.0, 105.0, 180.0, 150.0]},
+        {"class_name": CLASS_NO_HARDHAT, "confidence": 0.85, "box": [125.0, 110.0, 175.0, 145.0]},
+        {"class_name": CLASS_VEST, "confidence": 0.80, "box": [110.0, 150.0, 190.0, 220.0]},
+        {"class_name": CLASS_NO_VEST, "confidence": 0.82, "box": [115.0, 155.0, 185.0, 215.0]},
+    ]
+    result = evaluate_site_compliance(detections)
+    w = result["workers"][0]
+
+    assert w["hardhat_status"] == "unknown"
+    assert w["hardhat_reason"] == "conflicting detections"
+    assert w["vest_status"] == "unknown"
+    assert w["vest_reason"] == "conflicting detections"
+    assert w["status"] == "Needs review: conflicting detections"
+
+    table_records = format_worker_table(result["workers"])
+    assert table_records[0]["Hardhat"] == "Needs review: conflicting detections"
+    assert table_records[0]["Safety Vest"] == "Needs review: conflicting detections"
+    assert table_records[0]["Overall Status"] == "Needs review: conflicting detections"
+
+
+def test_conflict_not_chosen_by_confidence_negative_higher(base_person_box):
+    """Even if negative detection confidence is significantly higher than positive,
+    it must NOT choose by confidence (do not mark as missing). It must stay UNKNOWN
+    with reason 'conflicting detections'.
+    """
+    detections = [
+        {"class_name": CLASS_PERSON, "confidence": 0.95, "box": base_person_box},
+        # NO-Hardhat confidence 0.99 vs Hardhat confidence 0.40
+        {"class_name": CLASS_HARDHAT, "confidence": 0.40, "box": [120.0, 105.0, 180.0, 150.0]},
+        {"class_name": CLASS_NO_HARDHAT, "confidence": 0.99, "box": [125.0, 110.0, 175.0, 145.0]},
+        # NO-Vest confidence 0.98 vs Vest confidence 0.35
+        {"class_name": CLASS_VEST, "confidence": 0.35, "box": [110.0, 150.0, 190.0, 220.0]},
+        {"class_name": CLASS_NO_VEST, "confidence": 0.98, "box": [115.0, 155.0, 185.0, 215.0]},
+    ]
+    result = evaluate_site_compliance(detections)
+    w = result["workers"][0]
+
+    # Neither should be marked as "missing" despite much higher negative confidence
+    assert w["hardhat_status"] == "unknown"
+    assert w["hardhat_reason"] == "conflicting detections"
+    assert w["vest_status"] == "unknown"
+    assert w["vest_reason"] == "conflicting detections"
+    assert w["status"] == "Needs review: conflicting detections"
+    assert result["summary"]["violation_count"] == 0
+    assert result["summary"]["needs_review_count"] == 1
+
+
+# =============================================================================
+# NEW TESTS: Unreliable Guards & Zero Workers Image Annotation
+# =============================================================================
+
+def test_unreliable_person_never_deleted_stays_needs_review():
+    """Unreliable person with gear boxes detected is NEVER deleted from the list,
+    and their status must be 'Needs review: <reason>' (not Compliant or Violation).
+    """
+    # Low confidence person (0.30 < MIN_PERSON_CONF 0.40) who has Hardhat + Vest
+    low_conf_box = [100.0, 100.0, 200.0, 300.0]
+    detections = [
+        {"class_name": CLASS_PERSON, "confidence": 0.30, "box": low_conf_box},
+        {"class_name": CLASS_HARDHAT, "confidence": 0.90, "box": [120.0, 105.0, 180.0, 150.0]},
+        {"class_name": CLASS_VEST, "confidence": 0.88, "box": [110.0, 150.0, 190.0, 220.0]},
+    ]
+    result = evaluate_site_compliance(detections, image_height=1000.0)
+    workers = result["workers"]
+    summary = result["summary"]
+
+    # Must NOT be deleted
+    assert len(workers) == 1
+    w = workers[0]
+    assert w["reliability_reason"] == "low confidence"
+    assert w["status"] == "Needs review: low confidence"
+    # Must NOT be counted as compliant and NOT as violation
+    assert summary["compliant_count"] == 0
+    assert summary["violation_count"] == 0
+    assert summary["needs_review_count"] == 1
+
+
+def test_zero_workers_with_loose_gear_and_annotation():
+    """When zero workers are detected, evaluate_site_compliance handles it safely
+    without division errors, and annotate_image retains and draws loose gear boxes.
+    """
+    import numpy as np
+    from src.utils import annotate_image
+
+    # Gear boxes exist, but zero persons detected (e.g. overhead or empty site)
+    detections = [
+        {"class_name": CLASS_HARDHAT, "confidence": 0.85, "box": [50.0, 50.0, 100.0, 100.0]},
+        {"class_name": CLASS_VEST, "confidence": 0.90, "box": [150.0, 150.0, 250.0, 250.0]},
+    ]
+    result = evaluate_site_compliance(detections)
+    workers = result["workers"]
+    summary = result["summary"]
+    unassigned = result["unassigned_gear"]
+
+    assert len(workers) == 0
+    assert len(unassigned) == 2
+    assert summary["total_workers"] == 0
+    assert summary["compliant_count"] == 0
+    assert summary["violation_count"] == 0
+    assert summary["needs_review_count"] == 0
+    assert summary["compliance_rate"] == 100.0
+    assert summary["site_status"] == "Safe"
+
+    # Test annotation with zero workers: unassigned gear must still be drawn on canvas
+    blank_image = np.zeros((400, 400, 3), dtype=np.uint8)
+    annotated = annotate_image(
+        image=blank_image,
+        workers=workers,
+        unassigned_gear=unassigned,
+        show_gear_boxes=True,
+    )
+    assert annotated.shape == (400, 400, 3)
+    # The canvas should have drawn boxes and text for the loose gear
+    assert np.any(annotated > 0)

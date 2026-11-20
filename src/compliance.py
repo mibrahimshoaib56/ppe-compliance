@@ -32,6 +32,28 @@ OVERLAP_THRESHOLD: float = 0.30
 SITE_SAFE_THRESHOLD: float = 85.0  # >= 85% compliant -> Safe
 SITE_WARNING_THRESHOLD: float = 60.0  # >= 60% and < 85% -> Warning, < 60% -> Critical
 
+# ── Strict Hardhat Policy ──────────────────────────────────────────────────
+# When True (default), a person with no hardhat box matched in their head zone
+# is marked as MISSING (violation) instead of UNKNOWN, but ONLY when the
+# person detection is deemed "reliable" (confidence, size, and upright posture
+# all meet the thresholds below). Can be toggled from the app sidebar.
+STRICT_HARDHAT_POLICY: bool = True
+
+# Minimum person detection confidence score to be considered reliable.
+# Detections below this threshold are too uncertain for strict enforcement.
+MIN_PERSON_CONF: float = 0.40
+
+# Minimum person bounding-box height expressed as a fraction of the full image
+# height. Workers in the far background (small boxes) may have occluded
+# hardhats that YOLO simply cannot see, so we do not penalise them strictly.
+MIN_PERSON_HEIGHT_FRAC: float = 0.12
+
+# Minimum height-to-width aspect ratio for a person box to be treated as
+# an upright standing view. Squashed boxes (aspect < 1.2) indicate overhead
+# camera angles or crouching postures where vest geometry is unreliable;
+# those persons are excluded from strict enforcement for BOTH hardhat and vest.
+MIN_UPRIGHT_ASPECT: float = 1.2
+
 # Standard class names used by the compliance logic
 CLASS_PERSON: str = "Person"
 CLASS_HARDHAT: str = "Hardhat"
@@ -175,6 +197,51 @@ def normalize_detection(det: Dict[str, Any]) -> Optional[Dict[str, Any]]:
 
 
 # ============================================================================
+# PERSON RELIABILITY ASSESSMENT
+# ============================================================================
+
+def assess_person_reliability(
+    person_box: Union[List[float], Tuple[float, float, float, float]],
+    person_conf: float,
+    image_height: Optional[float] = None,
+) -> Tuple[bool, str]:
+    """Assess whether a person detection is reliable enough for strict PPE enforcement.
+
+    A person is "reliable" only if ALL of these conditions are met:
+      1. box height / box width >= MIN_UPRIGHT_ASPECT   (not an overhead / squashed view)
+      2. box height >= MIN_PERSON_HEIGHT_FRAC * image_height  (not a tiny background figure)
+      3. detection confidence >= MIN_PERSON_CONF
+
+    Conditions are evaluated in priority order; the first failure sets the reason.
+    The height-fraction check is skipped when image_height is None or zero.
+
+    Returns:
+        Tuple of (is_reliable: bool, reason: str).
+        reason is an empty string when the person is reliable.
+        Otherwise one of: "view not upright", "small", "low confidence".
+    """
+    px1, py1, px2, py2 = person_box
+    box_h = max(0.0, py2 - py1)
+    box_w = max(0.0, px2 - px1)
+
+    # 1. Upright posture check (highest priority — affects both hardhat and vest)
+    aspect = (box_h / box_w) if box_w > 0 else 0.0
+    if aspect < MIN_UPRIGHT_ASPECT:
+        return False, "view not upright"
+
+    # 2. Minimum visible size check (skipped if image_height is not provided)
+    if image_height is not None and image_height > 0:
+        if box_h < MIN_PERSON_HEIGHT_FRAC * image_height:
+            return False, "small"
+
+    # 3. Detection confidence check
+    if person_conf < MIN_PERSON_CONF:
+        return False, "low confidence"
+
+    return True, ""
+
+
+# ============================================================================
 # COMPLIANCE EVALUATION LOGIC
 # ============================================================================
 
@@ -182,6 +249,8 @@ def evaluate_site_compliance(
     detections: List[Dict[str, Any]],
     required_gear: str = "both",
     overlap_threshold: float = OVERLAP_THRESHOLD,
+    image_height: Optional[float] = None,
+    strict_hardhat: bool = STRICT_HARDHAT_POLICY,
 ) -> Dict[str, Any]:
     """Evaluate compliance of all detected workers in an image.
 
@@ -189,6 +258,12 @@ def evaluate_site_compliance(
         detections: List of detection dictionaries (class name, confidence, box).
         required_gear: 'both' (Hardhat + Vest) or 'hardhat_only'.
         overlap_threshold: Minimum overlap ratio for zone association.
+        image_height: Full image height in pixels, used to assess person box
+            size relative to frame. Pass None to skip the size reliability check.
+        strict_hardhat: When True, workers whose head zone has no matching
+            hardhat box are marked as violations if the person is reliable.
+            Mirrors the STRICT_HARDHAT_POLICY constant; can be overridden
+            at call-time (e.g. from the app sidebar checkbox).
 
     Returns:
         Dictionary containing:
@@ -227,6 +302,9 @@ def evaluate_site_compliance(
             "hardhat_status": "unknown",  # "present", "missing", "unknown"
             "vest_status": "unknown",     # "present", "missing", "unknown"
             "status": "Unknown",          # "Compliant", "Missing ...", "Unknown"
+            "reliability_reason": "",     # non-empty when person is unreliable
+            "hardhat_reason": "",         # non-empty on conflict
+            "vest_reason": "",            # non-empty on conflict
         })
 
     # 3. Disambiguation: Assign each gear box to at most one person
@@ -263,33 +341,52 @@ def evaluate_site_compliance(
         torso_pos = [g for g in worker["assigned_gear"] if g["class_name"] == GEAR_TORSO_POSITIVE]
         torso_neg = [g for g in worker["assigned_gear"] if g["class_name"] == GEAR_TORSO_NEGATIVE]
 
-        # Evaluate Hardhat
+        # ── Assess person reliability for strict enforcement decisions ──────
+        is_reliable, rel_reason = assess_person_reliability(
+            worker["box"], worker["confidence"], image_height
+        )
+        worker["reliability_reason"] = rel_reason
+
+        # ── Evaluate Hardhat ─────────────────────────────────────────────────
         if head_neg and not head_pos:
             worker["hardhat_status"] = "missing"
         elif head_pos and not head_neg:
             worker["hardhat_status"] = "present"
         elif head_pos and head_neg:
-            # Conflict: choose the detection with higher confidence
-            best_pos_conf = max(g["confidence"] for g in head_pos)
-            best_neg_conf = max(g["confidence"] for g in head_neg)
-            worker["hardhat_status"] = "present" if best_pos_conf >= best_neg_conf else "missing"
-        else:
+            # Conflict: both Hardhat and NO-Hardhat matched to the same person
             worker["hardhat_status"] = "unknown"
+            worker["hardhat_reason"] = "conflicting detections"
+        else:
+            # No hardhat box in head zone — apply strict policy if person is reliable
+            if strict_hardhat and is_reliable:
+                worker["hardhat_status"] = "missing"
+            else:
+                worker["hardhat_status"] = "unknown"
 
-        # Evaluate Vest
+        # ── Evaluate Vest ────────────────────────────────────────────────────
         if torso_neg and not torso_pos:
             worker["vest_status"] = "missing"
         elif torso_pos and not torso_neg:
             worker["vest_status"] = "present"
         elif torso_pos and torso_neg:
-            # Conflict: choose the detection with higher confidence
-            best_pos_conf = max(g["confidence"] for g in torso_pos)
-            best_neg_conf = max(g["confidence"] for g in torso_neg)
-            worker["vest_status"] = "present" if best_pos_conf >= best_neg_conf else "missing"
+            # Conflict: both Safety Vest and NO-Safety Vest matched to the same person
+            worker["vest_status"] = "unknown"
+            worker["vest_reason"] = "conflicting detections"
         else:
             worker["vest_status"] = "unknown"
 
-        # Overall worker compliance status
+        # ── MIN_UPRIGHT_ASPECT guard on vest ─────────────────────────────────
+        # For non-upright persons (overhead or crouching views) the torso zone
+        # geometry is unreliable, so vest detection evidence cannot be trusted.
+        # Override vest_status to unknown regardless of any assigned gear boxes.
+        px1, py1, px2, py2 = worker["box"]
+        _bh = max(0.0, py2 - py1)
+        _bw = max(0.0, px2 - px1)
+        _aspect = (_bh / _bw) if _bw > 0 else 0.0
+        if _aspect < MIN_UPRIGHT_ASPECT:
+            worker["vest_status"] = "unknown"
+
+        # ── Overall worker compliance status ─────────────────────────────────
         check_vest = (required_gear == "both")
 
         h_stat = worker["hardhat_status"]
@@ -318,6 +415,18 @@ def evaluate_site_compliance(
             else:
                 worker["status"] = "Unknown"
 
+        # ── Apply reliability or conflict reason ─────────────────────────────
+        # For unreliable persons, always set status to "Needs review: <reason>".
+        # Never delete a person from the list because of these guards.
+        has_conflict = (
+            worker["hardhat_reason"] == "conflicting detections"
+            or (check_vest and worker["vest_reason"] == "conflicting detections")
+        )
+        if worker["reliability_reason"]:
+            worker["status"] = f"Needs review: {worker['reliability_reason']}"
+        elif has_conflict:
+            worker["status"] = "Needs review: conflicting detections"
+
     # 5. Calculate Site Summary Metrics
     total_workers = len(workers)
     compliant_count = sum(1 for w in workers if w["status"] == "Compliant")
@@ -325,7 +434,9 @@ def evaluate_site_compliance(
         1 for w in workers if w["status"] in ("Missing hardhat", "Missing vest", "Missing both")
     )
     needs_review_count = sum(
-        1 for w in workers if w["status"] in ("Vest not visible: manual check", "Unknown")
+        1 for w in workers
+        if w["status"] in ("Vest not visible: manual check", "Unknown")
+        or w["status"].startswith("Needs review:")
     )
     unknown_count = needs_review_count
 

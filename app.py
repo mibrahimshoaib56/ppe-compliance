@@ -92,6 +92,9 @@ def init_session_state():
     if "nav_radio" not in st.session_state:
         st.session_state.nav_radio = "Dashboard"
 
+    if "strict_hardhat" not in st.session_state:
+        st.session_state.strict_hardhat = True  # mirrors STRICT_HARDHAT_POLICY default
+
     if "active_inspection" not in st.session_state:
         st.session_state.active_inspection = None
 
@@ -502,14 +505,20 @@ def render_dashboard(active_inspection: Optional[Dict[str, Any]], history: List[
 
     with c_alerts:
         st.markdown("#### 🚨 Latest Safety Directive")
-        advisory_msg = get_action_recommendation(summary)
-
-        if status == "Safe":
-            st.success(f"**Routine Surveillance Active:**\n\n{advisory_msg}")
-        elif status == "Warning":
-            st.warning(f"**Immediate Attention Required:**\n\n{advisory_msg}")
+        if total_w == 0:
+            st.warning(
+                "No workers detected. The image may be from an unsupported angle (for example overhead) "
+                "or workers are too small. Try a front or side view."
+            )
         else:
-            st.error(f"**Severe Safety Violation:**\n\n{advisory_msg}")
+            advisory_msg = get_action_recommendation(summary)
+
+            if status == "Safe":
+                st.success(f"**Routine Surveillance Active:**\n\n{advisory_msg}")
+            elif status == "Warning":
+                st.warning(f"**Immediate Attention Required:**\n\n{advisory_msg}")
+            else:
+                st.error(f"**Severe Safety Violation:**\n\n{advisory_msg}")
 
         active_label = current.get("image_name", "Live Scan")
         st.caption(f"Inspection source: `{active_label}`")
@@ -659,9 +668,15 @@ def render_new_inspection(model: Any):
                 )
 
                 # 2. Evaluate Spatial PPE Compliance
+                # Pass image height for person-size reliability check and
+                # the sidebar strict_hardhat toggle.
+                import numpy as _np
+                _img_h = float(_np.array(input_image).shape[0])
                 evaluation = evaluate_site_compliance(
                     detections=detections,
                     required_gear=required_gear_mode,
+                    image_height=_img_h,
+                    strict_hardhat=st.session_state.strict_hardhat,
                 )
 
                 # 3. Generate Annotated Visualization
@@ -695,6 +710,7 @@ def render_new_inspection(model: Any):
                         "required_gear": required_gear_mode,
                         "show_gear_boxes": show_gear_boxes,
                         "show_zones": show_zones,
+                        "strict_hardhat": st.session_state.strict_hardhat,
                     },
                 }
 
@@ -783,13 +799,19 @@ def render_inspection_results(active_inspection: Optional[Dict[str, Any]]):
 
     # Advisory Banner
     st.markdown("<div style='margin-top:16px;'></div>", unsafe_allow_html=True)
-    advisory = get_action_recommendation(summary)
-    if status == "Safe":
-        st.success(f"📋 **Site Safety Directive:** {advisory}")
-    elif status == "Warning":
-        st.warning(f"📋 **Site Safety Directive:** {advisory}")
+    if summary.get("total_workers", 0) == 0:
+        st.warning(
+            "No workers detected. The image may be from an unsupported angle (for example overhead) "
+            "or workers are too small. Try a front or side view."
+        )
     else:
-        st.error(f"📋 **Site Safety Directive:** {advisory}")
+        advisory = get_action_recommendation(summary)
+        if status == "Safe":
+            st.success(f"📋 **Site Safety Directive:** {advisory}")
+        elif status == "Warning":
+            st.warning(f"📋 **Site Safety Directive:** {advisory}")
+        else:
+            st.error(f"📋 **Site Safety Directive:** {advisory}")
 
     # Visual Inspection Tabs
     st.markdown("---")
@@ -848,10 +870,15 @@ def render_worker_audits(active_inspection: Optional[Dict[str, Any]]):
 
     if not workers:
         st.warning(
-            f"ℹ️ Zero workers were detected in inspection `{active_inspection['id']}` "
-            f"(Source: `{active_inspection['image_name']}`).\n\n"
-            "If personnel are visible in the background, lower the confidence threshold under New Inspection."
+            "No workers detected. The image may be from an unsupported angle (for example overhead) "
+            "or workers are too small. Try a front or side view."
         )
+        if "annotated_image" in active_inspection:
+            st.image(
+                active_inspection["annotated_image"],
+                caption="AI Annotated Inspection (Gear Detections)",
+                use_container_width=True,
+            )
         if st.button("Back to New Inspection"):
             navigate_to("New Inspection")
         return
@@ -972,7 +999,14 @@ def render_inspection_history(history: List[Dict[str, Any]], model: Any):
                             conf_t = item.get("settings", {}).get("conf_threshold", 0.25)
 
                             detections = run_detection(reloaded_img, model=model, conf_threshold=conf_t, device="cpu")
-                            evaluation = evaluate_site_compliance(detections, required_gear=req_mode)
+                            import numpy as _np2
+                            _h2 = float(_np2.array(reloaded_img).shape[0])
+                            evaluation = evaluate_site_compliance(
+                                detections,
+                                required_gear=req_mode,
+                                image_height=_h2,
+                                strict_hardhat=st.session_state.strict_hardhat,
+                            )
                             annotated_img = annotate_image(reloaded_img, evaluation["workers"], evaluation["unassigned_gear"])
                             annotated_bytes = encode_image_bytes(annotated_img, format_ext="JPEG")
 
@@ -1026,7 +1060,7 @@ def render_reports_exports(active_inspection: Optional[Dict[str, Any]]):
             &bull; <strong>Source Image:</strong> <code>{active_inspection['image_name']}</code><br>
             &bull; <strong>Execution Date:</strong> <code>{active_inspection['timestamp']}</code><br>
             &bull; <strong>Site Safety Grade:</strong> <strong>{summary['site_status'].upper()}</strong> ({summary['compliance_rate']}% Compliance)<br>
-            &bull; <strong>Worker Breakdown:</strong> {summary['total_workers']} Detected | {summary['compliant_count']} Compliant | {summary['violation_count']} Violations
+            &bull; <strong>Worker Breakdown:</strong> {summary['total_workers']} Detected | {summary['compliant_count']} Compliant | {summary['violation_count']} Violations | {summary.get('needs_review_count', 0)} Needs Review
         </div>
         """,
         unsafe_allow_html=True,
@@ -1201,6 +1235,27 @@ def main():
             st.rerun()
 
         st.markdown("<hr style='margin: 20px 0 16px 0; border: none; border-top: 1px solid rgba(148,163,184,0.2);'>", unsafe_allow_html=True)
+
+        # ── Hardhat Enforcement Policy ────────────────────────────────────
+        st.markdown(
+            "<span style='font-size:11px; color:#94a3b8; text-transform:uppercase; "
+            "letter-spacing:0.5px;'>Hardhat Policy</span>",
+            unsafe_allow_html=True,
+        )
+        st.session_state.strict_hardhat = st.checkbox(
+            "Treat undetected hardhat as violation",
+            value=st.session_state.strict_hardhat,
+            help=(
+                "When ON, workers whose head zone has no detectable hardhat box are "
+                "marked as violations \u2014 but only if their person detection is reliable "
+                "(confidence \u2265 0.40, box height \u2265 12\u202f%% of frame, upright posture). "
+                "Unreliable persons are always flagged as Needs Review regardless."
+            ),
+        )
+        st.markdown(
+            "<hr style='margin: 12px 0 16px 0; border: none; border-top: 1px solid rgba(148,163,184,0.2);'>",
+            unsafe_allow_html=True,
+        )
 
         # Sidebar Footer
         st.caption(f"**Engine:** YOLOv8 (CPU Mode)\n\n**Weights:** `{os.path.basename(active_model_path)}`")

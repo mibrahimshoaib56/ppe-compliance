@@ -166,16 +166,37 @@ def format_worker_table(workers: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """Format worker list into records suitable for a pandas DataFrame."""
     records = []
     for w in workers:
+        rel_reason = w.get("reliability_reason", "")
+        h_reason = w.get("hardhat_reason", "")
+        v_reason = w.get("vest_reason", "")
+
+        # Hardhat column: show "Needs review: <reason>" when hardhat has a reason
+        # (e.g. conflicting detections or unreliable person); otherwise use capitalised status.
+        hardhat_raw = w["hardhat_status"]
+        if hardhat_raw == "unknown" and h_reason:
+            hardhat_display = f"Needs review: {h_reason}"
+        elif hardhat_raw == "unknown" and rel_reason:
+            hardhat_display = f"Needs review: {rel_reason}"
+        else:
+            hardhat_display = hardhat_raw.capitalize()
+
+        # Vest column: "Needs review: <reason>" if vest has a reason or unreliable person;
+        # "Not visible — check manually" if reliable but vest undetected;
+        # otherwise the capitalised vest status.
         vest_raw = w["vest_status"]
-        vest_display = (
-            "Not visible — check manually"
-            if vest_raw == "unknown"
-            else vest_raw.capitalize()
-        )
+        if vest_raw == "unknown" and v_reason:
+            vest_display = f"Needs review: {v_reason}"
+        elif vest_raw == "unknown" and rel_reason:
+            vest_display = f"Needs review: {rel_reason}"
+        elif vest_raw == "unknown":
+            vest_display = "Not visible — check manually"
+        else:
+            vest_display = vest_raw.capitalize()
+
         records.append({
             "Worker ID": f"Worker #{w['worker_id']}",
             "Overall Status": w["status"],
-            "Hardhat": w["hardhat_status"].capitalize(),
+            "Hardhat": hardhat_display,
             "Safety Vest": vest_display,
             "Confidence": f"{int(w.get('confidence', 1.0) * 100)}%",
         })

@@ -1,5 +1,689 @@
 [
   {
+    "id": "INSP-20261120-124330",
+    "timestamp": "2026-11-20 12:43:30",
+    "image_name": "ppe4.png",
+    "total_workers": 0,
+    "compliant_count": 0,
+    "violation_count": 0,
+    "unknown_count": 0,
+    "compliance_rate": 100.0,
+    "site_status": "Safe",
+    "image_path": "sample_images\\ppe4.png",
+    "settings": {
+      "conf_threshold": 0.25,
+      "required_gear": "both",
+      "show_gear_boxes": true,
+      "show_zones": false,
+      "strict_hardhat": true
+    }
+  },
+  {
+    "id": "INSP-20261120-124248",
+    "timestamp": "2026-11-20 12:42:48",
+    "image_name": "ppe2.png",
+    "total_workers": 6,
+    "compliant_count": 5,
+    "violation_count": 1,
+    "unknown_count": 0,
+    "compliance_rate": 83.3,
+    "site_status": "Warning",
+    "image_path": "sample_images\\ppe2.png",
+    "settings": {
+      "conf_threshold": 0.25,
+      "required_gear": "both",
+      "show_gear_boxes": true,
+      "show_zones": false,
+      "strict_hardhat": true
+    }
+  },
+  {
+    "id": "INSP-20261120-124227",
+    "timestamp": "2026-11-20 12:42:27",
+    "image_name": "sample_3.jpg",
+    "total_workers": 2,
+    "compliant_count": 0,
+    "violation_count": 2,
+    "unknown_count": 0,
+    "compliance_rate": 0.0,
+    "site_status": "Critical",
+    "image_path": "sample_images\\sample_3.jpg",
+    "settings": {
+      "conf_threshold": 0.25,
+      "required_gear": "both",
+      "show_gear_boxes": true,
+      "show_zones": false,
+      "strict_hardhat": true
+    }
+  },
+  {
+    "id": "INSP-20261120-124213",
+    "timestamp": "2026-11-20 12:42:13",
+    "image_name": "sample_1.jpg",
+    "total_workers": 1,
+    "compliant_count": 0,
+    "violation_count": 0,
+    "unknown_count": 1,
+    "compliance_rate": 0.0,
+    "site_status": "Critical",
+    "image_path": "sample_images\\sample_1.jpg",
+    "settings": {
+      "conf_threshold": 0.25,
+      "required_gear": "both",
+      "show_gear_boxes": true,
+      "show_zones": false,
+      "strict_hardhat": true
+    }
+  },
+  {
+    "id": "INSP-20261120-124157",
+    "timestamp": "2026-11-20 12:41:57",
+    "image_name": "imageppe4.jpeg",
+    "total_workers": 10,
+    "compliant_count": 5,
+    "violation_count": 3,
+    "unknown_count": 2,
+    "compliance_rate": 50.0,
+    "site_status": "Critical",
+    "image_path": "sample_images\\imageppe4.jpeg",
+    "settings": {
+      "conf_threshold": 0.25,
+      "required_gear": "both",
+      "show_gear_boxes": true,
+      "show_zones": false,
+      "strict_hardhat": true
+    }
+  },
+  {
+    "id": "INSP-20261120-124117",
+    "timestamp": "2026-11-20 12:41:17",
+    "image_name": "ppe10.jpg",
+    "total_workers": 0,
+    "compliant_count": 0,
+    "violation_count": 0,
+    "unknown_count": 0,
+    "compliance_rate": 100.0,
+    "site_status": "Safe",
+    "image_path": "sample_images\\ppe10.jpg",
+    "settings": {
+      "conf_threshold": 0.25,
+      "required_gear": "both",
+      "show_gear_boxes": true,
+      "show_zones": false,
+      "strict_hardhat": true
+    }
+  },
+  {
+    "id": "INSP-20261120-123045",
+    "timestamp": "2026-11-20 12:30:45",
+    "image_name": "ppe10.jpg",
+    "total_workers": 0,
+    "compliant_count": 0,
+    "violation_count": 0,
+    "unknown_count": 0,
+    "compliance_rate": 100.0,
+    "site_status": "Safe",
+    "image_path": "sample_images\\ppe10.jpg",
+    "settings": {
+      "conf_threshold": 0.25,
+      "required_gear": "both",
+      "show_gear_boxes": true,
+      "show_zones": false,
+      "strict_hardhat": true
+    }
+  },
+  {
+    "id": "INSP-20261120-123025",
+    "timestamp": "2026-11-20 12:30:25",
+    "image_name": "images.jpeg",
+    "total_workers": 0,
+    "compliant_count": 0,
+    "violation_count": 0,
+    "unknown_count": 0,
+    "compliance_rate": 100.0,
+    "site_status": "Safe",
+    "image_path": "sample_images\\images.jpeg",
+    "settings": {
+      "conf_threshold": 0.25,
+      "required_gear": "both",
+      "show_gear_boxes": true,
+      "show_zones": false,
+      "strict_hardhat": true
+    }
+  },
+  {
+    "id": "INSP-20261120-121355",
+    "timestamp": "2026-11-20 12:13:55",
+    "image_name": "images (1).jpeg",
+    "total_workers": 2,
+    "compliant_count": 2,
+    "violation_count": 0,
+    "unknown_count": 0,
+    "compliance_rate": 100.0,
+    "site_status": "Safe",
+    "image_path": "sample_images\\images (1).jpeg",
+    "settings": {
+      "conf_threshold": 0.25,
+      "required_gear": "both",
+      "show_gear_boxes": true,
+      "show_zones": false,
+      "strict_hardhat": true
+    }
+  },
+  {
+    "id": "INSP-20261119-223152",
+    "timestamp": "2026-11-19 22:31:52",
+    "image_name": "imagesppe2.jpeg",
+    "total_workers": 8,
+    "compliant_count": 3,
+    "violation_count": 4,
+    "unknown_count": 1,
+    "compliance_rate": 37.5,
+    "site_status": "Critical",
+    "image_path": "sample_images\\imagesppe2.jpeg",
+    "settings": {
+      "conf_threshold": 0.25,
+      "required_gear": "both",
+      "show_gear_boxes": true,
+      "show_zones": false,
+      "strict_hardhat": true
+    }
+  },
+  {
+    "id": "INSP-20261119-222432",
+    "timestamp": "2026-11-19 22:24:32",
+    "image_name": "ppe9.png",
+    "total_workers": 3,
+    "compliant_count": 1,
+    "violation_count": 2,
+    "unknown_count": 0,
+    "compliance_rate": 33.3,
+    "site_status": "Critical",
+    "image_path": "sample_images\\ppe9.png",
+    "settings": {
+      "conf_threshold": 0.25,
+      "required_gear": "both",
+      "show_gear_boxes": true,
+      "show_zones": false,
+      "strict_hardhat": true
+    }
+  },
+  {
+    "id": "INSP-20261119-222401",
+    "timestamp": "2026-11-19 22:24:01",
+    "image_name": "ppe10.png",
+    "total_workers": 0,
+    "compliant_count": 0,
+    "violation_count": 0,
+    "unknown_count": 0,
+    "compliance_rate": 100.0,
+    "site_status": "Safe",
+    "image_path": "sample_images\\ppe10.png",
+    "settings": {
+      "conf_threshold": 0.25,
+      "required_gear": "both",
+      "show_gear_boxes": true,
+      "show_zones": false,
+      "strict_hardhat": true
+    }
+  },
+  {
+    "id": "INSP-20261119-221536",
+    "timestamp": "2026-11-19 22:15:36",
+    "image_name": "ppe10.png",
+    "total_workers": 0,
+    "compliant_count": 0,
+    "violation_count": 0,
+    "unknown_count": 0,
+    "compliance_rate": 100.0,
+    "site_status": "Safe",
+    "image_path": "sample_images\\ppe10.png",
+    "settings": {
+      "conf_threshold": 0.25,
+      "required_gear": "both",
+      "show_gear_boxes": true,
+      "show_zones": false,
+      "strict_hardhat": true
+    }
+  },
+  {
+    "id": "INSP-20261119-221459",
+    "timestamp": "2026-11-19 22:14:59",
+    "image_name": "ppe7.png",
+    "total_workers": 2,
+    "compliant_count": 0,
+    "violation_count": 2,
+    "unknown_count": 0,
+    "compliance_rate": 0.0,
+    "site_status": "Critical",
+    "image_path": "sample_images\\ppe7.png",
+    "settings": {
+      "conf_threshold": 0.25,
+      "required_gear": "both",
+      "show_gear_boxes": true,
+      "show_zones": false,
+      "strict_hardhat": true
+    }
+  },
+  {
+    "id": "INSP-20261119-220147",
+    "timestamp": "2026-11-19 22:01:47",
+    "image_name": "ppe10.jpeg",
+    "total_workers": 0,
+    "compliant_count": 0,
+    "violation_count": 0,
+    "unknown_count": 0,
+    "compliance_rate": 100.0,
+    "site_status": "Safe",
+    "image_path": "sample_images\\ppe10.jpeg",
+    "settings": {
+      "conf_threshold": 0.25,
+      "required_gear": "both",
+      "show_gear_boxes": true,
+      "show_zones": false,
+      "strict_hardhat": true
+    }
+  },
+  {
+    "id": "INSP-20261119-220027",
+    "timestamp": "2026-11-19 22:00:27",
+    "image_name": "ppe3.jpeg",
+    "total_workers": 3,
+    "compliant_count": 2,
+    "violation_count": 0,
+    "unknown_count": 1,
+    "compliance_rate": 66.7,
+    "site_status": "Warning",
+    "image_path": "sample_images\\ppe3.jpeg",
+    "settings": {
+      "conf_threshold": 0.25,
+      "required_gear": "both",
+      "show_gear_boxes": true,
+      "show_zones": false,
+      "strict_hardhat": true
+    }
+  },
+  {
+    "id": "INSP-20261119-220010",
+    "timestamp": "2026-11-19 22:00:10",
+    "image_name": "images.jpeg",
+    "total_workers": 0,
+    "compliant_count": 0,
+    "violation_count": 0,
+    "unknown_count": 0,
+    "compliance_rate": 100.0,
+    "site_status": "Safe",
+    "image_path": "sample_images\\images.jpeg",
+    "settings": {
+      "conf_threshold": 0.5,
+      "required_gear": "both",
+      "show_gear_boxes": true,
+      "show_zones": false,
+      "strict_hardhat": true
+    }
+  },
+  {
+    "id": "INSP-20261119-215950",
+    "timestamp": "2026-11-19 21:59:50",
+    "image_name": "images.jpeg",
+    "total_workers": 0,
+    "compliant_count": 0,
+    "violation_count": 0,
+    "unknown_count": 0,
+    "compliance_rate": 100.0,
+    "site_status": "Safe",
+    "image_path": "sample_images\\images.jpeg",
+    "settings": {
+      "conf_threshold": 0.25,
+      "required_gear": "both",
+      "show_gear_boxes": true,
+      "show_zones": false,
+      "strict_hardhat": true
+    }
+  },
+  {
+    "id": "INSP-20261119-215210",
+    "timestamp": "2026-11-19 21:52:10",
+    "image_name": "ppe2.jpeg",
+    "total_workers": 6,
+    "compliant_count": 5,
+    "violation_count": 0,
+    "unknown_count": 1,
+    "compliance_rate": 83.3,
+    "site_status": "Warning",
+    "image_path": "sample_images\\ppe2.jpeg",
+    "settings": {
+      "conf_threshold": 0.25,
+      "required_gear": "both",
+      "show_gear_boxes": true,
+      "show_zones": false
+    }
+  },
+  {
+    "id": "INSP-20261119-215154",
+    "timestamp": "2026-11-19 21:51:54",
+    "image_name": "ppe1.jpeg",
+    "total_workers": 1,
+    "compliant_count": 0,
+    "violation_count": 0,
+    "unknown_count": 1,
+    "compliance_rate": 0.0,
+    "site_status": "Critical",
+    "image_path": "sample_images\\ppe1.jpeg",
+    "settings": {
+      "conf_threshold": 0.55,
+      "required_gear": "both",
+      "show_gear_boxes": true,
+      "show_zones": false
+    }
+  },
+  {
+    "id": "INSP-20261119-215129",
+    "timestamp": "2026-11-19 21:51:29",
+    "image_name": "ppe1.jpeg",
+    "total_workers": 1,
+    "compliant_count": 0,
+    "violation_count": 0,
+    "unknown_count": 1,
+    "compliance_rate": 0.0,
+    "site_status": "Critical",
+    "image_path": "sample_images\\ppe1.jpeg",
+    "settings": {
+      "conf_threshold": 0.25,
+      "required_gear": "both",
+      "show_gear_boxes": true,
+      "show_zones": false
+    }
+  },
+  {
+    "id": "INSP-20261119-214702",
+    "timestamp": "2026-11-19 21:47:02",
+    "image_name": "ppe10.jpeg",
+    "total_workers": 0,
+    "compliant_count": 0,
+    "violation_count": 0,
+    "unknown_count": 0,
+    "compliance_rate": 100.0,
+    "site_status": "Safe",
+    "image_path": "sample_images\\ppe10.jpeg",
+    "settings": {
+      "conf_threshold": 0.45,
+      "required_gear": "both",
+      "show_gear_boxes": true,
+      "show_zones": false
+    }
+  },
+  {
+    "id": "INSP-20261119-214641",
+    "timestamp": "2026-11-19 21:46:41",
+    "image_name": "ppe10.jpeg",
+    "total_workers": 0,
+    "compliant_count": 0,
+    "violation_count": 0,
+    "unknown_count": 0,
+    "compliance_rate": 100.0,
+    "site_status": "Safe",
+    "image_path": "sample_images\\ppe10.jpeg",
+    "settings": {
+      "conf_threshold": 0.25,
+      "required_gear": "both",
+      "show_gear_boxes": true,
+      "show_zones": false
+    }
+  },
+  {
+    "id": "INSP-20261119-214523",
+    "timestamp": "2026-11-19 21:45:23",
+    "image_name": "ppe9.jpeg",
+    "total_workers": 3,
+    "compliant_count": 1,
+    "violation_count": 2,
+    "unknown_count": 0,
+    "compliance_rate": 33.3,
+    "site_status": "Critical",
+    "image_path": "sample_images\\ppe9.jpeg",
+    "settings": {
+      "conf_threshold": 0.25,
+      "required_gear": "both",
+      "show_gear_boxes": true,
+      "show_zones": false
+    }
+  },
+  {
+    "id": "INSP-20261119-214412",
+    "timestamp": "2026-11-19 21:44:12",
+    "image_name": "ppe7.jpeg",
+    "total_workers": 2,
+    "compliant_count": 0,
+    "violation_count": 1,
+    "unknown_count": 1,
+    "compliance_rate": 0.0,
+    "site_status": "Critical",
+    "image_path": "sample_images\\ppe7.jpeg",
+    "settings": {
+      "conf_threshold": 0.25,
+      "required_gear": "both",
+      "show_gear_boxes": true,
+      "show_zones": false
+    }
+  },
+  {
+    "id": "INSP-20261119-214339",
+    "timestamp": "2026-11-19 21:43:39",
+    "image_name": "ppe7.jpeg",
+    "total_workers": 1,
+    "compliant_count": 0,
+    "violation_count": 0,
+    "unknown_count": 1,
+    "compliance_rate": 0.0,
+    "site_status": "Critical",
+    "image_path": "sample_images\\ppe7.jpeg",
+    "settings": {
+      "conf_threshold": 0.45,
+      "required_gear": "both",
+      "show_gear_boxes": true,
+      "show_zones": false
+    }
+  },
+  {
+    "id": "INSP-20261119-214311",
+    "timestamp": "2026-11-19 21:43:11",
+    "image_name": "ppe7.jpeg",
+    "total_workers": 0,
+    "compliant_count": 0,
+    "violation_count": 0,
+    "unknown_count": 0,
+    "compliance_rate": 100.0,
+    "site_status": "Safe",
+    "image_path": "sample_images\\ppe7.jpeg",
+    "settings": {
+      "conf_threshold": 0.6,
+      "required_gear": "both",
+      "show_gear_boxes": true,
+      "show_zones": false
+    }
+  },
+  {
+    "id": "INSP-20261119-214239",
+    "timestamp": "2026-11-19 21:42:39",
+    "image_name": "ppe7.jpeg",
+    "total_workers": 2,
+    "compliant_count": 0,
+    "violation_count": 1,
+    "unknown_count": 1,
+    "compliance_rate": 0.0,
+    "site_status": "Critical",
+    "image_path": "sample_images\\ppe7.jpeg",
+    "settings": {
+      "conf_threshold": 0.25,
+      "required_gear": "both",
+      "show_gear_boxes": true,
+      "show_zones": false
+    }
+  },
+  {
+    "id": "INSP-20261119-214004",
+    "timestamp": "2026-11-19 21:40:04",
+    "image_name": "ppe8.jpeg",
+    "total_workers": 1,
+    "compliant_count": 0,
+    "violation_count": 1,
+    "unknown_count": 0,
+    "compliance_rate": 0.0,
+    "site_status": "Critical",
+    "image_path": "sample_images\\ppe8.jpeg",
+    "settings": {
+      "conf_threshold": 0.25,
+      "required_gear": "both",
+      "show_gear_boxes": true,
+      "show_zones": false
+    }
+  },
+  {
+    "id": "INSP-20261119-213951",
+    "timestamp": "2026-11-19 21:39:51",
+    "image_name": "ppe4.jpeg",
+    "total_workers": 0,
+    "compliant_count": 0,
+    "violation_count": 0,
+    "unknown_count": 0,
+    "compliance_rate": 100.0,
+    "site_status": "Safe",
+    "image_path": "sample_images\\ppe4.jpeg",
+    "settings": {
+      "conf_threshold": 0.65,
+      "required_gear": "both",
+      "show_gear_boxes": true,
+      "show_zones": false
+    }
+  },
+  {
+    "id": "INSP-20261119-213925",
+    "timestamp": "2026-11-19 21:39:25",
+    "image_name": "ppe4.jpeg",
+    "total_workers": 0,
+    "compliant_count": 0,
+    "violation_count": 0,
+    "unknown_count": 0,
+    "compliance_rate": 100.0,
+    "site_status": "Safe",
+    "image_path": "sample_images\\ppe4.jpeg",
+    "settings": {
+      "conf_threshold": 0.25,
+      "required_gear": "both",
+      "show_gear_boxes": true,
+      "show_zones": false
+    }
+  },
+  {
+    "id": "INSP-20261119-213347",
+    "timestamp": "2026-11-19 21:33:47",
+    "image_name": "ppe7.jpeg",
+    "total_workers": 2,
+    "compliant_count": 0,
+    "violation_count": 1,
+    "unknown_count": 1,
+    "compliance_rate": 0.0,
+    "site_status": "Critical",
+    "image_path": "sample_images\\ppe7.jpeg",
+    "settings": {
+      "conf_threshold": 0.25,
+      "required_gear": "both",
+      "show_gear_boxes": true,
+      "show_zones": false
+    }
+  },
+  {
+    "id": "INSP-20261119-213323",
+    "timestamp": "2026-11-19 21:33:23",
+    "image_name": "ppe3.jpeg",
+    "total_workers": 3,
+    "compliant_count": 2,
+    "violation_count": 0,
+    "unknown_count": 1,
+    "compliance_rate": 66.7,
+    "site_status": "Warning",
+    "image_path": "sample_images\\ppe3.jpeg",
+    "settings": {
+      "conf_threshold": 0.25,
+      "required_gear": "both",
+      "show_gear_boxes": true,
+      "show_zones": false
+    }
+  },
+  {
+    "id": "INSP-20261119-213304",
+    "timestamp": "2026-11-19 21:33:04",
+    "image_name": "ppe4.jpeg",
+    "total_workers": 0,
+    "compliant_count": 0,
+    "violation_count": 0,
+    "unknown_count": 0,
+    "compliance_rate": 100.0,
+    "site_status": "Safe",
+    "image_path": "sample_images\\ppe4.jpeg",
+    "settings": {
+      "conf_threshold": 0.25,
+      "required_gear": "both",
+      "show_gear_boxes": true,
+      "show_zones": false
+    }
+  },
+  {
+    "id": "INSP-20261119-213233",
+    "timestamp": "2026-11-19 21:32:33",
+    "image_name": "ppe4.jpeg",
+    "total_workers": 0,
+    "compliant_count": 0,
+    "violation_count": 0,
+    "unknown_count": 0,
+    "compliance_rate": 100.0,
+    "site_status": "Safe",
+    "image_path": "sample_images\\ppe4.jpeg",
+    "settings": {
+      "conf_threshold": 0.1,
+      "required_gear": "both",
+      "show_gear_boxes": true,
+      "show_zones": true
+    }
+  },
+  {
+    "id": "INSP-20261119-213153",
+    "timestamp": "2026-11-19 21:31:53",
+    "image_name": "images.jpeg",
+    "total_workers": 0,
+    "compliant_count": 0,
+    "violation_count": 0,
+    "unknown_count": 0,
+    "compliance_rate": 100.0,
+    "site_status": "Safe",
+    "image_path": "sample_images\\images.jpeg",
+    "settings": {
+      "conf_threshold": 0.25,
+      "required_gear": "both",
+      "show_gear_boxes": true,
+      "show_zones": false
+    }
+  },
+  {
+    "id": "INSP-20261119-212607",
+    "timestamp": "2026-11-19 21:26:07",
+    "image_name": "ppe3.jpeg",
+    "total_workers": 3,
+    "compliant_count": 2,
+    "violation_count": 0,
+    "unknown_count": 1,
+    "compliance_rate": 66.7,
+    "site_status": "Warning",
+    "image_path": "sample_images\\ppe3.jpeg",
+    "settings": {
+      "conf_threshold": 0.25,
+      "required_gear": "both",
+      "show_gear_boxes": true,
+      "show_zones": false
+    }
+  },
+  {
     "id": "INSP-20261119-115258",
     "timestamp": "2026-11-19 11:52:58",
     "image_name": "imagesppe1.jpeg",
