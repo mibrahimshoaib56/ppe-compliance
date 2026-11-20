@@ -256,7 +256,7 @@ def evaluate_site_compliance(
 
     Args:
         detections: List of detection dictionaries (class name, confidence, box).
-        required_gear: 'both' (Hardhat + Vest) or 'hardhat_only'.
+        required_gear: 'both' (Hardhat + Vest), 'hardhat_only', or 'vest_only'.
         overlap_threshold: Minimum overlap ratio for zone association.
         image_height: Full image height in pixels, used to assess person box
             size relative to frame. Pass None to skip the size reliability check.
@@ -387,12 +387,29 @@ def evaluate_site_compliance(
             worker["vest_status"] = "unknown"
 
         # ── Overall worker compliance status ─────────────────────────────────
-        check_vest = (required_gear == "both")
-
         h_stat = worker["hardhat_status"]
         v_stat = worker["vest_status"]
 
-        if check_vest:
+        if required_gear == "vest_only":
+            # Safety Vest only mode: evaluate solely on vest presence/absence
+            if v_stat == "missing":
+                worker["status"] = "Missing vest"
+            elif v_stat == "present":
+                worker["status"] = "Compliant"
+            elif v_stat == "unknown":
+                worker["status"] = "Vest not visible: manual check"
+            else:
+                worker["status"] = "Unknown"
+        elif required_gear == "hardhat_only":
+            # Hardhat only mode
+            if h_stat == "missing":
+                worker["status"] = "Missing hardhat"
+            elif h_stat == "present":
+                worker["status"] = "Compliant"
+            else:
+                worker["status"] = "Unknown"
+        else:
+            # Both Hardhat and Safety Vest
             if h_stat == "missing" and v_stat == "missing":
                 worker["status"] = "Missing both"
             elif h_stat == "missing":
@@ -406,21 +423,13 @@ def evaluate_site_compliance(
                 worker["status"] = "Vest not visible: manual check"
             else:
                 worker["status"] = "Unknown"
-        else:
-            # Hardhat only
-            if h_stat == "missing":
-                worker["status"] = "Missing hardhat"
-            elif h_stat == "present":
-                worker["status"] = "Compliant"
-            else:
-                worker["status"] = "Unknown"
 
         # ── Apply reliability or conflict reason ─────────────────────────────
         # For unreliable persons, always set status to "Needs review: <reason>".
         # Never delete a person from the list because of these guards.
         has_conflict = (
-            worker["hardhat_reason"] == "conflicting detections"
-            or (check_vest and worker["vest_reason"] == "conflicting detections")
+            (required_gear != "vest_only" and worker["hardhat_reason"] == "conflicting detections")
+            or (required_gear != "hardhat_only" and worker["vest_reason"] == "conflicting detections")
         )
         if worker["reliability_reason"]:
             worker["status"] = f"Needs review: {worker['reliability_reason']}"

@@ -20,6 +20,24 @@ COLOR_TEXT_WHITE: Tuple[int, int, int] = (255, 255, 255)
 COLOR_TEXT_BLACK: Tuple[int, int, int] = (0, 0, 0)
 
 
+def compute_box_thickness(frame_width: int) -> int:
+    """Compute bounding box border thickness proportional to frame width.
+
+    Scales linearly so boxes look equally fine regardless of resolution:
+    - 416px wide  -> 1px  (thin, clean)
+    - 640px wide  -> 2px  (standard)
+    - 1280px wide -> 3px  (high-res)
+
+    Args:
+        frame_width: Width of the frame in pixels.
+
+    Returns:
+        int: Border thickness in pixels (minimum 1).
+    """
+    # 1px per 400px of frame width, clamped between 1 and 4
+    return max(1, min(4, round(frame_width / 400)))
+
+
 def ensure_rgb_numpy(image: Union[str, np.ndarray, Image.Image]) -> np.ndarray:
     """Ensure the image is a numpy array in RGB channel order."""
     if isinstance(image, str):
@@ -84,6 +102,13 @@ def annotate_image(
         np.ndarray: Annotated RGB image.
     """
     canvas = ensure_rgb_numpy(image)
+    frame_w = canvas.shape[1]
+
+    # Proportional thickness: 1px per 400px of frame width, clamped to [1, 4]
+    person_thick = compute_box_thickness(frame_w)       # e.g. 2 at 640px
+    gear_thick = max(1, person_thick - 1)               # 1 thinner than person box
+    # Font scale also proportional so labels stay readable at any resolution
+    base_font = max(0.3, frame_w / 1200)
 
     # 1. Optionally draw head/torso zones faintly
     if show_zones:
@@ -105,14 +130,14 @@ def annotate_image(
                 else:
                     g_color = COLOR_GEAR_POS
 
-                cv2.rectangle(canvas, (gx1, gy1), (gx2, gy2), g_color, 2)
+                cv2.rectangle(canvas, (gx1, gy1), (gx2, gy2), g_color, gear_thick)
                 draw_label_tag(
                     canvas,
                     f"{g_name} {int(gear.get('confidence', 1.0) * 100)}%",
                     (gx1, gy1),
                     bg_color=g_color,
                     text_color=COLOR_TEXT_WHITE,
-                    font_scale=0.4,
+                    font_scale=max(0.3, base_font - 0.08),
                 )
 
         # Draw unassigned gear boxes faintly
@@ -126,7 +151,7 @@ def annotate_image(
                     (gx1, gy1),
                     bg_color=COLOR_CONTEXT,
                     text_color=COLOR_TEXT_BLACK,
-                    font_scale=0.35,
+                    font_scale=max(0.28, base_font - 0.12),
                 )
 
     # 3. Draw worker bounding boxes on top
@@ -141,8 +166,8 @@ def annotate_image(
         else:
             box_color = COLOR_UNKNOWN
 
-        # Thick boundary box for person
-        cv2.rectangle(canvas, (x1, y1), (x2, y2), box_color, 3)
+        # Proportional border thickness for person box
+        cv2.rectangle(canvas, (x1, y1), (x2, y2), box_color, person_thick)
 
         # Worker tag
         worker_id = w.get("worker_id", 1)
@@ -155,8 +180,8 @@ def annotate_image(
             (x1, y1),
             bg_color=box_color,
             text_color=COLOR_TEXT_WHITE,
-            font_scale=0.55,
-            thickness=2,
+            font_scale=max(0.35, base_font),
+            thickness=max(1, person_thick - 1),
         )
 
     return canvas

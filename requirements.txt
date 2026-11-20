@@ -4,3 +4,6 @@ opencv-python
 pillow
 pandas
 pytest
+imageio
+imageio-ffmpeg
+yt-dlp

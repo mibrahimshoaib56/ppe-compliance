@@ -1,8 +1,13 @@
-"""Pure functions and utilities for video PPE compliance processing.
+"""Pure functions and utilities for CCTV-style Video PPE compliance processing.
 
-Handles video metadata reading, frame sampling at fixed intervals,
-summary aggregation, report generation, and error checking.
-Decoupled from Streamlit to allow pure unit testing.
+Features:
+- Sequential frame decoding with OpenCV.
+- Proportional frame resizing to MAX_FRAME_WIDTH (640px).
+- Detection and compliance evaluation on every PROCESS_EVERY_N-th frame (default: 2).
+- Propagation of most recent detections and statuses onto intermediate frames
+  so bounding boxes follow the movement without inter-frame tracking.
+- H.264 MP4 export using imageio-ffmpeg with yuv420p pixel format, capped at OUTPUT_MAX_FPS (30).
+- Executive summary aggregation and CSV reporting computed strictly on analyzed frames.
 """
 
 import math
@@ -15,24 +20,35 @@ import numpy as np
 # NAMED CONSTANTS & LIMITS
 # ============================================================================
 
-# Maximum video duration in seconds before displaying a duration warning / capping
-MAX_VIDEO_SECONDS: int = 60
+# Maximum video duration in seconds to process (analyze at most the first 30 seconds)
+MAX_VIDEO_SECONDS: int = 30
 
-# Default FPS used as fallback if video metadata reports <= 0, NaN, or invalid frame rate
+# Fallback frames per second if video metadata reports 0, negative, NaN, or invalid FPS
 FALLBACK_FPS: float = 25.0
 
-# Sampling frequency: sample 1 frame every (1 / SAMPLE_FPS) seconds (1 frame per second)
-SAMPLE_FPS: float = 1.0
+# Inference stride: run detection + compliance on every N-th frame.
+# Set to 1 to analyze every frame for maximum smoothness (slower per frame on CPU,
+# but produces the most fluid bounding-box motion in the output video).
+PROCESS_EVERY_N: int = 1
 
-# Hard cap on the maximum number of frames sampled and analyzed per video
-MAX_SAMPLED_FRAMES: int = 60
+# Maximum frame width in pixels before inference (resized proportionally).
+# 416px is a standard YOLO inference size that is ~30% faster than 640px on CPU
+# with minimal accuracy loss, giving noticeably more fluid output on CPU-only machines.
+MAX_FRAME_WIDTH: int = 416
 
-# Number of top violation frames highlighted in the visual risk gallery
+# Maximum output video FPS cap for H.264 mp4 encoding
+OUTPUT_MAX_FPS: int = 30
+
+# Number of highest-violation moments to highlight in the risk gallery
 TOP_VIOLATION_FRAMES_COUNT: int = 3
+
+# Number of consecutive analyzed frames used for temporal rolling smoothing (default: 7).
+# Suppresses transient 1-2 frame posture/occlusion flickers without masking sustained violations.
+TEMPORAL_SMOOTHING_WINDOW: int = 7
 
 
 # ============================================================================
-# PURE SAMPLING & METADATA FUNCTIONS
+# PURE LOGIC FUNCTIONS
 # ============================================================================
 
 def validate_and_get_fps(fps: Any) -> float:
@@ -71,148 +87,341 @@ def calculate_video_duration(total_frames: int, fps: float) -> float:
     return float(total_frames) / safe_fps
 
 
-def compute_sample_frame_indices(
+def compute_max_frames_to_process(
     total_frames: int,
     fps: float,
-    sample_fps: float = SAMPLE_FPS,
-    max_frames: int = MAX_SAMPLED_FRAMES,
-) -> List[int]:
-    """Compute frame indices to sample at fixed time intervals, up to max_frames.
-
-    Samples one frame every (1 / sample_fps) seconds.
+    max_seconds: int = MAX_VIDEO_SECONDS,
+) -> int:
+    """Calculate the maximum number of sequential frames to process, capped by max_seconds.
 
     Args:
-        total_frames: Total frame count of the video.
-        fps: Video frames per second.
-        sample_fps: Sampling frequency in frames per second (default: 1.0).
-        max_frames: Hard ceiling on the count of sampled frames (default: 60).
+        total_frames: Total number of frames available in the video.
+        fps: Frames per second.
+        max_seconds: Maximum duration in seconds to analyze (default: 30).
 
     Returns:
-        List[int]: Strictly increasing list of integer frame indices to extract.
+        int: Number of frames to read sequentially (min of total_frames and max_seconds * fps).
     """
-    if total_frames <= 0 or max_frames <= 0:
-        return []
-
+    if total_frames <= 0 or max_seconds <= 0:
+        return 0
     safe_fps = validate_and_get_fps(fps)
-    safe_sample_fps = max(0.001, float(sample_fps))
-
-    # Step interval in frames (e.g. 25 fps / 1.0 sample_fps = 25 frames between samples)
-    step = max(1, int(round(safe_fps / safe_sample_fps)))
-
-    indices: List[int] = []
-    current_idx = 0
-    while current_idx < total_frames and len(indices) < max_frames:
-        indices.append(current_idx)
-        current_idx += step
-
-    return indices
+    max_cap = int(math.ceil(safe_fps * max_seconds))
+    return min(total_frames, max_cap)
 
 
-# ============================================================================
-# SUMMARY & AGGREGATION LOGIC
-# ============================================================================
+def compute_start_frame_index(
+    start_seconds: float,
+    fps: float,
+    total_frames: int,
+) -> int:
+    """Calculate the 0-based frame index corresponding to a starting timestamp in seconds.
 
-def summarize_video_results(frame_records: List[Dict[str, Any]]) -> Dict[str, Any]:
-    """Aggregate per-frame evaluation records into an executive video audit summary.
-
-    Note on compliance rate: frames with zero workers are counted separately
-    and are NOT treated as 100% compliant. Average compliance rate is computed
-    strictly over frames that contained at least one worker.
+    Pure function that validates FPS, clamps start_seconds, and bounds the frame
+    index within [0, max(0, total_frames)].
 
     Args:
-        frame_records: List of per-frame dictionaries, each containing:
-            - 'frame_number': int
-            - 'timestamp_sec': float
-            - 'total_workers': int
-            - 'compliant_count': int
-            - 'violation_count': int
-            - 'needs_review_count': int
-            - 'compliance_rate': Optional[float]
+        start_seconds: Desired starting time in seconds (>= 0.0).
+        fps: Video frames per second.
+        total_frames: Total number of frames in the video.
+
+    Returns:
+        int: 0-indexed frame index clamped to [0, max(0, total_frames)].
+    """
+    if start_seconds is None or start_seconds <= 0.0:
+        return 0
+    safe_fps = validate_and_get_fps(fps)
+    calculated_index = int(round(float(start_seconds) * safe_fps))
+    return max(0, min(calculated_index, max(0, total_frames)))
+
+
+def compute_cctv_frame_range(
+    total_frames: int,
+    fps: float,
+    start_seconds: float = 0.0,
+    max_seconds: int = MAX_VIDEO_SECONDS,
+) -> Tuple[int, int]:
+    """Calculate the [start_frame_index, end_frame_index) range for CCTV processing.
+
+    Pure function: Given total frames, FPS, start time, and max analysis window,
+    returns the half-open slice [start_idx, end_idx) to analyze.
+
+    Args:
+        total_frames: Total available frames in the video.
+        fps: Video frames per second.
+        start_seconds: Start offset in seconds.
+        max_seconds: Maximum duration to process in seconds from the start.
+
+    Returns:
+        Tuple[int, int]: (start_frame_index, end_frame_index) half-open range.
+    """
+    if total_frames <= 0 or max_seconds <= 0:
+        return (0, 0)
+    start_idx = compute_start_frame_index(start_seconds, fps, total_frames)
+    safe_fps = validate_and_get_fps(fps)
+    max_frames_to_read = int(math.ceil(safe_fps * max_seconds))
+    end_idx = min(total_frames, start_idx + max_frames_to_read)
+    return (start_idx, end_idx)
+
+
+def is_analyzed_frame(frame_index: int, process_every_n: int = PROCESS_EVERY_N) -> bool:
+    """Determine whether a given 0-indexed frame should undergo detection and compliance.
+
+    Args:
+        frame_index: 0-indexed sequential frame number.
+        process_every_n: Inference stride (default: 2).
+
+    Returns:
+        bool: True if detection + compliance should run on this frame, False otherwise.
+    """
+    stride = max(1, int(process_every_n))
+    return (frame_index % stride) == 0
+
+
+def compute_resized_dimensions(
+    orig_w: int,
+    orig_h: int,
+    max_width: int = MAX_FRAME_WIDTH,
+) -> Tuple[int, int]:
+    """Compute new (width, height) scaled proportionally so width <= max_width.
+
+    Ensures dimensions are even integers for H.264 video codec compatibility.
+
+    Args:
+        orig_w: Original image/frame width.
+        orig_h: Original image/frame height.
+        max_width: Target maximum width constraint (default: 640).
+
+    Returns:
+        Tuple[int, int]: (new_width, new_height) where new_width <= max_width.
+    """
+    if orig_w <= 0 or orig_h <= 0:
+        return (0, 0)
+
+    if orig_w <= max_width:
+        target_w = orig_w
+        target_h = orig_h
+    else:
+        scale = float(max_width) / float(orig_w)
+        target_w = max_width
+        target_h = max(1, int(round(orig_h * scale)))
+
+    # Ensure even dimensions for H.264 encoder compatibility (yuv420p)
+    if target_w % 2 != 0:
+        target_w -= 1
+    if target_h % 2 != 0:
+        target_h -= 1
+
+    return (max(2, target_w), max(2, target_h))
+
+
+def compute_output_fps(source_fps: float, max_fps: int = OUTPUT_MAX_FPS) -> float:
+    """Compute the safe output video frame rate capped at OUTPUT_MAX_FPS (30).
+
+    Args:
+        source_fps: Native video FPS.
+        max_fps: Upper ceiling for output video encoding.
+
+    Returns:
+        float: Output encoding FPS.
+    """
+    safe_fps = validate_and_get_fps(source_fps)
+    return min(safe_fps, float(max_fps))
+
+
+# ============================================================================
+# SUMMARY & AGGREGATION LOGIC (COMPUTED ON ANALYZED FRAMES ONLY)
+# ============================================================================
+
+def apply_temporal_smoothing(
+    analyzed_records: List[Dict[str, Any]],
+    window_size: int = TEMPORAL_SMOOTHING_WINDOW,
+) -> List[Dict[str, Any]]:
+    """Apply rolling median temporal smoothing to CCTV analyzed frame records.
+
+    Filters out transient single-frame detection flickers caused by brief turns,
+    occlusions, or posture shifts without masking sustained safety violations.
+
+    Args:
+        analyzed_records: List of raw analyzed frame dictionaries.
+        window_size: Odd integer defining the temporal rolling window size (default: 7).
+
+    Returns:
+        List[Dict[str, Any]]: New list of records with smoothed worker counts and compliance rates.
+    """
+    n = len(analyzed_records)
+    if n == 0:
+        return []
+
+    # Ensure window_size is an odd integer >= 1
+    w_size = max(1, int(window_size))
+    if w_size % 2 == 0:
+        w_size += 1
+
+    half_w = w_size // 2
+    smoothed_records: List[Dict[str, Any]] = []
+
+    for i in range(n):
+        start_idx = max(0, i - half_w)
+        end_idx = min(n, i + half_w + 1)
+        window = analyzed_records[start_idx:end_idx]
+
+        # Extract window distributions
+        worker_counts = [r.get("total_workers", 0) for r in window]
+        viol_counts = [r.get("violation_count", 0) for r in window]
+        comp_counts = [r.get("compliant_count", 0) for r in window]
+        rev_counts = [r.get("needs_review_count", 0) for r in window]
+
+        smoothed_total_w = int(round(float(np.median(worker_counts))))
+        smoothed_viol = int(round(float(np.median(viol_counts))))
+        smoothed_comp = int(round(float(np.median(comp_counts))))
+        smoothed_rev = int(round(float(np.median(rev_counts))))
+
+        # Rate smoothing: if smoothed workers > 0, compute median of available rates
+        if smoothed_total_w > 0:
+            rates = [
+                r["compliance_rate"]
+                for r in window
+                if r.get("total_workers", 0) > 0 and r.get("compliance_rate") is not None
+            ]
+            if rates:
+                smoothed_rate = round(float(np.median(rates)), 1)
+            elif (smoothed_comp + smoothed_viol) > 0:
+                smoothed_rate = round((smoothed_comp / (smoothed_comp + smoothed_viol)) * 100.0, 1)
+            else:
+                smoothed_rate = 0.0
+        else:
+            smoothed_comp = 0
+            smoothed_viol = 0
+            smoothed_rev = 0
+            smoothed_rate = None
+
+        raw_rec = analyzed_records[i]
+        new_rec = dict(raw_rec)
+        new_rec.update({
+            "total_workers": smoothed_total_w,
+            "compliant_count": smoothed_comp,
+            "violation_count": smoothed_viol,
+            "needs_review_count": smoothed_rev,
+            "compliance_rate": smoothed_rate,
+            "raw_total_workers": raw_rec.get("total_workers", 0),
+            "raw_violation_count": raw_rec.get("violation_count", 0),
+            "raw_compliance_rate": raw_rec.get("compliance_rate"),
+        })
+        smoothed_records.append(new_rec)
+
+    return smoothed_records
+
+
+def summarize_cctv_results(
+    analyzed_records: List[Dict[str, Any]],
+    use_smoothing: bool = False,
+    smoothing_window: int = TEMPORAL_SMOOTHING_WINDOW,
+) -> Dict[str, Any]:
+    """Aggregate analyzed frame records into an executive CCTV audit summary.
+
+    Computed strictly on the analyzed frames where detection + compliance ran.
+    Frames with zero workers are counted separately and are NEVER treated as 100% compliant.
+    Optionally applies temporal rolling smoothing to suppress single-frame posture flickers.
+
+    Args:
+        analyzed_records: List of dictionaries for analyzed frames.
+        use_smoothing: Whether to apply temporal median smoothing before aggregation.
+        smoothing_window: Window size for temporal smoothing if enabled (default: 7).
 
     Returns:
         Dict[str, Any]: Aggregated summary metrics.
     """
-    total_frames_analyzed = len(frame_records)
-    if total_frames_analyzed == 0:
+    if use_smoothing:
+        effective_records = apply_temporal_smoothing(analyzed_records, window_size=smoothing_window)
+    else:
+        effective_records = analyzed_records
+
+    frames_analyzed = len(effective_records)
+    if frames_analyzed == 0:
         return {
-            "total_frames_analyzed": 0,
+            "frames_analyzed": 0,
             "frames_with_workers": 0,
             "frames_without_workers": 0,
             "frames_with_violations": 0,
             "average_compliance_rate": 0.0,
             "has_worker_frames": False,
-            "top_violation_frames": [],
+            "top_violation_moments": [],
+            "smoothing_applied": use_smoothing,
+            "smoothing_window": smoothing_window if use_smoothing else 0,
         }
 
-    frames_with_workers = sum(1 for f in frame_records if f.get("total_workers", 0) > 0)
-    frames_without_workers = total_frames_analyzed - frames_with_workers
-    frames_with_violations = sum(1 for f in frame_records if f.get("violation_count", 0) > 0)
+    frames_with_workers = sum(1 for f in effective_records if f.get("total_workers", 0) > 0)
+    frames_without_workers = frames_analyzed - frames_with_workers
+    frames_with_violations = sum(1 for f in effective_records if f.get("violation_count", 0) > 0)
 
-    # Average compliance rate: strictly over frames with detected workers
-    worker_frame_rates = [
+    # Average compliance rate: computed strictly over frames with detected workers
+    worker_rates = [
         f["compliance_rate"]
-        for f in frame_records
+        for f in effective_records
         if f.get("total_workers", 0) > 0 and f.get("compliance_rate") is not None
     ]
 
-    if worker_frame_rates:
-        average_compliance_rate = round(sum(worker_frame_rates) / len(worker_frame_rates), 1)
+    if worker_rates:
+        average_compliance_rate = round(sum(worker_rates) / len(worker_rates), 1)
     else:
         average_compliance_rate = 0.0
 
-    # Top violation frames: sorted by violation_count descending (highest risk first)
-    frames_with_any_violations = [f for f in frame_records if f.get("violation_count", 0) > 0]
+    # Top moments (frames) with the most violations
+    frames_with_any_violations = [f for f in effective_records if f.get("violation_count", 0) > 0]
     sorted_violation_frames = sorted(
         frames_with_any_violations,
         key=lambda x: x.get("violation_count", 0),
         reverse=True,
     )
-    top_violation_frames = sorted_violation_frames[:TOP_VIOLATION_FRAMES_COUNT]
+    top_violation_moments = sorted_violation_frames[:TOP_VIOLATION_FRAMES_COUNT]
 
     return {
-        "total_frames_analyzed": total_frames_analyzed,
+        "frames_analyzed": frames_analyzed,
         "frames_with_workers": frames_with_workers,
         "frames_without_workers": frames_without_workers,
         "frames_with_violations": frames_with_violations,
         "average_compliance_rate": average_compliance_rate,
         "has_worker_frames": frames_with_workers > 0,
-        "top_violation_frames": top_violation_frames,
+        "top_violation_moments": top_violation_moments,
+        "smoothing_applied": use_smoothing,
+        "smoothing_window": smoothing_window if use_smoothing else 0,
     }
 
 
-def generate_video_csv_report(
-    frame_records: List[Dict[str, Any]],
+def generate_cctv_csv_report(
+    analyzed_records: List[Dict[str, Any]],
     summary: Dict[str, Any],
     video_filename: str = "Uploaded Video",
 ) -> str:
-    """Generate a structured CSV audit report string for video inspections.
+    """Generate a structured CSV audit report for CCTV video inspections.
 
     Args:
-        frame_records: List of evaluated frame dictionaries.
-        summary: Aggregated summary dictionary from summarize_video_results().
-        video_filename: Label/name of the source video file.
+        analyzed_records: List of analyzed frame dictionaries.
+        summary: Aggregated summary from summarize_cctv_results().
+        video_filename: Name of the uploaded video file.
 
     Returns:
         str: CSV formatted report content.
     """
     lines = [
-        "CONSTRUCTION SITE VIDEO PPE COMPLIANCE AUDIT REPORT",
+        "CCTV VIDEO PPE COMPLIANCE AUDIT REPORT",
         f"Source Video,{video_filename}",
-        f"Total Sampled Frames Analyzed,{summary.get('total_frames_analyzed', 0)}",
+        f"Inference Stride,Every {PROCESS_EVERY_N} frames",
+        f"Total Frames Analyzed,{summary.get('frames_analyzed', 0)}",
         f"Frames With Workers,{summary.get('frames_with_workers', 0)}",
         f"Frames Without Workers (Empty/Overhead),{summary.get('frames_without_workers', 0)}",
         f"Frames With Violations,{summary.get('frames_with_violations', 0)}",
         f"Average Compliance Rate (Worker Frames Only),{summary.get('average_compliance_rate', 0.0)}%",
         "",
-        "FRAME-BY-FRAME INSPECTION BREAKDOWN",
-        "Sample #,Frame Index,Timestamp (s),Total Workers,Compliant Workers,Violations,Needs Review,Compliance Rate (%)",
+        "ANALYZED FRAMES BREAKDOWN",
+        "Analysis #,Frame Index,Time (s),Workers Detected,Compliant,Violations,Needs Review,Compliance Rate (%)",
     ]
 
-    for idx, f in enumerate(frame_records, start=1):
+    for idx, f in enumerate(analyzed_records, start=1):
         rate = f.get("compliance_rate")
-        rate_str = f"{rate:.1f}%" if (rate is not None and f.get("total_workers", 0) > 0) else "N/A"
+        rate_str = f"{rate:.1f}%" if (rate is not None and f.get("total_workers", 0) > 0) else "N/A (No Workers)"
         lines.append(
-            f"{idx},{f.get('frame_number', 0)},{f.get('timestamp_sec', 0.0):.1f},"
+            f"{idx},{f.get('frame_number', 0)},{f.get('timestamp_sec', 0.0):.2f},"
             f"{f.get('total_workers', 0)},{f.get('compliant_count', 0)},"
             f"{f.get('violation_count', 0)},{f.get('needs_review_count', 0)},{rate_str}"
         )
@@ -221,56 +430,48 @@ def generate_video_csv_report(
 
 
 # ============================================================================
-# OPENCV VIDEO IO HELPERS
+# VIDEO ENCODING HELPER
 # ============================================================================
 
-def read_video_metadata(video_path: str) -> Dict[str, Any]:
-    """Read video file metadata (FPS, frame count, duration).
+def write_annotated_h264_video(
+    frames_rgb: List[np.ndarray],
+    output_path: str,
+    fps: float,
+) -> None:
+    """Write a sequence of RGB numpy frames to an H.264 MP4 file using imageio.
+
+    Uses pixel format yuv420p for universal browser playback in Streamlit.
 
     Args:
-        video_path: Local filesystem path to video file.
-
-    Returns:
-        Dict[str, Any]: Metadata dictionary.
+        frames_rgb: List of RGB uint8 numpy image arrays.
+        output_path: Destination path for the .mp4 file.
+        fps: Target frame rate for video playback.
 
     Raises:
-        ValueError: If the file cannot be opened by cv2.VideoCapture.
+        ValueError: If frames_rgb is empty.
+        RuntimeError: If video writing encounters an encoder error.
     """
-    if not os.path.exists(video_path):
-        raise FileNotFoundError(f"Video file not found at path: {video_path}")
+    if not frames_rgb:
+        raise ValueError("Cannot write an empty list of frames to video.")
 
-    cap = cv2.VideoCapture(video_path)
-    if not cap.isOpened():
-        raise ValueError(f"OpenCV could not open video stream for file: {video_path}")
+    try:
+        import imageio.v2 as imageio
+    except ImportError:
+        import imageio
 
-    raw_fps = cap.get(cv2.CAP_PROP_FPS)
-    raw_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-    safe_fps = validate_and_get_fps(raw_fps)
-    total_frames = max(0, raw_frames)
-    duration_sec = calculate_video_duration(total_frames, safe_fps)
+    safe_fps = compute_output_fps(fps)
 
-    cap.release()
+    writer = imageio.get_writer(
+        output_path,
+        format="FFMPEG",
+        mode="I",
+        fps=safe_fps,
+        codec="libx264",
+        pixelformat="yuv420p",
+    )
 
-    return {
-        "raw_fps": raw_fps,
-        "safe_fps": safe_fps,
-        "total_frames": total_frames,
-        "duration_sec": duration_sec,
-    }
-
-
-def extract_rgb_frame_at_index(cap: cv2.VideoCapture, frame_index: int) -> Optional[np.ndarray]:
-    """Seek to a specified frame index and read the image in RGB color order.
-
-    Args:
-        cap: Active cv2.VideoCapture instance.
-        frame_index: Target frame number (0-indexed).
-
-    Returns:
-        Optional[np.ndarray]: RGB numpy image array, or None if reading failed.
-    """
-    cap.set(cv2.CAP_PROP_POS_FRAMES, frame_index)
-    ret, bgr_frame = cap.read()
-    if not ret or bgr_frame is None or bgr_frame.size == 0:
-        return None
-    return cv2.cvtColor(bgr_frame, cv2.COLOR_BGR2RGB)
+    try:
+        for frame in frames_rgb:
+            writer.append_data(frame)
+    finally:
+        writer.close()

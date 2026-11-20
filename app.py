@@ -45,20 +45,36 @@ from src.detector import (
     run_detection,
     verify_model_classes,
 )
+import shutil
 import tempfile
+import time
 from src.video import (
     FALLBACK_FPS,
-    MAX_SAMPLED_FRAMES,
+    MAX_FRAME_WIDTH,
     MAX_VIDEO_SECONDS,
-    SAMPLE_FPS,
+    OUTPUT_MAX_FPS,
+    PROCESS_EVERY_N,
+    TEMPORAL_SMOOTHING_WINDOW,
     TOP_VIOLATION_FRAMES_COUNT,
+    apply_temporal_smoothing,
     calculate_video_duration,
-    compute_sample_frame_indices,
-    extract_rgb_frame_at_index,
-    generate_video_csv_report,
-    read_video_metadata,
-    summarize_video_results,
+    compute_cctv_frame_range,
+    compute_max_frames_to_process,
+    compute_output_fps,
+    compute_resized_dimensions,
+    compute_start_frame_index,
+    generate_cctv_csv_report,
+    is_analyzed_frame,
+    summarize_cctv_results,
     validate_and_get_fps,
+    write_annotated_h264_video,
+)
+from src.youtube import (
+    MAX_YOUTUBE_DURATION_SECONDS,
+    MAX_YOUTUBE_MB,
+    YouTubeDownloadError,
+    download_youtube,
+    is_valid_youtube_url,
 )
 from src.utils import (
     annotate_image,
@@ -655,11 +671,16 @@ def render_new_inspection(model: Any):
         # Mandatory Gear Selection
         gear_choice = st.radio(
             "Mandatory Site Equipment",
-            ["Hardhat + Safety Vest (Both Mandatory)", "Hardhat Only"],
+            ["Hardhat + Safety Vest", "Hardhat Only", "Safety Vest Only"],
             index=0,
             help="Select PPE requirements enforced for this specific construction zone.",
         )
-        required_gear_mode = "both" if "Both" in gear_choice else "hardhat_only"
+        if gear_choice == "Hardhat Only":
+            required_gear_mode = "hardhat_only"
+        elif gear_choice == "Safety Vest Only":
+            required_gear_mode = "vest_only"
+        else:
+            required_gear_mode = "both"
 
         # Expandable Advanced Configuration
         with st.expander("⚙️ Advanced Detection Settings", expanded=False):
@@ -1197,62 +1218,94 @@ def render_settings(model: Any, is_model_verified: bool):
 
 
 # ============================================================================
-# 13. PAGE: VIDEO PPE INSPECTION
+# 13. PAGE: CCTV-STYLE VIDEO PPE INSPECTION
 # ============================================================================
 def render_video_inspection(model: Any):
-    """Render the Video PPE Compliance Inspection page."""
-    st.markdown("### 🎥 Video PPE Compliance Inspection")
-    st.caption("Upload site surveillance footage to sample and analyze worker compliance second-by-second on CPU.")
+    """Render the CCTV-style continuous video PPE compliance inspection interface."""
+    st.markdown("### 📹 CCTV Surveillance PPE Inspection")
+    st.caption("Sequential CCTV-style analysis: continuous playback, interval inference, and H.264 video export on CPU.")
 
-    # Methodology & Limitation Notice
-    st.info(
-        "ℹ️ **Video Inspection Methodology & Limitations:**\n\n"
-        "• **Per-Frame Evaluation:** Video processing samples one frame every second (up to 60 frames max). "
-        "Each frame is evaluated independently using spatial body zones.\n"
-        "• **No Inter-Frame Tracking:** Workers are not tracked or re-identified across consecutive frames.\n"
-        "• **Image Model Constraints:** All single-image limitations apply (e.g. overhead angles, crouching, "
-        "heavy occlusions, and distant small figures are flagged for manual review rather than strictly judged)."
-    )
-
-    # If results are already stored in session state, display them directly
+    # Show banner if previous inspection results exist
     cached_results = st.session_state.get("video_results")
     if cached_results is not None:
-        render_video_results_view(cached_results)
-        return
+        c_banner, c_bbtn = st.columns([4, 1])
+        with c_banner:
+            st.info("ℹ️ Completed video inspection results are available in **Inspection Results**.")
+        with c_bbtn:
+            if st.button("👉 View Results", use_container_width=True):
+                navigate_to("Inspection Results")
 
     # Upload and Configuration Columns
     c_upload, c_config = st.columns([3, 2])
 
     with c_upload:
-        st.markdown("#### 1. Upload Video Footage")
-        uploaded_video = st.file_uploader(
-            "Select Surveillance Video (.mp4, .avi, .mov)",
-            type=["mp4", "avi", "mov"],
-            help=f"Upload site surveillance video. Videos longer than {MAX_VIDEO_SECONDS}s will be warned/capped at {MAX_SAMPLED_FRAMES} sampled frames.",
+        st.markdown("#### 1. Video Source")
+        video_source = st.radio(
+            "Source Selection",
+            ["Upload file", "YouTube link"],
+            horizontal=True,
+            key="cctv_video_source",
         )
 
-        if uploaded_video is not None:
-            file_mb = round(uploaded_video.size / (1024 * 1024), 2)
-            st.markdown(
-                f"""
-                <div class='sv-panel' style='padding: 12px; margin-top: 8px;'>
-                    <strong>Selected Video:</strong> <code>{uploaded_video.name}</code><br>
-                    <strong>File Size:</strong> <code>{file_mb} MB</code>
-                </div>
-                """,
-                unsafe_allow_html=True,
+        uploaded_video = None
+        youtube_url = ""
+
+        if video_source == "Upload file":
+            uploaded_video = st.file_uploader(
+                "Select Video File (.mp4, .avi, .mov)",
+                type=["mp4", "avi", "mov"],
+                help=f"Upload site surveillance footage. Videos longer than {MAX_VIDEO_SECONDS}s will be warned/capped at {MAX_VIDEO_SECONDS}s from start.",
             )
+
+            if uploaded_video is not None:
+                file_mb = round(uploaded_video.size / (1024 * 1024), 2)
+                st.markdown(
+                    f"""
+                    <div class='sv-panel' style='padding: 12px; margin-top: 8px;'>
+                        <strong>Selected Footage:</strong> <code>{uploaded_video.name}</code><br>
+                        <strong>File Size:</strong> <code>{file_mb} MB</code><br>
+                        <strong>Processing Cap:</strong> First {MAX_VIDEO_SECONDS} seconds from start | Width &le; {MAX_FRAME_WIDTH}px
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+        else:
+            st.info("ℹ️ Only use videos you are allowed to analyze. Downloading from YouTube may be restricted by its terms.")
+            youtube_url = st.text_input(
+                "YouTube Video URL",
+                placeholder="https://www.youtube.com/watch?v=...",
+                key="cctv_youtube_url",
+                help="Paste a valid YouTube link starting with https://www.youtube.com/, https://youtube.com/, https://m.youtube.com/, or https://youtu.be/",
+            )
+            st.caption(
+                f"Limits: max duration {MAX_YOUTUBE_DURATION_SECONDS // 60} mins ({MAX_YOUTUBE_DURATION_SECONDS}s), "
+                f"max download size {MAX_YOUTUBE_MB} MB. Analyzes up to {MAX_VIDEO_SECONDS}s from start time."
+            )
+
+        start_seconds = st.number_input(
+            "Start at (seconds)",
+            min_value=0.0,
+            value=0.0,
+            step=1.0,
+            help="Start CCTV inspection from this timestamp in seconds (optional).",
+            key="cctv_start_seconds",
+        )
 
     with c_config:
         st.markdown("#### 2. Detection & PPE Rules")
         gear_choice = st.radio(
             "Mandatory Site Equipment",
-            ["Hardhat + Safety Vest (Both Mandatory)", "Hardhat Only"],
+            ["Hardhat + Safety Vest", "Hardhat Only", "Safety Vest Only"],
             index=0,
-            key="video_gear_choice",
-            help="Select PPE requirements enforced for this video scan.",
+            key="cctv_gear_choice",
+            help="Select PPE requirements enforced for this surveillance inspection.",
         )
-        required_gear_mode = "both" if "Both" in gear_choice else "hardhat_only"
+        if gear_choice == "Hardhat Only":
+            required_gear_mode = "hardhat_only"
+        elif gear_choice == "Safety Vest Only":
+            required_gear_mode = "vest_only"
+        else:
+            required_gear_mode = "both"
 
         conf_threshold = st.slider(
             "Confidence Threshold",
@@ -1260,140 +1313,278 @@ def render_video_inspection(model: Any):
             max_value=0.90,
             value=0.25,
             step=0.05,
-            key="video_conf_slider",
+            key="cctv_conf_slider",
             help="Scales per-class thresholds (Base: Person 0.30, Hardhat 0.30, NO-Hardhat 0.20, Safety Vest 0.20).",
         )
-        show_gear_boxes = st.checkbox("Draw Gear Bounding Boxes", value=True, key="video_gear_box_cb")
-        show_zones = st.checkbox("Outline Body Zones (Head / Torso)", value=False, key="video_zones_cb")
+        show_gear_boxes = st.checkbox("Draw Gear Bounding Boxes", value=True, key="cctv_gear_box_cb")
+        show_zones = st.checkbox("Outline Body Zones (Head / Torso)", value=False, key="cctv_zones_cb")
+        temporal_smoothing = st.checkbox(
+            "Temporal Anti-Flicker Smoothing",
+            value=True,
+            key="cctv_temporal_smoothing_cb",
+            help=f"Applies a {TEMPORAL_SMOOTHING_WINDOW}-frame rolling filter to suppress transient posture and angle flickers from skewing audit statistics.",
+        )
 
     st.markdown("<div style='margin-top: 20px;'></div>", unsafe_allow_html=True)
 
-    # Run Video Inspection Action
-    run_disabled = uploaded_video is None
-    if st.button("🎬 Run Video Compliance Inspection", type="primary", use_container_width=True, disabled=run_disabled):
-        process_video_upload(
-            uploaded_video=uploaded_video,
-            model=model,
-            required_gear=required_gear_mode,
-            conf_threshold=conf_threshold,
-            show_gear_boxes=show_gear_boxes,
-            show_zones=show_zones,
-        )
+    # Run Action
+    if video_source == "Upload file":
+        run_disabled = uploaded_video is None
+    else:
+        run_disabled = not bool(youtube_url and youtube_url.strip())
+
+    if st.button("🎬 Run CCTV Compliance Inspection", type="primary", use_container_width=True, disabled=run_disabled):
+        if video_source == "Upload file":
+            process_cctv_video_upload(
+                uploaded_video=uploaded_video,
+                model=model,
+                required_gear=required_gear_mode,
+                conf_threshold=conf_threshold,
+                show_gear_boxes=show_gear_boxes,
+                show_zones=show_zones,
+                start_seconds=start_seconds,
+                temporal_smoothing=temporal_smoothing,
+            )
+        else:
+            process_cctv_youtube_link(
+                youtube_url=youtube_url.strip(),
+                model=model,
+                required_gear=required_gear_mode,
+                conf_threshold=conf_threshold,
+                show_gear_boxes=show_gear_boxes,
+                show_zones=show_zones,
+                start_seconds=start_seconds,
+                temporal_smoothing=temporal_smoothing,
+            )
 
 
-def process_video_upload(
+def process_cctv_video_upload(
     uploaded_video: Any,
     model: Any,
     required_gear: str,
     conf_threshold: float,
     show_gear_boxes: bool,
     show_zones: bool,
+    start_seconds: float = 0.0,
+    temporal_smoothing: bool = True,
 ):
-    """Process an uploaded video through temporary file decoding and frame inference."""
+    """Process uploaded video sequentially: resize, interval inference, annotate, encode H.264 MP4."""
     suffix = os.path.splitext(uploaded_video.name)[1]
     if not suffix:
         suffix = ".mp4"
 
-    # Use NamedTemporaryFile with delete=False, closed before cv2.VideoCapture opens it
-    temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
-    temp_path = temp_file.name
+    # NamedTemporaryFile closed before cv2.VideoCapture opens it, deleted in finally block
+    in_temp = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
+    in_temp_path = in_temp.name
 
     try:
-        # Write bytes and explicitly close file handle
-        temp_file.write(uploaded_video.getbuffer())
-        temp_file.close()
+        in_temp.write(uploaded_video.getbuffer())
+        in_temp.close()
 
-        # Read metadata and validate video
-        try:
-            metadata = read_video_metadata(temp_path)
-        except Exception as e:
-            st.error(f"❌ Could not open or decode video file: {e}")
-            return
+        execute_cctv_pipeline(
+            video_path=in_temp_path,
+            video_display_name=uploaded_video.name,
+            model=model,
+            required_gear=required_gear,
+            conf_threshold=conf_threshold,
+            show_gear_boxes=show_gear_boxes,
+            show_zones=show_zones,
+            start_seconds=start_seconds,
+            temporal_smoothing=temporal_smoothing,
+        )
+    finally:
+        if os.path.exists(in_temp_path):
+            try:
+                os.remove(in_temp_path)
+            except OSError:
+                pass
 
-        total_frames = metadata["total_frames"]
-        safe_fps = metadata["safe_fps"]
-        duration_sec = metadata["duration_sec"]
+
+def process_cctv_youtube_link(
+    youtube_url: str,
+    model: Any,
+    required_gear: str,
+    conf_threshold: float,
+    show_gear_boxes: bool,
+    show_zones: bool,
+    start_seconds: float = 0.0,
+    temporal_smoothing: bool = True,
+):
+    """Download YouTube video via yt-dlp into a temp dir and run the CCTV inspection pipeline."""
+    if not is_valid_youtube_url(youtube_url):
+        st.error(
+            "❌ Invalid YouTube URL. Please provide a link starting with "
+            "https://www.youtube.com/, https://youtube.com/, https://m.youtube.com/, or https://youtu.be/"
+        )
+        return
+
+    temp_dir = tempfile.mkdtemp(prefix="safety_vision_yt_")
+    try:
+        with st.spinner("📥 Extracting metadata and downloading YouTube video stream..."):
+            try:
+                downloaded_file = download_youtube(youtube_url, temp_dir)
+            except YouTubeDownloadError as e:
+                st.error(f"❌ {e}")
+                return
+            except Exception as e:
+                st.error(
+                    f"❌ Unexpected error downloading YouTube video: {e}. "
+                    "Please consider downloading the video file yourself and using the 'Upload file' mode."
+                )
+                return
+
+        display_name = f"YouTube: {os.path.basename(downloaded_file)}"
+        execute_cctv_pipeline(
+            video_path=downloaded_file,
+            video_display_name=display_name,
+            model=model,
+            required_gear=required_gear,
+            conf_threshold=conf_threshold,
+            show_gear_boxes=show_gear_boxes,
+            show_zones=show_zones,
+            start_seconds=start_seconds,
+            temporal_smoothing=temporal_smoothing,
+        )
+    finally:
+        shutil.rmtree(temp_dir, ignore_errors=True)
+
+
+def execute_cctv_pipeline(
+    video_path: str,
+    video_display_name: str,
+    model: Any,
+    required_gear: str,
+    conf_threshold: float,
+    show_gear_boxes: bool,
+    show_zones: bool,
+    start_seconds: float = 0.0,
+    temporal_smoothing: bool = True,
+):
+    """Core CCTV processing pipeline: seek, interval inference, annotation, and H.264 MP4 export."""
+    out_temp = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
+    out_mp4_path = out_temp.name
+    out_temp.close()
+
+    cap = cv2.VideoCapture(video_path)
+    if not cap.isOpened():
+        st.error("❌ OpenCV could not open or decode the video stream.")
+        if os.path.exists(out_mp4_path):
+            try:
+                os.remove(out_mp4_path)
+            except OSError:
+                pass
+        return
+
+    try:
+        raw_fps = cap.get(cv2.CAP_PROP_FPS)
+        raw_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        safe_fps = validate_and_get_fps(raw_fps)
+        total_frames = max(0, raw_frames)
 
         if total_frames <= 0:
-            st.error("❌ Video file reports zero playable frames.")
+            st.error("❌ Video file contains zero readable frames.")
+            cap.release()
             return
 
-        # Check duration warning
-        if duration_sec > MAX_VIDEO_SECONDS:
-            st.warning(
-                f"⚠️ Video length ({duration_sec:.1f}s) exceeds MAX_VIDEO_SECONDS ({MAX_VIDEO_SECONDS}s). "
-                f"Only the first {MAX_SAMPLED_FRAMES} sampled frames will be processed."
-            )
+        duration_sec = calculate_video_duration(total_frames, safe_fps)
 
-        # Compute sample indices (1 frame every second up to 60 frames)
-        sample_indices = compute_sample_frame_indices(
+        # Validate start time
+        if start_seconds >= duration_sec:
+            st.error(
+                f"❌ Start time ({start_seconds:.1f}s) is beyond the total video duration ({duration_sec:.1f}s). "
+                "Please specify a start time within the video duration."
+            )
+            cap.release()
+            return
+
+        # Calculate CCTV frame range from start_seconds
+        start_frame_idx, end_frame_idx = compute_cctv_frame_range(
             total_frames=total_frames,
             fps=safe_fps,
-            sample_fps=SAMPLE_FPS,
-            max_frames=MAX_SAMPLED_FRAMES,
+            start_seconds=start_seconds,
+            max_seconds=MAX_VIDEO_SECONDS,
         )
+        total_to_process = end_frame_idx - start_frame_idx
 
-        if not sample_indices:
-            st.error("❌ Could not compute frame sampling indices.")
+        if total_to_process <= 0:
+            st.error("❌ Zero frames eligible for processing.")
+            cap.release()
             return
 
-        # Open video capture
-        cap = cv2.VideoCapture(temp_path)
-        if not cap.isOpened():
-            st.error("❌ Failed to open video stream with OpenCV.")
-            return
+        # Check duration cap warning (MAX_VIDEO_SECONDS = 30 from start)
+        remaining_sec = max(0.0, duration_sec - start_seconds)
+        if remaining_sec > MAX_VIDEO_SECONDS:
+            st.warning(
+                f"⚠️ Remaining video duration from {start_seconds:.1f}s ({remaining_sec:.1f}s) exceeds MAX_VIDEO_SECONDS ({MAX_VIDEO_SECONDS}s). "
+                f"Only the first {MAX_VIDEO_SECONDS} seconds from {start_seconds:.1f}s will be analyzed."
+            )
+
+        # Seek to starting frame
+        if start_frame_idx > 0:
+            cap.set(cv2.CAP_PROP_POS_FRAMES, start_frame_idx)
 
         # Progress UI
         st.markdown("---")
-        st.markdown("#### ⏳ Processing Video Frames...")
+        st.markdown("#### ⏳ Analyzing CCTV Video Stream...")
         prog_bar = st.progress(0.0)
         status_line = st.empty()
         preview_container = st.empty()
 
-        frame_records: List[Dict[str, Any]] = []
+        annotated_frames_rgb: List[np.ndarray] = []
+        analyzed_records: List[Dict[str, Any]] = []
 
-        try:
-            for step_i, frame_idx in enumerate(sample_indices):
-                rgb_frame = extract_rgb_frame_at_index(cap, frame_idx)
-                if rgb_frame is None:
-                    continue
+        last_workers: List[Dict[str, Any]] = []
+        last_unassigned: List[Dict[str, Any]] = []
 
-                timestamp_sec = round(frame_idx / safe_fps, 1)
+        start_time = time.time()
 
-                # 1. Run inference on CPU
+        for step_idx in range(total_to_process):
+            ret, bgr_frame = cap.read()
+            if not ret or bgr_frame is None or bgr_frame.size == 0:
+                break
+
+            orig_h, orig_w = bgr_frame.shape[:2]
+            new_w, new_h = compute_resized_dimensions(orig_w, orig_h, max_width=MAX_FRAME_WIDTH)
+            if (new_w, new_h) != (orig_w, orig_h):
+                bgr_frame = cv2.resize(bgr_frame, (new_w, new_h), interpolation=cv2.INTER_AREA)
+
+            rgb_frame = cv2.cvtColor(bgr_frame, cv2.COLOR_BGR2RGB)
+            current_frame_idx = start_frame_idx + step_idx
+            timestamp_sec = round(current_frame_idx / safe_fps, 2)
+
+            # Check if this frame undergoes inference (every PROCESS_EVERY_N-th frame)
+            if is_analyzed_frame(step_idx, process_every_n=PROCESS_EVERY_N):
                 detections = run_detection(
                     image=rgb_frame,
                     model=model,
                     conf_threshold=conf_threshold,
                     device="cpu",
                 )
-
-                # 2. Evaluate compliance
                 evaluation = evaluate_site_compliance(
                     detections=detections,
                     required_gear=required_gear,
                     image_height=float(rgb_frame.shape[0]),
                     strict_hardhat=st.session_state.strict_hardhat,
                 )
-
-                # 3. Generate annotated image
-                annotated_frame = annotate_image(
-                    image=rgb_frame,
-                    workers=evaluation["workers"],
-                    unassigned_gear=evaluation["unassigned_gear"],
-                    show_gear_boxes=show_gear_boxes,
-                    show_zones=show_zones,
-                )
+                last_workers = evaluation["workers"]
+                last_unassigned = evaluation["unassigned_gear"]
 
                 total_w = evaluation["summary"]["total_workers"]
                 comp_w = evaluation["summary"]["compliant_count"]
                 viol_w = evaluation["summary"]["violation_count"]
                 review_w = evaluation["summary"]["needs_review_count"]
-                # For frames with zero workers, compliance_rate is None (do not treat as 100% compliant)
                 rate = evaluation["summary"]["compliance_rate"] if total_w > 0 else None
 
-                frame_records.append({
-                    "frame_number": frame_idx,
+                annotated_frame = annotate_image(
+                    image=rgb_frame,
+                    workers=last_workers,
+                    unassigned_gear=last_unassigned,
+                    show_gear_boxes=show_gear_boxes,
+                    show_zones=show_zones,
+                )
+
+                analyzed_records.append({
+                    "frame_number": current_frame_idx,
                     "timestamp_sec": timestamp_sec,
                     "total_workers": total_w,
                     "compliant_count": comp_w,
@@ -1402,76 +1593,161 @@ def process_video_upload(
                     "compliance_rate": rate,
                     "annotated_image": annotated_frame,
                 })
-
-                # Update progress and live preview
-                pct = (step_i + 1) / len(sample_indices)
-                prog_bar.progress(pct)
-                status_line.caption(
-                    f"Sample {step_i + 1}/{len(sample_indices)} | Frame #{frame_idx} (t={timestamp_sec}s) | "
-                    f"Workers: {total_w} | Violations: {viol_w}"
-                )
-                preview_container.image(
-                    annotated_frame,
-                    caption=f"Live Preview — t={timestamp_sec}s (Workers: {total_w}, Violations: {viol_w})",
-                    use_container_width=True,
+            else:
+                # Frames in between: draw the most recent detections and statuses on the actual frame
+                annotated_frame = annotate_image(
+                    image=rgb_frame,
+                    workers=last_workers,
+                    unassigned_gear=last_unassigned,
+                    show_gear_boxes=show_gear_boxes,
+                    show_zones=show_zones,
                 )
 
-        finally:
-            cap.release()
+            annotated_frames_rgb.append(annotated_frame)
 
-        if not frame_records:
-            st.error("❌ Zero valid frames could be read or analyzed from the video.")
+            # Update progress, elapsed time, and preview
+            elapsed = round(time.time() - start_time, 1)
+            pct = (step_idx + 1) / total_to_process
+            prog_bar.progress(pct)
+            status_line.caption(
+                f"Processing frame {step_idx + 1}/{total_to_process} ({int(pct * 100)}%) | "
+                f"Video time: {timestamp_sec:.2f}s | Elapsed: {elapsed}s"
+            )
+            preview_container.image(
+                annotated_frame,
+                caption=f"CCTV Stream Preview — Frame #{current_frame_idx} (t={timestamp_sec:.2f}s)",
+                use_container_width=True,
+            )
+
+        cap.release()
+
+        if not analyzed_records:
+            st.error("❌ No frames could be analyzed.")
             return
 
-        # Aggregate summary metrics
-        summary = summarize_video_results(frame_records)
+        # Write annotated video to H.264 MP4 using imageio and imageio-ffmpeg
+        video_bytes: Optional[bytes] = None
+        write_error: Optional[str] = None
+        try:
+            write_annotated_h264_video(
+                frames_rgb=annotated_frames_rgb,
+                output_path=out_mp4_path,
+                fps=safe_fps,
+            )
+            with open(out_mp4_path, "rb") as vf:
+                video_bytes = vf.read()
+        except Exception as e:
+            write_error = str(e)
 
-        # Save to session state so results persist across reruns
-        st.session_state.video_results = {
-            "video_filename": uploaded_video.name,
-            "metadata": metadata,
-            "summary": summary,
-            "frame_records": frame_records,
+        # Summary computed on the ANALYZED frames (with anti-flicker smoothing if enabled)
+        if temporal_smoothing:
+            smoothed_records = apply_temporal_smoothing(
+                analyzed_records,
+                window_size=TEMPORAL_SMOOTHING_WINDOW,
+            )
+            summary = summarize_cctv_results(smoothed_records, use_smoothing=False)
+            summary["smoothing_applied"] = True
+            summary["smoothing_window"] = TEMPORAL_SMOOTHING_WINDOW
+            effective_records = smoothed_records
+        else:
+            summary = summarize_cctv_results(analyzed_records, use_smoothing=False)
+            effective_records = analyzed_records
+
+        metadata_dict = {
+            "raw_fps": raw_fps,
+            "safe_fps": safe_fps,
+            "total_frames": total_frames,
+            "duration_sec": duration_sec,
+            "processed_frames": len(annotated_frames_rgb),
+            "start_seconds": start_seconds,
+            "temporal_smoothing": temporal_smoothing,
         }
 
-        st.success(f"✅ Video analysis complete! Processed {len(frame_records)} sampled frames.")
-        st.rerun()
+        # Save to session state so results survive reruns
+        st.session_state.video_results = {
+            "video_filename": video_display_name,
+            "metadata": metadata_dict,
+            "summary": summary,
+            "analyzed_records": effective_records,
+            "raw_records": analyzed_records,
+            "video_bytes": video_bytes,
+            "write_error": write_error,
+        }
+
+        st.success(f"✅ Video processing complete! Analyzed {len(analyzed_records)} frames ({len(annotated_frames_rgb)} total frames rendered).")
+        navigate_to("Inspection Results")
 
     finally:
-        # Guarantee deletion of the temporary file in a finally block
-        if os.path.exists(temp_path):
+        if cap.isOpened():
+            cap.release()
+        if os.path.exists(out_mp4_path):
             try:
-                os.remove(temp_path)
+                os.remove(out_mp4_path)
             except OSError:
                 pass
 
 
 def render_video_results_view(video_results: Dict[str, Any]):
-    """Render the comprehensive video compliance audit results."""
+    """Render the CCTV video results: video player, metrics, charts, table, and moments gallery."""
     summary = video_results["summary"]
-    frames = video_results["frame_records"]
+    analyzed = video_results["analyzed_records"]
     meta = video_results["metadata"]
-    filename = video_results.get("video_filename", "Uploaded Video")
+    filename = video_results.get("video_filename", "Uploaded Footage")
+    video_bytes = video_results.get("video_bytes")
+    write_error = video_results.get("write_error")
+
+    smoothing_badge = (
+        f" &nbsp;|&nbsp; <strong>Anti-Flicker:</strong> <code>{TEMPORAL_SMOOTHING_WINDOW}-frame Window</code>"
+        if meta.get("temporal_smoothing")
+        else ""
+    )
 
     # Header Panel
     st.markdown(
         f"""
         <div class='sv-panel' style='padding: 12px 18px; margin-bottom: 16px;'>
             <strong>Source Video:</strong> <code>{filename}</code> &nbsp;|&nbsp;
-            <strong>Recorded Duration:</strong> <code>{meta['duration_sec']:.1f}s</code> &nbsp;|&nbsp;
-            <strong>Native FPS:</strong> <code>{meta['safe_fps']} fps</code> &nbsp;|&nbsp;
-            <strong>Sampled Frames:</strong> <code>{summary['total_frames_analyzed']} frames (1 frame/sec)</code>
+            <strong>Duration:</strong> <code>{meta['duration_sec']:.1f}s</code> &nbsp;|&nbsp;
+            <strong>Inference Stride:</strong> <code>Every {PROCESS_EVERY_N} frames</code> &nbsp;|&nbsp;
+            <strong>Analyzed Frames:</strong> <code>{summary['frames_analyzed']} frames</code>{smoothing_badge}
         </div>
         """,
         unsafe_allow_html=True,
     )
 
-    # 1. KPI Metric Row
+    # 1. Video Player & Download
+    st.markdown("#### 🎬 Annotated CCTV Playback")
+    if write_error:
+        st.error(f"⚠️ Video file encoding error: {write_error}. Audit statistics remain available below.")
+
+    if video_bytes:
+        st.video(video_bytes, format="video/mp4")
+        st.download_button(
+            "📥 Download Annotated CCTV Video (.mp4)",
+            data=video_bytes,
+            file_name=f"annotated_cctv_{filename}.mp4",
+            mime="video/mp4",
+            use_container_width=True,
+        )
+    else:
+        st.info("Video player unavailable, but all analytical audit metrics are presented below.")
+
+    st.markdown("<div style='margin-top: 20px;'></div>", unsafe_allow_html=True)
+
+    # Anti-flicker banner if active
+    if meta.get("temporal_smoothing"):
+        st.info(
+            f"🛡️ **Temporal Anti-Flicker Active:** Summary metrics are calculated using a {TEMPORAL_SMOOTHING_WINDOW}-frame "
+            "rolling median filter. Transient detection flickers caused by rapid head-turns, occlusions, and body-angle shifts "
+            "are smoothed out so temporary postures do not unfairly degrade your site compliance rate."
+        )
+
+    # 2. Executive KPI Metric Row (Computed on analyzed frames only)
     k1, k2, k3, k4, k5 = st.columns(5)
     with k1:
         st.markdown(
             f"<div class='metric-card'><div class='metric-card-title'>Frames Analyzed</div>"
-            f"<div class='metric-card-value'>{summary['total_frames_analyzed']}</div></div>",
+            f"<div class='metric-card-value'>{summary['frames_analyzed']}</div></div>",
             unsafe_allow_html=True,
         )
     with k2:
@@ -1504,49 +1780,48 @@ def render_video_results_view(video_results: Dict[str, Any]):
 
     st.markdown("<div style='margin-top: 20px;'></div>", unsafe_allow_html=True)
 
-    # 2. Line Chart of Compliance Rate Over Time
-    st.markdown("#### 📈 Compliance Rate Over Time (Sampled Every 1s)")
-    chart_data = []
-    for f in frames:
-        # Exclude empty frames from rate chart or display rate for worker frames
+    # 3. Compliance Rate Over Time Line Chart (Grouped by second)
+    st.markdown("#### 📈 Compliance Rate Over Time (By Second)")
+    chart_rows = []
+    for f in analyzed:
         r_val = f["compliance_rate"] if f["total_workers"] > 0 else None
-        chart_data.append({
-            "Timestamp (s)": f"{f['timestamp_sec']:.1f}s",
+        chart_rows.append({
+            "Time (s)": f"{f['timestamp_sec']:.1f}s",
             "Compliance Rate (%)": r_val,
         })
-    df_chart = pd.DataFrame(chart_data).set_index("Timestamp (s)")
+    df_chart = pd.DataFrame(chart_rows).set_index("Time (s)")
     if summary["has_worker_frames"]:
         st.line_chart(df_chart, color="#2563eb", height=240)
     else:
-        st.info("ℹ️ No workers were detected in any sampled frames to plot compliance trends.")
+        st.info("ℹ️ No workers were detected in the analyzed frames to plot compliance trends.")
 
-    # 3. Top Violation Frames Gallery (Top 3 Highest Risk Moments)
+    # 4. Top Moments with the Most Violations Gallery (Top 3)
     st.markdown("---")
-    st.markdown("#### 🚨 Top Risk Frames (Most Violations)")
-    top_frames = summary.get("top_violation_frames", [])
-    if top_frames:
-        st.caption(f"Displaying up to {TOP_VIOLATION_FRAMES_COUNT} frames with the highest count of non-compliant workers:")
-        g_cols = st.columns(len(top_frames))
-        for col, f in zip(g_cols, top_frames):
+    st.markdown("#### 🚨 Top Risk Moments (Most Violations)")
+    top_moments = summary.get("top_violation_moments", [])
+    if top_moments:
+        st.caption(f"Displaying up to {TOP_VIOLATION_FRAMES_COUNT} moments with the highest count of non-compliant workers:")
+        g_cols = st.columns(len(top_moments))
+        for col, f in zip(g_cols, top_moments):
             with col:
                 st.image(
                     f["annotated_image"],
-                    caption=f"Frame #{f['frame_number']} (t={f['timestamp_sec']:.1f}s) | Violations: {f['violation_count']} | Workers: {f['total_workers']}",
+                    caption=f"Frame #{f['frame_number']} (t={f['timestamp_sec']:.2f}s) | Violations: {f['violation_count']} | Workers: {f['total_workers']}",
                     use_container_width=True,
                 )
     else:
-        st.success("✅ Clean Video Surveillance: Zero PPE violations detected across all sampled frames!")
+        st.success("✅ Clean Video Surveillance: Zero PPE violations detected across all analyzed frames!")
 
-    # 4. Per-Frame Breakdown Table with CSV Export
+    # 5. Per-Frame Table & CSV Download
     st.markdown("---")
-    st.markdown("#### 📋 Frame-by-Frame Inspection Table")
+    st.markdown("#### 📋 Analyzed Frames Breakdown")
     table_rows = []
-    for idx, f in enumerate(frames, start=1):
+    for idx, f in enumerate(analyzed, start=1):
         rate_cell = f"{f['compliance_rate']:.1f}%" if f["total_workers"] > 0 and f["compliance_rate"] is not None else "N/A (No Workers)"
         table_rows.append({
-            "Sample #": idx,
+            "Analysis #": idx,
             "Frame #": f["frame_number"],
-            "Time (s)": f"{f['timestamp_sec']:.1f}s",
+            "Time (s)": f"{f['timestamp_sec']:.2f}s",
             "Workers": f["total_workers"],
             "Compliant": f["compliant_count"],
             "Violations": f["violation_count"],
@@ -1557,21 +1832,21 @@ def render_video_results_view(video_results: Dict[str, Any]):
     df_table = pd.DataFrame(table_rows)
     st.dataframe(df_table, use_container_width=True)
 
-    # CSV Download Button & Reset Action
+    # Actions
     c_csv, c_reset = st.columns([2, 1])
     with c_csv:
-        csv_content = generate_video_csv_report(frames, summary, filename)
+        csv_content = generate_cctv_csv_report(analyzed, summary, filename)
         st.download_button(
-            "📥 Download Video Audit CSV Report",
+            "📥 Download CCTV Audit CSV Report",
             data=csv_content,
-            file_name=f"video_ppe_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+            file_name=f"cctv_audit_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
             mime="text/csv",
             use_container_width=True,
         )
     with c_reset:
         if st.button("🔄 Analyze Another Video", use_container_width=True):
             st.session_state.video_results = None
-            st.rerun()
+            navigate_to("New Inspection")
 
 
 # ============================================================================
@@ -1687,29 +1962,47 @@ def main():
     # ------------------------------------------------------------------------
     render_top_navbar(st.session_state.current_page, is_model_verified)
 
-    # Route to selected page based on mode and navigation
-    if st.session_state.inspection_mode == "Video":
-        render_video_inspection(model)
-        return
-
-    # Image Mode: route to selected page (stays exactly as it was)
     active_insp = st.session_state.active_inspection
     history_list = st.session_state.inspection_history
 
-    if st.session_state.current_page == "Dashboard":
-        render_dashboard(active_insp, history_list)
-    elif st.session_state.current_page == "New Inspection":
-        render_new_inspection(model)
-    elif st.session_state.current_page == "Inspection Results":
-        render_inspection_results(active_insp)
-    elif st.session_state.current_page == "Worker Audits":
-        render_worker_audits(active_insp)
-    elif st.session_state.current_page == "Inspection History":
-        render_inspection_history(history_list, model)
-    elif st.session_state.current_page == "Reports & Exports":
-        render_reports_exports(active_insp)
-    elif st.session_state.current_page == "Settings":
-        render_settings(model, is_model_verified)
+    # Route to selected page based on mode and navigation
+    if st.session_state.inspection_mode == "Video":
+        if st.session_state.current_page == "New Inspection":
+            render_video_inspection(model)
+        elif st.session_state.current_page == "Inspection Results":
+            video_res = st.session_state.get("video_results")
+            if video_res is not None:
+                render_video_results_view(video_res)
+            else:
+                st.warning("⚠️ No active video inspection results available. Please run a video inspection first.")
+                if st.button("🎬 Go to Video Inspection", type="primary"):
+                    navigate_to("New Inspection")
+        elif st.session_state.current_page == "Dashboard":
+            render_dashboard(active_insp, history_list)
+        elif st.session_state.current_page == "Worker Audits":
+            render_worker_audits(active_insp)
+        elif st.session_state.current_page == "Inspection History":
+            render_inspection_history(history_list, model)
+        elif st.session_state.current_page == "Reports & Exports":
+            render_reports_exports(active_insp)
+        elif st.session_state.current_page == "Settings":
+            render_settings(model, is_model_verified)
+    else:
+        # Image Mode: route to selected page (stays exactly as it was)
+        if st.session_state.current_page == "Dashboard":
+            render_dashboard(active_insp, history_list)
+        elif st.session_state.current_page == "New Inspection":
+            render_new_inspection(model)
+        elif st.session_state.current_page == "Inspection Results":
+            render_inspection_results(active_insp)
+        elif st.session_state.current_page == "Worker Audits":
+            render_worker_audits(active_insp)
+        elif st.session_state.current_page == "Inspection History":
+            render_inspection_history(history_list, model)
+        elif st.session_state.current_page == "Reports & Exports":
+            render_reports_exports(active_insp)
+        elif st.session_state.current_page == "Settings":
+            render_settings(model, is_model_verified)
 
 
 if __name__ == "__main__":

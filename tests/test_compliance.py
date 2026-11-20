@@ -647,3 +647,41 @@ def test_zero_workers_with_loose_gear_and_annotation():
     assert annotated.shape == (400, 400, 3)
     # The canvas should have drawn boxes and text for the loose gear
     assert np.any(annotated > 0)
+
+
+# ============================================================================
+# SAFETY VEST ONLY MODE TESTS
+# ============================================================================
+
+def test_vest_only_mode_compliant(base_person_box):
+    """Test that in vest_only mode, a worker with Safety Vest is Compliant even without Hardhat."""
+    detections = [
+        {"class_name": CLASS_PERSON, "confidence": 0.95, "box": base_person_box},
+        {"class_name": CLASS_NO_HARDHAT, "confidence": 0.88, "box": [120.0, 105.0, 180.0, 150.0]},
+        {"class_name": CLASS_VEST, "confidence": 0.90, "box": [110.0, 150.0, 190.0, 220.0]},
+    ]
+    # In 'both' mode, this worker would be a violation ('Missing hardhat')
+    res_both = evaluate_site_compliance(detections, required_gear="both")
+    assert res_both["workers"][0]["status"] == "Missing hardhat"
+    assert res_both["summary"]["compliant_count"] == 0
+
+    # In 'vest_only' mode, this worker must be Compliant
+    res_vest = evaluate_site_compliance(detections, required_gear="vest_only")
+    assert res_vest["workers"][0]["status"] == "Compliant"
+    assert res_vest["summary"]["compliant_count"] == 1
+    assert res_vest["summary"]["violation_count"] == 0
+    assert res_vest["summary"]["compliance_rate"] == 100.0
+
+
+def test_vest_only_mode_violation(base_person_box):
+    """Test that in vest_only mode, a worker without Safety Vest is a violation."""
+    detections = [
+        {"class_name": CLASS_PERSON, "confidence": 0.95, "box": base_person_box},
+        {"class_name": CLASS_HARDHAT, "confidence": 0.90, "box": [120.0, 105.0, 180.0, 150.0]},
+        {"class_name": CLASS_NO_VEST, "confidence": 0.90, "box": [110.0, 150.0, 190.0, 220.0]},
+    ]
+    res = evaluate_site_compliance(detections, required_gear="vest_only")
+    assert res["workers"][0]["status"] == "Missing vest"
+    assert res["summary"]["compliant_count"] == 0
+    assert res["summary"]["violation_count"] == 1
+    assert res["summary"]["compliance_rate"] == 0.0
