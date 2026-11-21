@@ -1,5 +1,195 @@
 [
   {
+    "id": "INSP-20261121-154055",
+    "timestamp": "2026-11-21 15:40:55",
+    "image_name": "photo08.jpeg",
+    "total_workers": 2,
+    "compliant_count": 0,
+    "violation_count": 1,
+    "unknown_count": 1,
+    "compliance_rate": 0.0,
+    "site_status": "Critical",
+    "image_path": "",
+    "settings": {
+      "conf_threshold": 0.25,
+      "required_gear": "both",
+      "show_gear_boxes": true,
+      "show_zones": false,
+      "strict_hardhat": true
+    }
+  },
+  {
+    "id": "INSP-20261121-153856",
+    "timestamp": "2026-11-21 15:38:56",
+    "image_name": "photo06.jpeg",
+    "total_workers": 5,
+    "compliant_count": 1,
+    "violation_count": 3,
+    "unknown_count": 1,
+    "compliance_rate": 20.0,
+    "site_status": "Critical",
+    "image_path": "",
+    "settings": {
+      "conf_threshold": 0.25,
+      "required_gear": "both",
+      "show_gear_boxes": true,
+      "show_zones": false,
+      "strict_hardhat": true
+    }
+  },
+  {
+    "id": "INSP-20261121-153315",
+    "timestamp": "2026-11-21 15:33:15",
+    "image_name": "photo01.jpeg",
+    "total_workers": 7,
+    "compliant_count": 5,
+    "violation_count": 0,
+    "unknown_count": 2,
+    "compliance_rate": 71.4,
+    "site_status": "Warning",
+    "image_path": "",
+    "settings": {
+      "conf_threshold": 0.25,
+      "required_gear": "both",
+      "show_gear_boxes": true,
+      "show_zones": false,
+      "strict_hardhat": true
+    }
+  },
+  {
+    "id": "INSP-20261121-082713",
+    "timestamp": "2026-11-21 08:27:13",
+    "image_name": "photo13.jpg",
+    "total_workers": 2,
+    "compliant_count": 0,
+    "violation_count": 2,
+    "unknown_count": 0,
+    "compliance_rate": 0.0,
+    "site_status": "Critical",
+    "image_path": "",
+    "settings": {
+      "conf_threshold": 0.25,
+      "required_gear": "both",
+      "show_gear_boxes": true,
+      "show_zones": false,
+      "strict_hardhat": true
+    }
+  },
+  {
+    "id": "INSP-20261121-082646",
+    "timestamp": "2026-11-21 08:26:46",
+    "image_name": "photo12.jpg",
+    "total_workers": 2,
+    "compliant_count": 0,
+    "violation_count": 1,
+    "unknown_count": 1,
+    "compliance_rate": 0.0,
+    "site_status": "Critical",
+    "image_path": "",
+    "settings": {
+      "conf_threshold": 0.25,
+      "required_gear": "both",
+      "show_gear_boxes": true,
+      "show_zones": false,
+      "strict_hardhat": true
+    }
+  },
+  {
+    "id": "INSP-20261121-082621",
+    "timestamp": "2026-11-21 08:26:21",
+    "image_name": "photo07.jpeg",
+    "total_workers": 2,
+    "compliant_count": 0,
+    "violation_count": 0,
+    "unknown_count": 2,
+    "compliance_rate": 0.0,
+    "site_status": "Critical",
+    "image_path": "",
+    "settings": {
+      "conf_threshold": 0.25,
+      "required_gear": "both",
+      "show_gear_boxes": true,
+      "show_zones": false,
+      "strict_hardhat": true
+    }
+  },
+  {
+    "id": "INSP-20261121-082555",
+    "timestamp": "2026-11-21 08:25:55",
+    "image_name": "photo15.jpg",
+    "total_workers": 4,
+    "compliant_count": 0,
+    "violation_count": 0,
+    "unknown_count": 4,
+    "compliance_rate": 0.0,
+    "site_status": "Critical",
+    "image_path": "",
+    "settings": {
+      "conf_threshold": 0.25,
+      "required_gear": "both",
+      "show_gear_boxes": true,
+      "show_zones": false,
+      "strict_hardhat": true
+    }
+  },
+  {
+    "id": "INSP-20261121-082534",
+    "timestamp": "2026-11-21 08:25:34",
+    "image_name": "photo09.jpg",
+    "total_workers": 1,
+    "compliant_count": 0,
+    "violation_count": 0,
+    "unknown_count": 1,
+    "compliance_rate": 0.0,
+    "site_status": "Critical",
+    "image_path": "",
+    "settings": {
+      "conf_threshold": 0.25,
+      "required_gear": "both",
+      "show_gear_boxes": true,
+      "show_zones": false,
+      "strict_hardhat": true
+    }
+  },
+  {
+    "id": "INSP-20261121-082506",
+    "timestamp": "2026-11-21 08:25:06",
+    "image_name": "photo14.jpg",
+    "total_workers": 10,
+    "compliant_count": 0,
+    "violation_count": 0,
+    "unknown_count": 10,
+    "compliance_rate": 0.0,
+    "site_status": "Critical",
+    "image_path": "",
+    "settings": {
+      "conf_threshold": 0.25,
+      "required_gear": "both",
+      "show_gear_boxes": true,
+      "show_zones": false,
+      "strict_hardhat": true
+    }
+  },
+  {
+    "id": "INSP-20261121-082415",
+    "timestamp": "2026-11-21 08:24:15",
+    "image_name": "photo10.jpg",
+    "total_workers": 6,
+    "compliant_count": 4,
+    "violation_count": 2,
+    "unknown_count": 0,
+    "compliance_rate": 66.7,
+    "site_status": "Warning",
+    "image_path": "",
+    "settings": {
+      "conf_threshold": 0.25,
+      "required_gear": "both",
+      "show_gear_boxes": true,
+      "show_zones": false,
+      "strict_hardhat": true
+    }
+  },
+  {
     "id": "INSP-20261120-214325",
     "timestamp": "2026-11-20 21:43:25",
     "image_name": "sample_3.jpg",
