@@ -1,0 +1,16 @@
+image,true_compliant,pred_compliant,true_violations,pred_violations,true_workers,pred_workers,pred_needs_review,compliance_rate,small,low_confidence,view_not_upright,conflicting_detections,hardhat_unknown,vest_unknown,other
+photo01.jpg,7,5,0,0,7,7,2,71.4,0,0,0,2,0,0,0
+photo02.jpg,4,4,0,0,4,4,0,100.0,0,0,0,0,0,0,0
+photo03.jpg,10,3,0,0,10,6,3,50.0,1,0,1,1,0,0,0
+photo04.jpg,7,4,0,1,7,7,2,57.1,1,0,0,1,0,0,0
+photo05.jpg,4,2,0,1,4,4,1,50.0,0,1,0,0,0,0,0
+photo06.jpg,3,1,2,3,5,5,1,20.0,0,0,0,1,0,0,0
+photo07.jpg,1,0,1,0,2,2,2,0.0,0,0,2,0,0,0,0
+photo08.jpg,2,0,0,1,2,2,1,0.0,0,0,0,0,0,1,0
+photo09.jpg,3,0,0,0,3,1,1,0.0,0,0,1,0,0,0,0
+photo10.jpg,6,4,0,2,6,6,0,66.7,0,0,0,0,0,0,0
+photo11.jpg,18,2,0,1,18,7,4,28.6,1,2,0,1,0,0,0
+photo12.jpg,0,0,2,1,2,2,1,0.0,1,0,0,0,0,0,0
+photo13.jpg,0,0,2,2,2,2,0,0.0,0,0,0,0,0,0,0
+photo14.jpg,12,0,0,0,12,10,10,0.0,10,0,0,0,0,0,0
+photo15.jpg,4,0,0,0,4,4,4,0.0,3,1,0,0,0,0,0

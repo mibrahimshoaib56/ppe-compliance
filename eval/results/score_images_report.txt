@@ -1,0 +1,73 @@
+============================================================================================================================================
+SCORING PPE COMPLIANCE PIPELINE AGAINST GROUND TRUTH
+============================================================================================================================================
+Image Folder:        eval/test_photos
+Ground Truth CSV:    eval/ground_truth.csv
+Images to Evaluate:  15
+Confidence Setting:  0.25
+--------------------------------------------------------------------------------------------------------------------------------------------
+Image            True C Pred C True V Pred V True W Pred W   NR Comp Rate | small low_cf  uprt  conf h_unk v_unk  oth
+--------------------------------------------------------------------------------------------------------------------------------------------
+photo01.jpg           7      5      0      0      7      7    2     71.4% |     0      0     0     2     0     0    0
+photo02.jpg           4      4      0      0      4      4    0    100.0% |     0      0     0     0     0     0    0
+photo03.jpg          10      3      0      0     10      6    3     50.0% |     1      0     1     1     0     0    0
+photo04.jpg           7      4      0      1      7      7    2     57.1% |     1      0     0     1     0     0    0
+photo05.jpg           4      2      0      1      4      4    1     50.0% |     0      1     0     0     0     0    0
+photo06.jpg           3      1      2      3      5      5    1     20.0% |     0      0     0     1     0     0    0
+photo07.jpg           1      0      1      0      2      2    2      0.0% |     0      0     2     0     0     0    0
+photo08.jpg           2      0      0      1      2      2    1      0.0% |     0      0     0     0     0     1    0
+photo09.jpg           3      0      0      0      3      1    1      0.0% |     0      0     1     0     0     0    0
+photo10.jpg           6      4      0      2      6      6    0     66.7% |     0      0     0     0     0     0    0
+photo11.jpg          18      2      0      1     18      7    4     28.6% |     1      2     0     1     0     0    0
+photo12.jpg           0      0      2      1      2      2    1      0.0% |     1      0     0     0     0     0    0
+photo13.jpg           0      0      2      2      2      2    0      0.0% |     0      0     0     0     0     0    0
+photo14.jpg          12      0      0      0     12     10   10      0.0% |    10      0     0     0     0     0    0
+photo15.jpg           4      0      0      0      4      4    4      0.0% |     3      1     0     0     0     0    0
+============================================================================================================================================
+DIAGNOSTIC SUMMARY & EVALUATION METRICS
+============================================================================================================================================
+  • Total Images Evaluated:            15
+  • Exact Match Accuracy (Both Counts): 2 / 15 (13.3%)
+  • Within ±1 Accuracy (Compliant):    4 / 15 (26.7%)
+  • Within ±1 Accuracy (Violations):   14 / 15 (93.3%)
+  • MAE (Compliant Count):             3.73
+  • MAE (Violations Count):            0.60
+--------------------------------------------------------------------------------------------------------------------------------------------
+  • Total Detected vs True Workers:    69 detected vs 88 true (diff: -19)
+  • Judged Workers (Compliant+Viol):   37 / 69 detected (53.6%)
+  • Needs-Review Workers Rate:         32 / 69 detected (46.4%)
+--------------------------------------------------------------------------------------------------------------------------------------------
+  • Violations Flagged by Pipeline:    12
+  • Violations Caught (Upper Bound):   5 / 7 true violations (sum of min(pred, true))
+--------------------------------------------------------------------------------------------------------------------------------------------
+  • Needs-Review Workers Breakdown by Reason (Total across all images):
+      - small                   :  17 ( 53.1% of needs-review)
+      - low confidence          :   4 ( 12.5% of needs-review)
+      - view not upright        :   4 ( 12.5% of needs-review)
+      - conflicting detections  :   6 ( 18.8% of needs-review)
+      - hardhat unknown         :   0 (  0.0% of needs-review)
+      - vest unknown            :   1 (  3.1% of needs-review)
+      - other                   :   0 (  0.0% of needs-review)
+============================================================================================================================================
+Note: Comp Rate = compliant / all detected workers, including needs review
+============================================================================================================================================
+
+============================================================================================================================================
+TABLE OF WRONG IMAGES (13 mismatches):
+============================================================================================================================================
+Image               True Comp  Pred Comp  True Viol  Pred Viol   Pred NR              Mismatch Type
+--------------------------------------------------------------------------------------------------------------------------------------------
+photo01.jpg                 7          5          0          0         2         Compliant Mismatch
+photo03.jpg                10          3          0          0         3         Compliant Mismatch
+photo04.jpg                 7          4          0          1         2 Compliant Mismatch, Violation Mismatch
+photo05.jpg                 4          2          0          1         1 Compliant Mismatch, Violation Mismatch
+photo06.jpg                 3          1          2          3         1 Compliant Mismatch, Violation Mismatch
+photo07.jpg                 1          0          1          0         2 Compliant Mismatch, Violation Mismatch
+photo08.jpg                 2          0          0          1         1 Compliant Mismatch, Violation Mismatch
+photo09.jpg                 3          0          0          0         1         Compliant Mismatch
+photo10.jpg                 6          4          0          2         0 Compliant Mismatch, Violation Mismatch
+photo11.jpg                18          2          0          1         4 Compliant Mismatch, Violation Mismatch
+photo12.jpg                 0          0          2          1         1         Violation Mismatch
+photo14.jpg                12          0          0          0        10         Compliant Mismatch
+photo15.jpg                 4          0          0          0         4         Compliant Mismatch
+============================================================================================================================================
