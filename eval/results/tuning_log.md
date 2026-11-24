@@ -1,7 +1,7 @@
 # Detection & Compliance Tuning Log
 
-Tracks every named constant in `src/compliance.py` and `src/detector.py` that
-affects a detection or compliance decision.
+Tracks every named constant in `src/compliance.py`, `src/detector.py`, and `src/video.py` that
+affects a detection, compliance, or video-processing decision.
 
 **Starting values** are taken from the initial git commit `df563b0` (2026-11-17)
 and confirmed by `PROJECT_CONTEXT.md` (line 41).  
@@ -10,7 +10,7 @@ No code was modified to produce this file.
 
 ---
 
-## `src/compliance.py`
+## 1. `src/compliance.py` (Zones & Core Policy)
 
 | Constant | File | Starting value | Final value | Why it changed |
 |---|---|---|---|---|
@@ -34,37 +34,55 @@ A subsequent prompt formalised this choice and raised the threshold to `0.30`.
 
 ---
 
-## `src/detector.py`
-
-> [!NOTE]
-> The initial commit (`df563b0`) had **no per-class confidence constants**.
-> The original `run_detection()` accepted a single `conf_threshold: float = 0.25`
-> parameter passed directly to `model.predict()`. All constants below are **new**,
-> introduced in an uncommitted working-tree edit per the user prompt:
-> *"run YOLO at a low base confidence (0.10), then filter detections per class
-> using named constants"*.
+## 2. `src/compliance.py` (Reliability & Strict Hardhat Policy)
 
 | Constant | File | Starting value | Final value | Why it changed |
 |---|---|---|---|---|
-| `BASE_YOLO_CONFIDENCE` | detector.py | N/A (not present in initial commit) | `0.10` | New two-stage filtering design. YOLO is run at a permissive base threshold (0.10) so more raw candidates are returned; per-class filters then apply the real thresholds. The original single `conf_threshold=0.25` was replaced by this constant. |
-| `CONF_PERSON` | detector.py | N/A (not present in initial commit) | `0.30` | Per-class threshold for the Person class. Set higher than the base to avoid false person detections from background objects. |
-| `CONF_HARDHAT` | detector.py | N/A (not present in initial commit) | `0.30` | Per-class threshold for Hardhat. Same rationale as `CONF_PERSON` — positive-class gear needs high certainty. |
-| `CONF_NO_HARDHAT` | detector.py | N/A (not present in initial commit) | `0.20` | Per-class threshold for NO-Hardhat. Set lower than positive class to favour false-negative detection (better to flag a potential violation than to miss it). |
-| `CONF_SAFETY_VEST` | detector.py | N/A (not present in initial commit) | `0.20` | Per-class threshold for Safety Vest. Lower threshold improves recall for partially occluded vests (bags, harnesses). |
-| `CONF_NO_SAFETY_VEST` | detector.py | N/A (not present in initial commit) | `0.20` | Per-class threshold for NO-Safety Vest. Same rationale as `CONF_NO_HARDHAT`. |
-| `CONF_DEFAULT` | detector.py | N/A (not present in initial commit) | `0.20` | Fallback threshold for any class name not explicitly listed in `CLASS_CONF_THRESHOLDS`. Guards against future model classes that lack a named constant. |
+| `STRICT_HARDHAT_POLICY` | compliance.py | `False` | `True` | In construction safety, a reliable worker observed with no hardhat detection is presumed missing head protection rather than unknown. Can be toggled in Streamlit sidebar. |
+| `MIN_PERSON_CONF` | compliance.py | N/A | `0.40` | Worker reliability gate: Person detections with confidence < 0.40 are routed to "Needs review: low confidence" to prevent background clutter false violations. |
+| `MIN_PERSON_HEIGHT_FRAC` | compliance.py | N/A | `0.12` | Worker reliability gate: Workers whose bounding box height is < 12% of total image height are routed to "Needs review: small" because tiny background figures cannot reliably show PPE. |
+| `MIN_UPRIGHT_ASPECT` | compliance.py | N/A | `1.2` | Worker reliability gate: Height-to-width aspect ratio < 1.2 indicates overhead camera angles or severe crouching where torso/head geometry is unreliable. Routed to "Needs review: view not upright" and vest status overridden to unknown. |
 
 ---
 
-## Summary
+## 3. `src/detector.py` (Two-Stage Confidence Filtering)
 
-| Change category | Constants affected | Net effect |
+| Constant | File | Starting value | Final value | Why it changed |
+|---|---|---|---|---|
+| `BASE_YOLO_CONFIDENCE` | detector.py | N/A (single 0.25) | `0.10` | Two-stage filtering design: YOLO runs at a permissive base threshold (0.10) to retain candidates before per-class filters apply specific thresholds. |
+| `CONF_PERSON` | detector.py | N/A | `0.30` | Per-class threshold for Person: set higher to prevent clutter and spurious false person boxes. |
+| `CONF_HARDHAT` | detector.py | N/A | `0.30` | Per-class threshold for Hardhat: positive-class gear requires high certainty. |
+| `CONF_NO_HARDHAT` | detector.py | N/A | `0.20` | Lower threshold favors violation recall (better to flag a potential violation than miss it). |
+| `CONF_SAFETY_VEST` | detector.py | N/A | `0.20` | Lower threshold improves recall for partially occluded vests (straps, harnesses, bags). |
+| `CONF_NO_SAFETY_VEST` | detector.py | N/A | `0.20` | Lower threshold favors violation recall for missing vests. |
+| `CONF_DEFAULT` | detector.py | N/A | `0.20` | Fallback threshold for unlisted contextual classes (machinery, vehicles, cones). |
+
+---
+
+## 4. `src/video.py` (CCTV Video Processing & Smoothing)
+
+| Constant | File | Starting value | Final value | Why it changed |
+|---|---|---|---|---|
+| `MAX_VIDEO_SECONDS` | video.py | N/A | `30` | Caps analysis to the first 30 seconds to keep CPU inference under acceptable latency. |
+| `FALLBACK_FPS` | video.py | N/A | `25.0` | Default FPS when video metadata reports 0, negative, or invalid framerate. |
+| `PROCESS_EVERY_N` | video.py | `2` | `1` | Stride of analyzed frames. Set to 1 for maximum smoothness and per-frame detection accuracy. |
+| `MAX_FRAME_WIDTH` | video.py | `640` | `416` | Standard YOLO inference width, ~30% faster on CPU with minimal accuracy difference. |
+| `OUTPUT_MAX_FPS` | video.py | N/A | `30` | Caps exported H.264 MP4 playback framerate. |
+| `TOP_VIOLATION_FRAMES_COUNT` | video.py | N/A | `3` | Number of peak violation moments displayed in executive summary gallery. |
+| `TEMPORAL_SMOOTHING_WINDOW` | video.py | N/A | `7` | 7-frame rolling median window to eliminate 1–2 frame transient flicker from rapid head turns and occlusions. |
+
+---
+
+## 5. Summary of Net Effects
+
+| Category | Constants Affected | Net Effect |
 |---|---|---|
-| Torso zone widening | `TORSO_ZONE_TOP`, `TORSO_ZONE_BOTTOM` | Vest detections for bag-wearing workers are more likely to be associated with the correct worker. |
-| Overlap threshold tightening | `OVERLAP_THRESHOLD` | Requires 30 % of the gear box to overlap a body zone (up from 20 %), reducing spurious assignments of distant gear boxes. |
-| Two-stage confidence filtering | All `CONF_*` and `BASE_YOLO_CONFIDENCE` | Low base threshold keeps more candidates; per-class gates apply the real minimum, giving independent control over precision/recall per class. |
-| Unchanged | `HEAD_ZONE_TOP`, `HEAD_ZONE_BOTTOM`, `SITE_SAFE_THRESHOLD`, `SITE_WARNING_THRESHOLD` | No evidence of change in git history or code comments. |
+| Torso zone widening | `TORSO_ZONE_TOP`, `TORSO_ZONE_BOTTOM` | Captures vests occluded by tool belts, bags, or backpacks. |
+| Overlap metric | `OVERLAP_THRESHOLD` (IoG = 0.30) | Measures fraction of gear inside anatomical zone, preventing small gear penalties. |
+| Reliability guards | `MIN_PERSON_CONF`, `MIN_PERSON_HEIGHT_FRAC`, `MIN_UPRIGHT_ASPECT` | Small, distant, or overhead persons are routed to "Needs review" rather than penalized falsely. |
+| Strict hardhat | `STRICT_HARDHAT_POLICY` | Reliable persons without hardhat boxes are flagged as violations. |
+| Temporal smoothing | `TEMPORAL_SMOOTHING_WINDOW = 7` | Stabilizes video metrics against inter-frame posture fluctuations without inter-frame tracking. |
 
 ---
 
-*Last updated: 2026-11-19 | Source: `git log -p src/compliance.py src/detector.py` + `PROJECT_CONTEXT.md` line 41*
+*Last updated: 2026-11-24 | Source: Current code inspection of `src/compliance.py`, `src/detector.py`, and `src/video.py`.*

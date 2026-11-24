@@ -6,3 +6,9 @@ __pycache__/
 *.pt
 runs/
 .DS_Store
+
+# Evaluation images (keep out of git repository to avoid large binary commits)
+eval/test_photos/*.jpg
+eval/test_photos/*.jpeg
+eval/test_photos/*.png
+eval/roboflow_test/
