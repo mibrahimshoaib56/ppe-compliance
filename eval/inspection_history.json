@@ -1,5 +1,100 @@
 [
   {
+    "id": "INSP-20261123-133601",
+    "timestamp": "2026-11-23 13:36:01",
+    "image_name": "ppe2.png",
+    "total_workers": 6,
+    "compliant_count": 5,
+    "violation_count": 1,
+    "unknown_count": 0,
+    "compliance_rate": 83.3,
+    "site_status": "Warning",
+    "image_path": "sample_images\\ppe2.png",
+    "settings": {
+      "conf_threshold": 0.25,
+      "required_gear": "both",
+      "show_gear_boxes": true,
+      "show_zones": false,
+      "strict_hardhat": true
+    }
+  },
+  {
+    "id": "INSP-20261123-133208",
+    "timestamp": "2026-11-23 13:32:08",
+    "image_name": "images.jpeg",
+    "total_workers": 0,
+    "compliant_count": 0,
+    "violation_count": 0,
+    "unknown_count": 0,
+    "compliance_rate": 100.0,
+    "site_status": "Safe",
+    "image_path": "sample_images\\images.jpeg",
+    "settings": {
+      "conf_threshold": 0.25,
+      "required_gear": "both",
+      "show_gear_boxes": true,
+      "show_zones": false,
+      "strict_hardhat": true
+    }
+  },
+  {
+    "id": "INSP-20261122-000109",
+    "timestamp": "2026-11-22 00:01:09",
+    "image_name": "photo11.jpg",
+    "total_workers": 7,
+    "compliant_count": 2,
+    "violation_count": 1,
+    "unknown_count": 4,
+    "compliance_rate": 28.6,
+    "site_status": "Critical",
+    "image_path": "",
+    "settings": {
+      "conf_threshold": 0.25,
+      "required_gear": "both",
+      "show_gear_boxes": true,
+      "show_zones": false,
+      "strict_hardhat": true
+    }
+  },
+  {
+    "id": "INSP-20261122-000029",
+    "timestamp": "2026-11-22 00:00:29",
+    "image_name": "images.jpeg",
+    "total_workers": 0,
+    "compliant_count": 0,
+    "violation_count": 0,
+    "unknown_count": 0,
+    "compliance_rate": 100.0,
+    "site_status": "Safe",
+    "image_path": "sample_images\\images.jpeg",
+    "settings": {
+      "conf_threshold": 0.25,
+      "required_gear": "both",
+      "show_gear_boxes": true,
+      "show_zones": false,
+      "strict_hardhat": true
+    }
+  },
+  {
+    "id": "INSP-20261121-175634",
+    "timestamp": "2026-11-21 17:56:34",
+    "image_name": "photo05.jpeg",
+    "total_workers": 4,
+    "compliant_count": 2,
+    "violation_count": 1,
+    "unknown_count": 1,
+    "compliance_rate": 50.0,
+    "site_status": "Critical",
+    "image_path": "",
+    "settings": {
+      "conf_threshold": 0.25,
+      "required_gear": "both",
+      "show_gear_boxes": true,
+      "show_zones": false,
+      "strict_hardhat": true
+    }
+  },
+  {
     "id": "INSP-20261121-154055",
     "timestamp": "2026-11-21 15:40:55",
     "image_name": "photo08.jpeg",
