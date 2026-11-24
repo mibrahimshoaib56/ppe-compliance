@@ -7,3 +7,4 @@ pytest
 imageio
 imageio-ffmpeg
 yt-dlp
+matplotlib

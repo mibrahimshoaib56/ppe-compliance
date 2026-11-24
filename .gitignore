@@ -12,3 +12,6 @@ eval/test_photos/*.jpg
 eval/test_photos/*.jpeg
 eval/test_photos/*.png
 eval/roboflow_test/
+
+# Generated Submission Archives
+*.zip
