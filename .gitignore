@@ -11,6 +11,7 @@ runs/
 eval/test_photos/*
 !eval/test_photos/SOURCES.md
 eval/roboflow_test/
+sample_images/*
 
 # Generated Submission Archives
 *.zip
