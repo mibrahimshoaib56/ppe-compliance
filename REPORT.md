@@ -14,7 +14,7 @@ Personal Protective Equipment (PPE) compliance is critical for preventing head i
 
 This project implements an automated compliance surveillance workflow combining deep-learning object detection with spatial geometric rule logic and temporal video filtering. The detector is an Ultralytics **YOLOv8n** model (129 layers, 3,012,798 parameters as trained, and 73 layers with 3,134,894 parameters when fused) trained on the **Construction Site Safety (v28)** dataset across 10 classes, achieving a validation $\text{mAP}_{50}$ of **0.813** and test $\text{mAP}_{50}$ of **0.754**.
 
-To determine compliance from raw bounding boxes, a Python spatial compliance engine was developed. The engine partitions worker bounding boxes into anatomical head (top 0%–35%) and widened torso (middle 15%–75%) zones, associates equipment using **Intersection over Gear Area ($\text{IoG} \ge 0.30$)**, and applies reliability safeguards based on aspect ratio, bounding box height fraction, detection confidence, and detection conflicts. For video processing, a **7-frame rolling median temporal filter** processes analyzed frames in a post-processing pass over frames before and after the current frame to reduce single-frame detection flickers.
+To determine compliance from raw bounding boxes, a Python spatial compliance engine was developed. The engine partitions worker bounding boxes into anatomical head (top 0%–35%) and widened torso (middle 15%–75%) zones, associates equipment using **Intersection over Gear Area ($\text{IoG} \ge 0.30$)**, and applies reliability safeguards based on aspect ratio, bounding box height fraction, detection confidence, and detection conflicts. For video processing, a **7-frame rolling median temporal filter** operates in a post-processing pass over surrounding frames to smooth aggregate frame counts (total workers, violations, compliant counts) and the compliance rate over time. It does not alter bounding boxes, per-worker statuses, or playback video frames.
 
 Evaluation on 15 test photos collected from Google Images with labels made by the group by visual inspection yielded an exact image-level match of **13.3%** (2 of 15 images). Within $\pm 1$ worker count, accuracy was **93.3%** (14 of 15) for violations and **26.7%** (4 of 15) for compliant workers, with a Mean Absolute Error (MAE) of **0.60** for violations and **3.73** for compliant counts. A naive baseline that predicts zero violations everywhere would be within $\pm 1$ on 12 of 15 images (**80%**), because the ground-truth key contains only 7 violations among 88 workers. Across the 15 photos, 69 workers were detected versus 88 true workers (counts only; detections were not matched one by one); 37 received a verdict (25 compliant, 12 violations), while 32 were sent to "Needs Review".
 
@@ -33,6 +33,7 @@ Evaluation on 15 test photos collected from Google Images with labels made by th
 10. [Application Architecture & User Interface](#10-application-architecture--user-interface)
 11. [Limitations & Future Improvements](#11-limitations--future-improvements)
 12. [Conclusion](#12-conclusion)
+13. [References](#13-references)
 
 ---
 
@@ -61,7 +62,7 @@ This project was developed under **Path A (Software-Based Implementation)** of t
 1. **Object Detection Model:** Train a YOLOv8 object detector on construction site safety gear and person classes.
 2. **Rule-Based Compliance Logic:** Implement a Python compliance engine on top of detector outputs to extract anatomical zones, compute gear-to-person overlap, and calculate site compliance percentages.
 3. **Reliability Safeguards:** Implement filtering rules to prevent false violation flags on background objects, distant figures, crouching postures, and overhead perspectives.
-4. **Video Processing with Temporal Filtering:** Implement post-processing temporal smoothing to stabilize bounding-box outputs across video frames.
+4. **Video Processing with Temporal Filtering:** Implement post-processing temporal smoothing to stabilize aggregate frame counts and compliance rates across video frames.
 5. **Streamlit Interface:** Provide a web interface supporting image upload, video processing with annotated playback, inspection summary metrics, and CSV reporting.
 6. **Empirical Evaluation:** Benchmark the pipeline against visual ground-truth counts on test photos across confidence thresholds.
 
@@ -69,18 +70,21 @@ This project was developed under **Path A (Software-Based Implementation)** of t
 
 ## 3. Algorithm Justification: Why Detection & YOLOv8?
 
-### 3.1 Object Detection vs. Image Classification
+### 3.1 System Input, Output, and Supported Decision
+The pipeline takes a single RGB image (or video frame) as input. It outputs bounding box coordinates $[x_1, y_1, x_2, y_2]$, class detections, per-worker compliance status (`Compliant`, `Violation`, or `Needs Review` with diagnostic reasons), and an aggregate site summary (total workers, compliant count, violation count, and compliance percentage). This supports on-site safety officers by automatically flagging scenes or zones requiring immediate manual inspection, triaging potential infractions, and logging compliance trends over time.
+
+### 3.2 Object Detection vs. Image Classification
 Image classification assigns a single label to an entire image or crop. In construction scenes:
 * **Multiple Instances:** Scenes contain multiple workers at varying distances simultaneously; whole-image classification cannot evaluate individual workers.
 * **Spatial Explainability:** Classification does not provide bounding box coordinates showing which worker is missing which item.
 * **Detection Capability:** Object detection outputs bounding box coordinates $[x_1, y_1, x_2, y_2]$, class labels, and confidence scores for every detected person and piece of gear, enabling spatial reasoning.
 
-### 3.2 YOLOv8 Architecture
+### 3.3 YOLOv8 Architecture
 YOLOv8 uses an anchor-free convolutional architecture that detects objects in a single pass:
 * **Anchor-Free Head:** Decouples object classification and bounding-box regression, which assists in detecting small objects (such as hardhats) alongside larger objects (such as vehicles).
 * **C2f Modules:** Integrate cross-stage partial connections with two convolutions to enhance feature gradient flow across scales.
 
-### 3.3 YOLOv8 Nano (`yolov8n`) Configuration
+### 3.4 YOLOv8 Nano (`yolov8n`) Configuration
 For this project, `yolov8n.pt` was selected:
 * **Parameters:** **3,012,798 parameters** (129 layers) as trained; **3,134,894 parameters** (73 layers) when fused for validation.
 * **Compute Complexity:** **8.2 GFLOPs** as trained (8.6 GFLOPs fused).
@@ -97,8 +101,8 @@ The dataset contains **2,801 total images** at $640 \times 640$ resolution:
 
 | Split | Image Count | Percentage | Split Characteristics |
 |---|:---:|:---:|---|
-| **Training** | 2,605 | 93.0% | Baked-in $2 \times 2$ mosaics with cutout patch squares |
-| **Validation** | 114 | 4.1% | 114 images (split counts verified; images not individually inspected) |
+| **Training** | 2,605 | 93.0% | Sampled training images are baked-in mosaics with cutout patch squares |
+| **Validation** | 114 | 4.1% | 114 images (natural images, not individually inspected) |
 | **Testing** | 82 | 2.9% | Held-out benchmark test set of natural photographic scenes |
 | **Total** | **2,801** | **100.0%** | YOLO annotation format |
 
@@ -120,7 +124,7 @@ The dataset contains **2,801 total images** at $640 \times 640$ resolution:
 The compliance engine uses classes 0, 2, 4, 5, and 7. The remaining classes are treated as context.
 
 ### 4.3 Training Set Characteristics
-The training images contain baked-in $2 \times 2$ mosaics with cutout squares, which forces the network to detect partial equipment features. The held-out test split consists of natural photographic scenes.
+Sampled training images are baked-in mosaics with cutout squares, which forces the network to detect partial equipment features. The held-out test split consists of natural photographic scenes.
 
 ---
 
@@ -144,6 +148,8 @@ From the Kaggle training log and `results.csv`:
 * **Validation Losses at Epoch 100:** Box loss **1.281**, Class loss **0.714**, DFL loss **1.339**
 * **Validation mAP at Epoch 100:** $\text{mAP}_{50} = \mathbf{0.814}$, $\text{mAP}_{50-95} = \mathbf{0.512}$
 * **Best Model Weights (`best.pt`):** Validation $\text{mAP}_{50} = \mathbf{0.813}$, $\text{mAP}_{50-95} = \mathbf{0.511}$
+
+![Training Loss and Metric Curves](eval/results/results.png)
 
 ### 5.3 Held-Out Test Set Performance (82 Images, 760 Boxes)
 
@@ -173,11 +179,15 @@ From `eval/results/test_metrics.txt`:
 
 `NO-Hardhat` had the lowest $\text{AP}_{50}$ (0.545) and recall (0.561) among target classes. This is likely due to the small pixel size of bare heads at distance and visual variance in hair styles, caps, and skin tones compared to hardhat shapes. This empirical result informed the strict hardhat policy described below.
 
+![Test Confusion Matrix (test split)](eval/results/test_eval/confusion_matrix.png)
+
 ---
 
 ## 6. Compliance Engine Architecture
 
-The compliance logic in [`src/compliance.py`](file:///d:/AI_project/src/compliance.py) operates on detector outputs using geometric rules.
+![Pipeline Architecture Diagram](eval/results/pipeline_architecture_diagram.png)
+
+The compliance logic in [`src/compliance.py`](src/compliance.py) operates on detector outputs using geometric rules.
 
 ### 6.1 Two-Stage Confidence Filtering
 Running YOLO at a single high confidence threshold can eliminate small pieces of gear. The pipeline applies:
@@ -189,6 +199,8 @@ Running YOLO at a single high confidence threshold can eliminate small pieces of
    * $\text{CONF\_SAFETY\_VEST} = 0.20$
    * $\text{CONF\_NO\_SAFETY\_VEST} = 0.20$
    * $\text{CONF\_DEFAULT} = 0.20$
+
+The UI confidence slider (default 0.25) sets `conf_threshold` in `run_detection()` (`src/detector.py`, lines 135–208). YOLO inference is always executed first at a fixed low base confidence of 0.10 (`BASE_YOLO_CONFIDENCE`, line 38) to retain candidate gear boxes. The slider value then scales per-class thresholds via `conf_scale = conf_threshold / 0.25` (`src/detector.py`, line 171). At the default 0.25 (scale 1.0), candidate boxes must meet the unscaled gates: 0.30 for Person and Hardhat, and 0.20 for Vests and negative classes (`src/detector.py`, lines 43–50). Detections surviving this gate enter `evaluate_site_compliance()` (`src/compliance.py`), where person detections with confidence below 0.40 (`MIN_PERSON_CONF`, line 44) are routed to "Needs review: low confidence" rather than receiving definitive violation verdicts.
 
 ### 6.2 Anatomical Zone Partitioning
 For each person box $[x_1, y_1, x_2, y_2]$ with height $H = y_2 - y_1$:
@@ -212,12 +224,13 @@ Each detected worker is evaluated against four criteria:
 ### 6.5 Strict Hardhat Enforcement Policy
 Because detector recall for `NO-Hardhat` is 0.561, an unhelmeted worker often produces no head detection.
 * Under `STRICT_HARDHAT_POLICY = True`: A worker whose head zone has no hardhat detection is classified as a violation (`Missing hardhat`), but only if the person detection passes all reliability guards. Unreliable workers remain in "Needs Review".
+* Detector recall for `Hardhat` is 0.809, meaning a missed hardhat detection on a helmeted worker can cause a false violation under strict policy. At confidence 0.25, the pipeline flagged 12 violations against 7 true ones; missed hardhat detections under the strict policy are one possible cause, which was not isolated.
 
 ---
 
 ## 7. System-Level Evaluation & Diagnostics
 
-The pipeline was evaluated on **15 test photos** collected from Google Images (original pages not recorded). Ground-truth worker counts (`true_compliant`, `true_violations`) were established by the group by visual inspection and recorded in [`eval/ground_truth.csv`](file:///d:/AI_project/eval/ground_truth.csv).
+The pipeline was evaluated on **15 test photos** collected from Google Images (original pages not recorded). A worker is defined as **compliant** only when wearing both a hardhat and a safety vest. Ground-truth worker counts (`true_compliant`, `true_violations`) were established by the group by visual inspection and recorded in [`eval/ground_truth.csv`](eval/ground_truth.csv) using **key v1**, which counted vest-colored garments without silver retroreflective tape as compliant. Under key v1 (vest-colored garments without reflectors counted as compliant), some mismatches may come from workers whose vests the model does not treat as safety vests.
 
 ### 7.1 Quantitative Evaluation at Default Confidence (0.25)
 
@@ -274,25 +287,28 @@ From the evaluation records on these 15 photos:
 
 ## 8. Failure Case Analysis
 
-Failure cases were examined and recorded in [`eval/results/failure_cases/`](file:///d:/AI_project/eval/results/failure_cases/):
+Failure cases were examined and recorded in [`eval/results/failure_cases/`](eval/results/failure_cases/):
 
 ### Case 1: Overhead Camera Angle (`sample_images/ppe10.jpg`)
-* **Observation:** Steep downward camera angles compress the worker bounding box vertically.
-* **Behavior:** Aspect ratio $h/w \approx 1.03$ falls below the 1.20 threshold. The aspect guard intercepts the detection and routes the worker to `"Needs review: view not upright"`.
+* **Source Image:** `sample_images/ppe10.jpg`
+* **Visual Content:** [GROUP TO ADD: what is visible in the photo]
+* **Empirical Execution (`eval/results/ppe10_check.txt`):** YOLO base inference at confidence 0.10 detects two Person candidates (confidences 0.268 and 0.148), one machinery (0.454), one NO-Safety Vest (0.451), and one Safety Vest (0.234). Both Person detections fall below the `CONF_PERSON = 0.30` per-class gate and are dropped upstream in `run_detection`. Consequently, zero Person bounding boxes enter `evaluate_site_compliance()`, yielding 0 detected workers. The `MIN_UPRIGHT_ASPECT = 1.2` guard is not reached because candidate figures are discarded upstream by the confidence gate.
 
 ### Case 2: Posture and Material Occlusion (`eval/test_photos/photo03.jpg`)
-* **Observation:** Workers bending over rebar grids with tool belts and equipment pouches.
-* **Behavior:** Torso zones are partially occluded by rebar and equipment, resulting in `"Needs review: conflicting detections"` and `"Needs review: small"`.
+* **Source Image:** `eval/test_photos/photo03.jpg`
+* **Visual Content:** [GROUP TO ADD: what is visible in the photo]
+* **Empirical Diagnostic (`score_images_report.txt`):** True counts: 10 compliant, 0 violations (10 true workers). Pipeline predictions: 3 compliant, 0 violations, 6 total workers detected, 3 routed to "Needs Review" (compliance rate 50.0%). Review reasons breakdown for the 3 review workers: 1 `small` ($< 12\%$ frame height), 1 `view not upright` ($h/w < 1.2$), and 1 `conflicting detections`. Diagnostic status: Compliant Mismatch.
 
 ### Case 3: Fluorescent Clothing without Reflective Stripes (`eval/test_photos/photo06.jpg`)
-* **Observation:** Workers wearing high-visibility orange garments without silver retroreflective tape.
-* **Behavior:** In `score_images_report.txt`, photo06 has 3 true compliant and 2 true violations, whereas the pipeline predicted 1 compliant, 3 violations, and 1 needs review. The model was trained on dataset annotations where safety vests include reflective striping.
+* **Source Image:** `eval/test_photos/photo06.jpg`
+* **Visual Content:** [GROUP TO ADD: what is visible in the photo]
+* **Empirical Diagnostic (`score_images_report.txt`):** True counts: 3 compliant, 2 violations (5 true workers). Pipeline predictions: 1 compliant, 3 violations, 5 total workers detected, 1 routed to "Needs Review" (compliance rate 20.0%). Review reasons breakdown for the 1 review worker: 1 `conflicting detections`. Diagnostic status: Compliant Mismatch, Violation Mismatch.
 
 ---
 
 ## 9. Video Surveillance & Temporal Smoothing
 
-Video processing in [`src/video.py`](file:///d:/AI_project/src/video.py) processes an uploaded video, then plays back the annotated result.
+Video processing in [`src/video.py`](src/video.py) processes an uploaded video, then plays back the annotated result.
 
 ### 9.1 Processing Configuration
 * **Resolution:** Frames are resized proportionally to a maximum width of 416 px.
@@ -301,21 +317,23 @@ Video processing in [`src/video.py`](file:///d:/AI_project/src/video.py) process
 * **Export:** Encodes H.264 MP4 with `yuv420p` pixel format using `imageio-ffmpeg` capped at 30 FPS (`OUTPUT_MAX_FPS = 30`).
 
 ### 9.2 Temporal Smoothing Implementation
-Temporal smoothing is implemented in `apply_temporal_smoothing()`:
+Temporal smoothing is implemented in `apply_temporal_smoothing()` in `src/video.py`:
+* **Smoothed Targets:** `apply_temporal_smoothing()` smooths aggregate frame counts (`total_workers`, `compliant_count`, `violation_count`, `needs_review_count`) and the overall `compliance_rate` across frames. It operates purely on frame-level summary counts, not on individual worker tracks or per-worker compliance statuses, because workers are detected independently per frame without multi-object tracking.
 * **Window Size:** 7 consecutive analyzed frames (`TEMPORAL_SMOOTHING_WINDOW = 7`).
 * **Window Range:** For frame $i$, the window spans from $i - 3$ to $i + 3$ (clamped at boundaries). Because it uses frames both before and after the current frame, it runs in a post-processing pass after all video frames have been analyzed.
 * **Operation:** Computes the median of worker counts, violation counts, and compliance rates across the 7-frame window.
 
 $$\hat{C}_i = \text{round}\left(\text{median}\left(C_{i-3}, \dots, C_{i+3}\right)\right)$$
 
-This suppresses isolated 1-frame detection drops while preserving multi-frame non-compliance.
+This suppresses isolated 1-frame detection drops in summary trends while preserving multi-frame non-compliance. In video mode, the Streamlit application displays the annotated video stream rendered with raw per-frame bounding boxes, while presenting smoothed aggregate metrics in the dashboard cards, a smoothed compliance percentage line chart across time, and a gallery of top violation moments.
 
 ---
 
 ## 10. Application Architecture & User Interface
 
-The application ([`app.py`](file:///d:/AI_project/app.py)) is implemented with Streamlit:
-* **Sidebar:** Mode selection (Image vs. Video), page navigation, and strict hardhat policy toggle.
+The application ([`app.py`](app.py)) is implemented with Streamlit:
+* **Sidebar:** Mode selection (Image vs. Video), input source selection (Upload file vs. YouTube link), page navigation, and strict hardhat policy toggle.
+* **YouTube Ingestion:** When "YouTube link" is selected, the application validates URLs against approved YouTube domain prefixes (`https://www.youtube.com/`, `https://youtube.com/`, `https://m.youtube.com/`, `https://youtu.be/`; `src/youtube.py`, lines 16–21). In `download_youtube()` (`src/youtube.py`, lines 62–190), metadata is pre-queried to reject live streams (lines 125–129) and videos exceeding the 15-minute duration cap (`MAX_YOUTUBE_DURATION_SECONDS = 900`, lines 24, 131–139). Streams are downloaded via `yt-dlp` using the format selector `'best[ext=mp4][height<=480]/bestvideo[ext=mp4][height<=480]+bestaudio[ext=m4a]/bestvideo[height<=480]+bestaudio/best[height<=480]/best'` with `merge_output_format: 'mp4'` (lines 156–163), enforcing a maximum resolution of 480p and a 100 MB filesize limit (`MAX_YOUTUBE_MB = 100`, lines 27, 165). Custom `YouTubeDownloadError` exceptions (lines 34–36) map private/sign-in videos, age restrictions, region blocks, bot verification challenges, and network failures to user-friendly messages advising manual download and file upload.
 * **Main Area:** Summary metric cards, annotated image/video display, compliance line chart over time, top violation moments, and CSV export.
 * **Testing:** 68 isolated unit tests in `tests/` pass with `python -m pytest -q`.
 
@@ -324,9 +342,15 @@ The application ([`app.py`](file:///d:/AI_project/app.py)) is implemented with S
 ## 11. Limitations & Future Improvements
 
 1. **Small Evaluation Dataset:** The quantitative evaluation set contains only 15 photos with 88 workers and 7 true violations, which limits statistical significance.
-2. **Camera Angles:** Steep downward angles ($> 60^\circ$) compress human body geometry, triggering the aspect ratio guard and routing workers to review.
-3. **Reflective Tape Dependency:** The model does not reliably recognize fluorescent clothing that lacks silver reflective striping.
-4. **Crouching Postures:** Workers sitting or crouching have squashed aspect ratios and are excluded from strict enforcement.
+2. **Undetected Workers:** 22% of true workers were not detected by the model (69 workers detected vs 88 in the ground truth).
+3. **Low Coverage on Verdicts:** Only 37 of 88 true workers received a definitive compliance verdict (25 compliant, 12 violations); 32 detected workers were routed to "Needs Review".
+4. **Visual Inspection Labeling:** Ground-truth labels were created by one person's visual inspection without multi-annotator agreement or consensus reviews.
+5. **Sampling Bias in Test Photos:** Evaluation photos came from the author's own Google Images search rather than systematically sampled operational camera feeds.
+6. **Foreign-Site Domain Gap:** The model was trained on the public Roboflow v28 dataset, which presents a domain gap when applied to construction sites with varying uniforms, untaped garments, or regional gear standards.
+7. **Seated and Crouching Workers:** Seated workers were not tested; crouching workers have squashed aspect ratios ($h/w < 1.2$) and are excluded from strict enforcement by the upright aspect guard.
+8. **Camera Angles:** Steep downward angles compress human body geometry, triggering the aspect ratio guard and routing workers to review.
+9. **Reflective Tape Dependency:** The model does not reliably recognize fluorescent clothing that lacks silver retroreflective striping.
+10. **Video Mode Not Quantitatively Evaluated:** Video mode processing was demonstrated and visually verified, but was not quantitatively benchmarked against frame-by-frame ground-truth annotations.
 
 ---
 
@@ -336,4 +360,11 @@ This project implemented a construction PPE compliance detection pipeline combin
 * The YOLOv8n model achieved a validation $\text{mAP}_{50}$ of 0.813 and a test $\text{mAP}_{50}$ of 0.754 on the Roboflow dataset test split.
 * On 15 real-world test photos with visual ground-truth annotations, the system achieved 93.3% accuracy within $\pm 1$ on violation counts (MAE 0.60), compared to an 80.0% baseline for predicting zero violations everywhere.
 * Multi-criteria reliability guards routed 46.4% of detected figures to "Needs Review", primarily due to small figure scale at distance (53.1% of review cases).
-* The temporal smoothing filter applies a 7-frame rolling median in a post-processing pass over surrounding frames to reduce single-frame flicker during video playback.
+* The temporal smoothing filter applies a 7-frame rolling median in a post-processing pass over surrounding frames to smooth aggregate frame counts and compliance rates over time; bounding boxes and playback frames themselves remain raw per-frame detections.
+
+---
+
+## 13. References
+
+1. **Construction Site Safety Dataset (v28):** Roboflow Universe, licensed under CC BY 4.0. Available at: `https://universe.roboflow.com/roboflow-universe-projects/construction-site-safety`
+2. **Ultralytics YOLOv8:** Jocher, G., Chaurasia, A., & Qiu, J. (2023). Ultralytics YOLOv8 (Version 8.4.215). Available at: `https://github.com/ultralytics/ultralytics`

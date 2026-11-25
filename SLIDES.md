@@ -131,7 +131,7 @@ color: #0f172a
 5. **Spatial IoG Association:** $\text{IoG} \ge 0.30$ with greedy disambiguation.
 6. **Multi-Criteria Reliability:** Aspect ratio $\ge 1.2$, height fraction $\ge 12\%$, conf $\ge 0.40$.
 7. **Compliance Decision Engine:** Compliant / Violation / Needs Review.
-8. **Post-Processing Smoothing & UI:** 7-frame rolling median filter & interactive dashboard.
+8. **Post-Processing Smoothing & UI:** 7-frame rolling median filter for aggregate counts/rates & interactive dashboard.
 
 > **Speaker Note:** Walk through the 8 stages from input detection to geometric zone evaluation and final status resolution.
 
@@ -208,34 +208,33 @@ $$\text{IoG} = \frac{\text{Area}(\text{Gear Box} \cap \text{Anatomical Zone})}{\
 * *Observation:* Confidence 0.25 represents the least-bad trade-off on these 15 photos.
 
 ### Documented Failure Cases
-1. **Overhead Angles (`sample_images/ppe10.jpg`):** $h/w \approx 1.03$ triggers aspect guard $\to$ `"Needs review: view not upright"`.
-2. **Material Occlusion (`eval/test_photos/photo03.jpg`):** Bending workers with tool belts $\to$ `"conflicting detections"` and `"small"`.
-3. **Clothing without Reflectors (`eval/test_photos/photo06.jpg`):** Neon shirts lacking reflective tape; ground truth has 3 compliant and 2 violations, while pipeline predicted 1 compliant and 3 violations.
+1. **Overhead Angles (`sample_images/ppe10.jpg`):** Base detections yield Person confidences 0.268 and 0.148, both dropped by the `CONF_PERSON = 0.30` gate $\to$ 0 detected workers.
+2. **Material Occlusion (`eval/test_photos/photo03.jpg`):** [GROUP TO ADD: what is visible in the photo]. True counts: 10 compliant, 0 violations; predicted: 3 compliant, 0 violations, 3 Needs Review (1 small, 1 upright, 1 conflict).
+3. **Clothing without Reflectors (`eval/test_photos/photo06.jpg`):** [GROUP TO ADD: what is visible in the photo]. True counts: 3 compliant, 2 violations; predicted: 1 compliant, 3 violations, 1 Needs Review (conflict).
 
 > **Speaker Note:** Explain the slider trade-off: at 0.15 review count is high, while at 0.40 missing gear detections raise violation counts under strict enforcement.
 
 ---
 
-## Slide 11: Video Processing & Post-Processing Smoothing
+## Slide 11: Video Processing & Temporal Smoothing
 
-### Reducing Single-Frame Detection Flicker
-* Worker movement and head turns can cause brief 1–2 frame detection drops.
+### Smoothing Aggregate Counts & Compliance Rates
+* Transient detection variations across frames can cause noise in aggregate summary metrics.
 
 ### 7-Frame Rolling Median Filter Implementation
 
 $$\hat{C}_i = \text{round}\left(\text{median}\left(C_{i-3}, \dots, C_{i+3}\right)\right)$$
 
-* **Window Size:** 7 consecutive analyzed frames (`TEMPORAL_SMOOTHING_WINDOW = 7`).
-* **Frame Dependency:** Uses frames before and after the current frame ($i - 3$ to $i + 3$).
+* **Smoothed Metrics:** Operates purely on frame-level aggregate counts (`total_workers`, `compliant_count`, `violation_count`, `needs_review_count`) and `compliance_rate`.
+* **Bounding Boxes Unaltered:** Bounding boxes, per-worker tracks, and playback video frames remain raw per-frame detections; workers are not tracked across frames.
+* **Window Size:** 7 consecutive analyzed frames (`TEMPORAL_SMOOTHING_WINDOW = 7`, from $i - 3$ to $i + 3$).
 * **Execution Phase:** Runs in a post-processing pass after all video frames have been decoded and analyzed.
-* **Effect:** Suppresses isolated single-frame dips while preserving multi-frame non-compliance.
 
-### Video Pipeline Configuration
-* **Resolution:** Resized proportionally to a maximum width of **416 px**.
-* **Stride & Limit:** Evaluates every frame (`PROCESS_EVERY_N = 1`), capped at the first 30 seconds.
-* **Export:** Encodes H.264 MP4 with `imageio-ffmpeg` capped at 30 FPS.
+### Video Interface Features
+* **Playback:** Displays annotated video rendered with raw per-frame bounding boxes.
+* **Dashboard:** Displays smoothed summary metric cards, compliance rate curve over time, and top violation moments.
 
-> **Speaker Note:** Note that smoothing runs in a post-processing pass over surrounding frames after video frames are collected, which is why it uses both past and future frames.
+> **Speaker Note:** Emphasize that smoothing runs in post-processing over aggregate counts and rates; individual bounding boxes and playback frames are not smoothed.
 
 ---
 

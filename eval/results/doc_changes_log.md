@@ -10,7 +10,7 @@ This log documents every correction, replacement, and deletion made during the d
 5. `eval/results/slider_check.csv`
 6. Kaggle Training Log Facts (provided in prompt)
 
-*(Note: `eval/results/args.yaml` was missing from `eval/results/` and was not used).*
+*(Note: `eval/results/args.yaml` was located in `Downloads/ppe_export.zip` and restored to `eval/results/args.yaml`).*
 
 ---
 
@@ -65,3 +65,24 @@ This log documents every correction, replacement, and deletion made during the d
 | 7 | Slider Sweep Table & Notes | Old values; called 0.25 "optimal" | Exact values: 0.15 (83/27/9/47), 0.25 (69/25/12/32), 0.40 (58/20/18/20); stated: "Confidence 0.25 represents the least-bad trade-off on these 15 photos." | Kaggle Training Log Facts |
 | 8 | Temporal Smoothing Description | Described as real-time smoothing | Described as 7-frame rolling median post-processing pass over surrounding frames ($i-3$ to $i+3$) after video decoding | `src/video.py` code inspection |
 | 9 | Deleted Sections & Wording | Deleted: "60% of construction fatalities", "Viva Defense Guide", scripted Q&A, and terms: "real-time", "publication-grade", "enterprise", "industrial", "audit" | Replaced with plain descriptive terms | Prompt instruction |
+
+
+---
+
+## 4. Phase 2 Verification & Fact-Checking Updates
+
+| Document | Section | Old Value / Phrasing | New Value / Phrasing | Rationale / Source |
+|---|---|---|---|---|
+| `REPORT.md` | Executive Summary | "7-frame rolling median temporal filter processes analyzed frames in a post-processing pass over frames before and after the current frame to reduce single-frame detection flickers." | "...operates in a post-processing pass over surrounding frames to smooth aggregate frame counts (total workers, violations, compliant counts) and the compliance rate over time. It does not alter bounding boxes, per-worker statuses, or playback video frames." | `src/video.py` lines 240–310 |
+| `REPORT.md` | Section 5.3 | Caption & path: `eval/results/confusion_matrix.png` | `eval/results/test_eval/confusion_matrix.png` captioned "test split" | Verified existence of test-split matrix |
+| `REPORT.md` | Section 6.1 | Omitted code-level explanation of slider scaling | Added 4-line paragraph explaining slider scaling of base conf (0.10) to per-class gates (Person 0.30, Hardhat 0.30, Vest 0.20) and MIN_PERSON_CONF 0.40 | `src/detector.py` (lines 38, 43-50, 171, 200-207) & `src/compliance.py` (line 44) |
+| `REPORT.md` | Section 6.5 | "At confidence 0.25, this contributed to the pipeline flagging 12 violations against 7 true ones across the 15 test photos." | "At confidence 0.25, the pipeline flagged 12 violations against 7 true ones; missed hardhat detections under the strict policy are one possible cause, which was not isolated." | Prompt instruction |
+| `REPORT.md` | Section 7 | Omitted note on key v1 vest definition impact | Added: "Under key v1 (vest-colored garments without reflectors counted as compliant), some mismatches may come from workers whose vests the model does not treat as safety vests." | Prompt instruction |
+| `REPORT.md` | Section 8 | Case 1 claimed aspect guard caught `sample_images/ppe10.jpg`; Cases 2 & 3 contained unverified descriptions | Case 1: stated both Person detections (0.268, 0.148) are dropped by `CONF_PERSON = 0.30` gate, yielding 0 detected workers. Cases 2 & 3: recorded exact counts and review reasons from `score_images_report.txt` and added `[GROUP TO ADD: what is visible in the photo]`. | `eval/results/ppe10_check.txt` & `score_images_report.txt` |
+| `REPORT.md` | Section 9.2 | Did not describe app video UI | Added description of Streamlit video view (raw per-frame boxes on video, smoothed aggregate counts and rates in dashboard cards and chart). | `app.py` lines 1640–1720 |
+| `REPORT.md` | Section 10 | Generic YouTube description | Added exact format selector, 480p resolution limit, 100 MB file limit, 900s duration limit, and error handling. | `src/youtube.py` lines 16-27, 62-190 |
+| `REPORT.md` | Section 11 | "consensus audits" | "consensus reviews" | Removed prohibited word "audit" |
+| `REPORT.md` | Section 12 | Smoothing described as reducing playback flicker | Stated filter smooths aggregate counts and rates over time; bounding boxes and playback frames remain raw per-frame detections. | `src/video.py` |
+| `README.md` | Overview & Architecture | Mentioned reducing transient flicker | Stated filter smooths aggregate frame counts and compliance rates across frames (boxes and playback video remain raw per-frame detections). | `src/video.py` |
+| `SLIDES.md` | Slides 6, 10, 11 | Flickering video claims, old failure case descriptions | Clarified counts/rates smoothing; updated Case 1 to confidence gate drop (0 workers); updated Cases 2 & 3 with exact counts and `[GROUP TO ADD: what is visible in the photo]`. | `ppe10_check.txt` & `score_images_report.txt` |
+| `eval/results/failure_cases/README.md` | Cases 1, 2, 3 | Theoretical explanations | Grounded strictly in empirical data (`ppe10_check.txt` and `score_images_report.txt`) with placeholder `[GROUP TO ADD: what is visible in the photo]`. | Empirical run on `ppe10.jpg` & `score_images_report.txt` |

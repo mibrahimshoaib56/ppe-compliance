@@ -20,7 +20,7 @@ This project implements a compliance detection system combining deep-learning ob
 1. **Object Detection Model:** Ultralytics **YOLOv8n** (129 layers, 3,012,798 parameters as trained; 73 layers, 3,134,894 parameters when fused) trained on the **Construction Site Safety (v28)** dataset across 10 classes, achieving a validation $\text{mAP}_{50}$ of **0.813** and test $\text{mAP}_{50}$ of **0.754**.
 2. **Spatial Rule Engine:** A Python compliance module that partitions workers into anatomical head (top 0%–35%) and widened torso (middle 15%–75%) zones, matching equipment using **Intersection over Gear Area ($\text{IoG} \ge 0.30$)** with greedy disambiguation.
 3. **Reliability Safeguards:** Filters out background clutter, distant figures, crouching postures, and overhead perspectives ($\text{aspect} < 1.2$), routing ambiguous cases to `"Needs Review"`.
-4. **Video Processing with Temporal Filtering:** Sequential video processing featuring a **7-frame rolling median filter** running in a post-processing pass over surrounding frames to reduce transient 1–2 frame detection flicker.
+4. **Video Processing with Temporal Filtering:** Sequential video processing featuring a **7-frame rolling median filter** running in a post-processing pass over surrounding frames to smooth aggregate frame counts and compliance rates across video frames (bounding boxes and playback video remain raw per-frame detections).
 5. **Web Portal:** Streamlit interface supporting image uploads, video processing with annotated playback, YouTube clip processing, summary metrics, and downloadable CSV inspection records.
 
 > **Note on Model Weights:** The trained model weights (`models/best.pt`) are not stored in the Git repository due to file size considerations; they are included in the project submission zip.
@@ -69,7 +69,7 @@ This project implements a compliance detection system combining deep-learning ob
                         │
                         ▼
        ┌─────────────────────────────────┐
-       │ Temporal Smoothing & Reporting  │  • 7-Frame Rolling Median (Post-processing)
+       │ Temporal Smoothing & Reporting  │  • 7-Frame Rolling Median (Counts & Rates)
        │ (CCTV Video Stream / Dashboard) │  • Site Safety Rate % (Safe/Warn/Crit)
        └─────────────────────────────────┘  • CSV Inspection Log & Risk Moments Gallery
 ```

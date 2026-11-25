@@ -1,0 +1,20 @@
+=== ALL DETECTIONS AT BASE CONF 0.10 ===
+Class: machinery       | Conf: 0.454 | Box: [0.0, 114.7, 96.0, 364.5] | Aspect: 2.60
+Class: NO-Safety Vest  | Conf: 0.451 | Box: [305.7, 90.8, 395.4, 176.6] | Aspect: 0.96
+Class: Person          | Conf: 0.268 | Box: [172.2, 90.7, 405.4, 330.7] | Aspect: 1.03
+Class: Safety Vest     | Conf: 0.234 | Box: [306.1, 90.1, 396.0, 174.4] | Aspect: 0.94
+Class: Person          | Conf: 0.148 | Box: [125.5, 137.5, 309.1, 333.1] | Aspect: 1.07
+
+=== PERSON DETECTIONS BEFORE AND AFTER CONF_PERSON GATE (0.30) ===
+Person Conf: 0.268 -> Passed CONF_PERSON (0.30): False
+Person Conf: 0.148 -> Passed CONF_PERSON (0.30): False
+
+=== DETECTIONS AFTER PER-CLASS GATES (conf_threshold=0.25) ===
+{'class_name': 'machinery', 'class_id': 8, 'confidence': 0.454, 'box': [0.0, 114.7, 96.0, 364.5]}
+{'class_name': 'NO-Safety Vest', 'class_id': 4, 'confidence': 0.451, 'box': [305.7, 90.8, 395.4, 176.6]}
+{'class_name': 'Safety Vest', 'class_id': 7, 'confidence': 0.234, 'box': [306.1, 90.1, 396.0, 174.4]}
+
+=== FINAL WORKER STATUSES WITH REASONS ===
+Summary: {'total_workers': 0, 'compliant_count': 0, 'violation_count': 0, 'needs_review_count': 0, 'unknown_count': 0, 'compliance_rate': 100.0, 'site_status': 'Safe'}
+Workers count: 0
+Explanation: Both raw Person candidate detections (conf 0.268 and conf 0.148) are dropped by the CONF_PERSON = 0.30 gate during run_detection. Because zero Person bounding boxes pass into evaluate_site_compliance, the compliance engine evaluates 0 workers. The MIN_UPRIGHT_ASPECT guard is not reached because person detections are discarded upstream by the confidence gate.
