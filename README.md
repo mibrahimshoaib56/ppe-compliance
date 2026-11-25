@@ -1,9 +1,9 @@
 # 🛡️ Hardhat & Safety-Vest Compliance Detection for Construction Workers Using YOLOv8
 
-[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
-[![YOLOv8](https://img.shields.io/badge/YOLOv8-Nano%20(3.14M%20params)-orange.svg)](https://github.com/ultralytics/ultralytics)
+[![Python 3.12.10](https://img.shields.io/badge/python-3.12.10-blue.svg)](https://www.python.org/downloads/)
+[![YOLOv8](https://img.shields.io/badge/YOLOv8-Nano%20(3.01M%20params)-orange.svg)](https://github.com/ultralytics/ultralytics)
 [![Streamlit](https://img.shields.io/badge/Streamlit-App%20Live-FF4B4B.svg)](https://streamlit.io/)
-[![Unit Tests](https://img.shields.io/badge/pytest-68%2F68%20passing-brightgreen.svg)](tests/)
+[![Unit Tests](https://img.shields.io/badge/pytest-68%20passed-brightgreen.svg)](tests/)
 [![License: CC BY 4.0](https://img.shields.io/badge/Dataset-CC%20BY%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by/4.0/)
 
 > **Course:** AI2002 — Artificial Intelligence (Path A: Software-Based Implementation)  
@@ -14,14 +14,16 @@
 
 ## 📌 Project Overview
 
-Occupational head and pedestrian-strike hazards account for over 60% of construction site fatalities. While personal protective equipment (PPE) like **industrial hardhats** and **high-visibility safety vests** is legally mandatory (OSHA/HSE), manual safety walkthrough audits suffer from intermittent coverage and human fatigue.
+Safety gear like **hardhats** and **high-visibility safety vests** is required on construction sites to prevent head injuries and vehicular accidents. Manual monitoring by safety inspectors has limited coverage and depends on periodic visual inspections.
 
-This project delivers an automated, real-time safety surveillance system that bridges the gap between deep-learning perception and deterministic compliance decisions:
-1. **Core Deep Learning Detector:** Ultralytics **YOLOv8 Nano** (130 layers, 3.14M parameters) trained on the **Construction Site Safety (v28)** dataset across 10 classes, achieving a validation $\text{mAP}_{50}$ of **0.813** and test $\text{mAP}_{50}$ of **0.754**.
-2. **Deterministic Spatial Rule Engine:** A pure-Python compliance module that partitions workers into anatomical head (top 0%–35%) and widened torso (middle 15%–75%) zones, matching equipment using **Intersection over Gear Area ($\text{IoG} \ge 0.30$)** with greedy bipartite disambiguation.
-3. **Multi-Criteria Reliability Safeguards:** Defensively filters out background clutter, tiny distant figures, crouching postures, and overhead perspectives ($\text{aspect} < 1.2$), routing ambiguous cases to `"Needs Review"` rather than falsely penalizing workers.
-4. **CCTV Video Engine with Temporal Smoothing:** Sequential video decoder featuring a **7-frame rolling median filter** to eliminate transient 1–2 frame detection flicker without tracking drift.
-5. **Interactive Industrial Web Portal:** Multi-page Streamlit dashboard supporting static image uploads, live CCTV video playback, YouTube clip ingestion, KPI cards, and downloadable CSV audit trails.
+This project implements a compliance detection system combining deep-learning object detection with spatial geometric rule logic:
+1. **Object Detection Model:** Ultralytics **YOLOv8n** (129 layers, 3,012,798 parameters as trained; 73 layers, 3,134,894 parameters when fused) trained on the **Construction Site Safety (v28)** dataset across 10 classes, achieving a validation $\text{mAP}_{50}$ of **0.813** and test $\text{mAP}_{50}$ of **0.754**.
+2. **Spatial Rule Engine:** A Python compliance module that partitions workers into anatomical head (top 0%–35%) and widened torso (middle 15%–75%) zones, matching equipment using **Intersection over Gear Area ($\text{IoG} \ge 0.30$)** with greedy disambiguation.
+3. **Reliability Safeguards:** Filters out background clutter, distant figures, crouching postures, and overhead perspectives ($\text{aspect} < 1.2$), routing ambiguous cases to `"Needs Review"`.
+4. **Video Processing with Temporal Filtering:** Sequential video processing featuring a **7-frame rolling median filter** running in a post-processing pass over surrounding frames to reduce transient 1–2 frame detection flicker.
+5. **Web Portal:** Streamlit interface supporting image uploads, video processing with annotated playback, YouTube clip processing, summary metrics, and downloadable CSV inspection records.
+
+> **Note on Model Weights:** The trained model weights (`models/best.pt`) are not stored in the Git repository due to file size considerations; they are included in the project submission zip.
 
 ---
 
@@ -33,7 +35,7 @@ This project delivers an automated, real-time safety surveillance system that br
                         ▼
        ┌─────────────────────────────────┐
        │     YOLOv8n Object Detector     │  Base Conf = 0.10 (Prevents NMS drops)
-       │    (130 Layers, 3.14M Params)   │  10 Target & Context Classes
+       │ (129 Layers, 3.01M Params Trained) 10 Target & Context Classes
        └────────────────┬────────────────┘
                         │
                         ▼
@@ -67,12 +69,12 @@ This project delivers an automated, real-time safety surveillance system that br
                         │
                         ▼
        ┌─────────────────────────────────┐
-       │ Temporal Smoothing & Reporting  │  • 7-Frame Rolling Median (Anti-flicker)
+       │ Temporal Smoothing & Reporting  │  • 7-Frame Rolling Median (Post-processing)
        │ (CCTV Video Stream / Dashboard) │  • Site Safety Rate % (Safe/Warn/Crit)
-       └─────────────────────────────────┘  • CSV Audit Log & Risk Moments Gallery
+       └─────────────────────────────────┘  • CSV Inspection Log & Risk Moments Gallery
 ```
 
-A publication-grade diagram is available in [`eval/results/pipeline_architecture_diagram.png`](eval/results/pipeline_architecture_diagram.png).
+An architecture diagram is available in [`eval/results/pipeline_architecture_diagram.png`](eval/results/pipeline_architecture_diagram.png).
 
 ---
 
@@ -80,7 +82,7 @@ A publication-grade diagram is available in [`eval/results/pipeline_architecture
 
 ```text
 .
-├── app.py                      # Multi-page industrial Streamlit web application
+├── app.py                      # Streamlit web application
 ├── requirements.txt            # Python dependencies (pip install -r requirements.txt)
 ├── README.md                   # Project documentation and quickstart guide
 ├── REPORT.md                   # Comprehensive final project report (AI2002 deliverable)
@@ -90,11 +92,11 @@ A publication-grade diagram is available in [`eval/results/pipeline_architecture
 ├── src/                        # Modular source code
 │   ├── detector.py             # YOLOv8 inference wrapper & two-stage confidence filtering
 │   ├── compliance.py           # Pure-Python spatial compliance rules & reliability guards
-│   ├── video.py                # CCTV video pipeline, 7-frame median smoothing & MP4 export
+│   ├── video.py                # Video pipeline, 7-frame median smoothing & MP4 export
 │   └── utils.py                # Color-coded bounding box annotation & visual helpers
 │
 ├── models/
-│   └── best.pt                 # Trained YOLOv8n weights (3.14M parameters)
+│   └── .gitkeep                # Placeholder; best.pt is provided in submission zip
 │
 ├── notebooks/
 │   └── yolov8-safety-helmet-detection.ipynb  # Kaggle GPU training notebook deliverable
@@ -102,19 +104,19 @@ A publication-grade diagram is available in [`eval/results/pipeline_architecture
 ├── tests/                      # Automated unit test suite (68 tests)
 │   ├── test_compliance.py      # Spatial zones, overlap logic, reliability guards
 │   ├── test_video.py           # Video summary, resizing, temporal smoothing, MP4 writer
-│   └── test_youtube.py         # YouTube URL parsing and CCTV timestamp clamping
+│   └── test_youtube.py         # YouTube URL parsing and timestamp clamping
 │
 ├── scripts/
-│   ├── generate_pipeline_diagram.py  # Generates high-res PNG/SVG architecture diagram
+│   ├── generate_pipeline_diagram.py  # Generates PNG/SVG architecture diagram
 │   └── build_submission_zip.py       # Packages deliverables into submission ZIP
 │
-├── sample_images/              # Curated construction images for quick manual UI testing
+├── sample_images/              # Curated construction images for quick manual testing
 │
 └── eval/                       # Evaluation benchmarks, ground truth, and outputs
-    ├── ground_truth.csv        # Human ground-truth counts for test photos
+    ├── ground_truth.csv        # Ground-truth counts for test photos (visual inspection)
     ├── slider_check.py         # Confidence slider diagnostics (0.15, 0.25, 0.40)
     ├── score_images.py         # Pipeline scoring against ground truth
-    ├── test_photos/            # 15 real-world evaluation photos (photo01 - photo15)
+    ├── test_photos/            # 15 test photos from Google Images
     │   └── SOURCES.md          # Image origins, scenes, and labeling rules
     └── results/                # Evaluation outputs, curves, and reports
         ├── results.png         # 100-epoch training and validation loss curves
@@ -129,8 +131,8 @@ A publication-grade diagram is available in [`eval/results/pipeline_architecture
 ## 🚀 Quickstart & Setup
 
 ### 1. Prerequisites
-* **Python 3.10+** (Tested on Python 3.12)
-* Windows, Linux, or macOS (Runs entirely on CPU; no GPU required)
+* **Python 3.12.10** (Tested in the project virtual environment)
+* Windows, Linux, or macOS
 
 ### 2. Clone and Setup Environment
 ```bash
@@ -161,26 +163,26 @@ Open your browser at `http://localhost:8501`.
 
 ## 🧪 Running Unit Tests
 
-The test suite contains **68 isolated unit tests** verifying spatial math, compliance rules, temporal smoothing, and URL parsers with **zero external model dependencies**:
+The test suite contains **68 unit tests** verifying spatial math, compliance rules, temporal smoothing, and URL parsers:
 
 ```bash
-python -m pytest -v
+python -m pytest -q
 ```
-*Expected Result:* `68 passed in ~1.5s` (100% pass rate).
+*Result:* `68 passed`.
 
 ---
 
 ## 📊 Running Evaluation & Benchmark Diagnostics
 
 ### 1. Confidence Slider Sweep (0.15, 0.25, 0.40)
-Runs the detector and compliance engine across three confidence thresholds, breaking down workers, compliance rates, and the 7 "Needs Review" diagnostic reasons:
+Runs the detector and compliance engine across three confidence thresholds on the test photos:
 ```bash
 python eval/slider_check.py eval/test_photos
 ```
 *Outputs saved to:* `eval/results/slider_check.csv`.
 
-### 2. Ground-Truth Scoring Against Real-World Benchmark
-Scoring against human-audited ground-truth counts (`true_compliant`, `true_violations`):
+### 2. Ground-Truth Scoring Against Test Photos
+Scores pipeline predictions against visual ground-truth counts (`true_compliant`, `true_violations`):
 ```bash
 python eval/score_images.py eval/test_photos eval/ground_truth.csv
 ```
@@ -190,39 +192,47 @@ python eval/score_images.py eval/test_photos eval/ground_truth.csv
 ```bash
 python scripts/generate_pipeline_diagram.py
 ```
-*Outputs saved to:* `eval/results/pipeline_architecture_diagram.png` (300 DPI) and `.svg`.
+*Outputs saved to:* `eval/results/pipeline_architecture_diagram.png` and `.svg`.
 
 ---
 
 ## 📈 Key Empirical Results
 
-### 1. Model Training Benchmark (Kaggle GPU, 100 Epochs)
-* **Validation $\text{mAP}_{50}$:** **0.813** (81.3%)
-* **Held-Out Test $\text{mAP}_{50}$:** **0.754** | **Test $\text{mAP}_{50-95}$:** **0.465**
-* **Precision / Recall:** **0.874** / **0.702**
-* **Weakest Class:** `NO-Hardhat` ($\text{AP}_{50} = 0.545$) due to small pixel footprint and variable hair/caps.
+### 1. Model Training Benchmark (Kaggle GPU Tesla T4, 100 Epochs)
+* **Training Time:** **0.565 hours**
+* **Validation $\text{mAP}_{50}$ at Epoch 100:** **0.814** (Best weights `best.pt`: **0.813**, $\text{mAP}_{50-95} = 0.511$)
+* **Held-Out Test $\text{mAP}_{50}$ (82 images):** **0.754** | **Test $\text{mAP}_{50-95}$:** **0.465**
+* **Test Precision / Recall:** **0.874** / **0.702**
+* **Test Speed on T4 GPU:** 1.8 ms preprocess, 6.8 ms inference, 2.3 ms postprocess per image (No CPU timing measured)
+* **Per-Class Test Metrics (`test_metrics.txt`):**
+  * Hardhat: $P = 0.959$, $R = 0.809$, $\text{AP}_{50} = 0.905$
+  * Safety Vest: $P = 0.896$, $R = 0.849$, $\text{AP}_{50} = 0.902$
+  * Person: $P = 0.884$, $R = 0.786$, $\text{AP}_{50} = 0.857$
+  * NO-Safety Vest: $P = 0.930$, $R = 0.739$, $\text{AP}_{50} = 0.799$
+  * NO-Hardhat: $P = 0.807$, $R = 0.561$, $\text{AP}_{50} = 0.545$
 
-### 2. System-Level Evaluation on 15 Real-World Photos (88 True Workers)
-* **Within $\pm 1$ Violation Accuracy:** **93.3%** (14 / 15 images)
-* **Mean Absolute Error (Violations):** **0.60 workers**
-* **Violations Caught (Upper Bound):** **71.4%** (5 / 7 true violations)
-* **Needs-Review Composition:**
-  * Small / distant background figures ($< 12\%$ height): **53.1%** (17 workers)
-  * Conflicting detections: **18.8%** (6 workers)
-  * Low confidence: **12.5%** (4 workers)
-  * View not upright (overhead / crouching): **12.5%** (4 workers)
-  * Vest unconfirmed: **3.1%** (1 worker)
+### 2. System-Level Evaluation on 15 Test Photos (88 True Workers)
+*Evaluation photos collected from Google Images; labels made by the group by visual inspection.*
+
+* **Exact Image-Level Match (Both Counts):** **13.3%** (2 of 15 images)
+* **Within $\pm 1$ Accuracy (Violations):** **93.3%** (14 of 15 images)
+* **Within $\pm 1$ Accuracy (Compliant):** **26.7%** (4 of 15 images)
+* **Mean Absolute Error:** Violations = **0.60**, Compliant = **3.73**
+* **"Predict Zero Violations" Baseline:** **80.0%** (12 of 15 images within $\pm 1$), because the ground truth has only 7 violations among 88 workers.
+* **Worker Coverage:** 69 workers detected vs 88 true (counts only; detections were not matched one by one); 37 received a verdict (25 compliant, 12 violations); 32 were sent to "Needs Review".
+* **Violations Flagged / Caught:** 12 flagged by pipeline vs 7 true, with at most 5 caught (sum of min(pred, true)).
+* **Evaluation Limitation:** The evaluation set is small (15 photos with 88 workers and 7 true violations).
 
 ---
 
 ## 📦 Project Deliverables Index
 
-* 📄 **Comprehensive Report:** [`REPORT.md`](REPORT.md) (426 lines covering problem justification, algorithm theory, empirical results, and failure modes).
-* 📑 **Presentation Slide Deck:** [`SLIDES.md`](SLIDES.md) (12 Marp-compatible presentation slides with complete speaker notes).
-* 📓 **Kaggle GPU Notebook:** [`notebooks/yolov8-safety-helmet-detection.ipynb`](notebooks/yolov8-safety-helmet-detection.ipynb).
-* 📐 **Architecture Diagram:** [`eval/results/pipeline_architecture_diagram.png`](eval/results/pipeline_architecture_diagram.png).
-* 🔍 **Failure Case Studies:** [`eval/results/failure_cases/`](eval/results/failure_cases/).
-* ⚙️ **Constants & Tuning Log:** [`eval/results/tuning_log.md`](eval/results/tuning_log.md).
+* 📄 **Comprehensive Report:** [`REPORT.md`](REPORT.md)
+* 📑 **Presentation Slide Deck:** [`SLIDES.md`](SLIDES.md)
+* 📓 **Kaggle GPU Notebook:** [`notebooks/yolov8-safety-helmet-detection.ipynb`](notebooks/yolov8-safety-helmet-detection.ipynb)
+* 📐 **Architecture Diagram:** [`eval/results/pipeline_architecture_diagram.png`](eval/results/pipeline_architecture_diagram.png)
+* 🔍 **Failure Case Studies:** [`eval/results/failure_cases/`](eval/results/failure_cases/)
+* ⚙️ **Tuning Log:** [`eval/results/tuning_log.md`](eval/results/tuning_log.md)
 
 ---
 
