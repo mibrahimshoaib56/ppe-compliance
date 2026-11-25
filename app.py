@@ -1,22 +1,18 @@
-"""SAFETY VISION — Construction PPE Safety Management Portal.
+"""SAFETY VISION: Enterprise AI Surveillance & PPE Compliance Monitoring Platform.
 
-Enterprise-grade safety inspection application using YOLOv8 object detection
-and rule-based spatial compliance logic on CPU.
-
-Organized into 7 dedicated operational views:
-1. Dashboard: Executive safety metrics, compliance distribution, recent records, alerts.
-2. New Inspection: Image selection, preview, configuration, and compliance detection.
-3. Inspection Results: Visual inspection tabs, KPI summary, and safety advisories.
-4. Worker Audits: Individual worker compliance breakdown and drill-down ROI inspector.
-5. Inspection History: Audit log of past inspections with one-click review.
-6. Reports & Exports: Standardized CSV audit reports and annotated image downloads.
-7. Settings: Engine status, class verification, default thresholds, and viva reference.
+Streamlit web application for construction site safety surveillance, combining
+an Ultralytics YOLOv8 object detector with pure Python spatial compliance rules
+and multi-criteria reliability safeguards.
 """
 
-from datetime import datetime
 import json
 import os
+import shutil
+import tempfile
+import time
+from datetime import datetime
 from typing import Any, Dict, List, Optional
+
 import cv2
 import numpy as np
 import pandas as pd
@@ -45,11 +41,16 @@ from src.detector import (
     run_detection,
     verify_model_classes,
 )
-import shutil
-import tempfile
-import time
+from src.utils import (
+    annotate_image,
+    crop_worker_roi,
+    encode_image_bytes,
+    format_worker_table,
+    generate_cctv_csv_report,
+    generate_csv_report,
+    get_action_recommendation,
+)
 from src.video import (
-    FALLBACK_FPS,
     MAX_FRAME_WIDTH,
     MAX_VIDEO_SECONDS,
     OUTPUT_MAX_FPS,
@@ -62,12 +63,10 @@ from src.video import (
     compute_max_frames_to_process,
     compute_output_fps,
     compute_resized_dimensions,
-    compute_start_frame_index,
-    generate_cctv_csv_report,
+    extract_frame_at_timestamp,
     is_analyzed_frame,
     summarize_cctv_results,
-    validate_and_get_fps,
-    write_annotated_h264_video,
+    write_annotated_video,
 )
 from src.youtube import (
     MAX_YOUTUBE_DURATION_SECONDS,
@@ -76,34 +75,25 @@ from src.youtube import (
     download_youtube,
     is_valid_youtube_url,
 )
-from src.utils import (
-    annotate_image,
-    crop_worker_roi,
-    encode_image_bytes,
-    format_worker_table,
-    generate_csv_report,
-    get_action_recommendation,
-)
 
 # ============================================================================
 # 1. PAGE CONFIGURATION
 # ============================================================================
 st.set_page_config(
-    page_title="SAFETY VISION | PPE Portal",
+    page_title="SAFETY VISION — AI Surveillance Platform",
     page_icon="🛡️",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
-# Constants & Paths
-SAMPLE_DIR = "sample_images"
+SAMPLE_DIRS = ["sample_images", os.path.join("eval", "test_photos")]
 HISTORY_FILE = os.path.join("eval", "inspection_history.json")
 
 
 # ============================================================================
 # 2. CACHED MODEL LOADER (Ensures model is loaded once on CPU)
 # ============================================================================
-@st.cache_resource(show_spinner="Loading YOLOv8 model into memory...")
+@st.cache_resource(show_spinner="Initializing YOLOv8 inference engine on CPU...")
 def get_detector(model_file_path: str):
     """Load and cache the YOLOv8 model instance on CPU."""
     return load_detector_model(model_file_path)
@@ -130,7 +120,7 @@ def init_session_state():
         st.session_state.video_results = None
 
     if "strict_hardhat" not in st.session_state:
-        st.session_state.strict_hardhat = True  # mirrors STRICT_HARDHAT_POLICY default
+        st.session_state.strict_hardhat = True
 
     if "active_inspection" not in st.session_state:
         st.session_state.active_inspection = None
@@ -140,7 +130,6 @@ def init_session_state():
 
     if "inspection_history" not in st.session_state:
         st.session_state.inspection_history = []
-        # Attempt to load persistent inspection records from disk
         if os.path.exists(HISTORY_FILE):
             try:
                 with open(HISTORY_FILE, "r") as f:
@@ -155,10 +144,8 @@ def save_inspection_to_history(inspection_record: Dict[str, Any]):
     """Save an inspection record to session state and disk."""
     inspection_id = inspection_record["id"]
 
-    # Store full in-memory object (images + detections + evaluation)
     st.session_state.inspections_store[inspection_id] = inspection_record
 
-    # Build clean metadata record for history persistence
     history_entry = {
         "id": inspection_id,
         "timestamp": inspection_record["timestamp"],
@@ -173,13 +160,11 @@ def save_inspection_to_history(inspection_record: Dict[str, Any]):
         "settings": inspection_record.get("settings", {}),
     }
 
-    # Remove existing duplicate ID if present, then insert newest first
     st.session_state.inspection_history = [
         h for h in st.session_state.inspection_history if h.get("id") != inspection_id
     ]
     st.session_state.inspection_history.insert(0, history_entry)
 
-    # Persist metadata to disk
     os.makedirs(os.path.dirname(HISTORY_FILE), exist_ok=True)
     try:
         with open(HISTORY_FILE, "w") as f:
@@ -196,104 +181,197 @@ def navigate_to(page_name: str):
 
 
 # ============================================================================
-# 4. MODERN INDUSTRIAL STYLING (Dark & Light Themes)
+# 4. ENTERPRISE INDUSTRIAL STYLING (Dark & Light Themes)
 # ============================================================================
 def inject_custom_css(theme: str):
-    """Inject responsive, enterprise-grade CSS based on theme selection."""
+    """Inject responsive, enterprise-grade industrial SaaS CSS."""
     if theme == "Dark Theme":
         css = """
         <style>
-            /* Base Theme - Dark Slate */
+            /* Base Theme - Dark Graphite & Deep Navy */
             .stApp {
-                background-color: #0b0f17;
-                color: #e2e8f0;
-                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                background-color: #0B1118;
+                color: #F1F5F9;
+                font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             }
             [data-testid="stSidebar"] {
-                background-color: #111726;
-                border-right: 1px solid #1e293b;
+                background-color: #101820;
+                border-right: 1px solid #263442;
             }
+            [data-testid="stSidebar"] hr {
+                border-top: 1px solid #263442 !important;
+                margin: 12px 0 !important;
+            }
+
             /* Top Navigation Bar */
             .top-nav {
-                background: linear-gradient(90deg, #131b2e, #182238);
-                border: 1px solid #23314d;
-                border-radius: 12px;
-                padding: 12px 22px;
-                margin-bottom: 22px;
+                background-color: #101820;
+                border: 1px solid #263442;
+                border-radius: 8px;
+                padding: 10px 18px;
+                margin-bottom: 20px;
                 display: flex;
                 align-items: center;
                 justify-content: space-between;
-                box-shadow: 0 4px 16px rgba(0,0,0,0.35);
             }
             .brand-title {
-                color: #38bdf8;
-                font-weight: 800;
-                font-size: 20px;
+                color: #38BDF8;
+                font-weight: 700;
+                font-size: 16px;
                 letter-spacing: 0.5px;
-                margin: 0;
+                display: flex;
+                align-items: center;
+                gap: 8px;
             }
             .page-crumb {
-                color: #94a3b8;
-                font-size: 14px;
-                font-weight: 600;
+                color: #94A3B8;
+                font-size: 13px;
+                font-weight: 500;
             }
             .model-pill-ready {
-                background-color: rgba(34, 197, 94, 0.15);
-                color: #4ade80;
-                border: 1px solid #22c55e;
-                padding: 4px 12px;
-                border-radius: 20px;
-                font-size: 12px;
-                font-weight: 700;
-                letter-spacing: 0.4px;
+                background-color: rgba(52, 211, 153, 0.1);
+                color: #34D399;
+                border: 1px solid rgba(52, 211, 153, 0.25);
+                padding: 4px 10px;
+                border-radius: 6px;
+                font-size: 11px;
+                font-weight: 600;
+                letter-spacing: 0.3px;
             }
-            /* KPI Metric Cards */
+            .model-pill-warn {
+                background-color: rgba(251, 191, 36, 0.1);
+                color: #FBBF24;
+                border: 1px solid rgba(251, 191, 36, 0.25);
+                padding: 4px 10px;
+                border-radius: 6px;
+                font-size: 11px;
+                font-weight: 600;
+                letter-spacing: 0.3px;
+            }
+
+            /* Metric Cards */
             .metric-card {
-                background: linear-gradient(145deg, #131a29, #182236);
-                border: 1px solid #23314d;
-                border-radius: 10px;
-                padding: 16px;
-                text-align: center;
-                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+                background: #151F2B;
+                border: 1px solid #263442;
+                border-radius: 8px;
+                padding: 14px 16px;
+                text-align: left;
+                position: relative;
+                overflow: hidden;
             }
             .metric-card-title {
-                color: #94a3b8;
-                font-size: 12px;
-                font-weight: 700;
+                color: #94A3B8;
+                font-size: 11px;
+                font-weight: 600;
                 text-transform: uppercase;
-                letter-spacing: 0.6px;
-                margin-bottom: 6px;
+                letter-spacing: 0.5px;
+                margin-bottom: 4px;
+                display: flex;
+                align-items: center;
+                gap: 6px;
             }
             .metric-card-value {
-                color: #f8fafc;
-                font-size: 28px;
-                font-weight: 800;
+                color: #F1F5F9;
+                font-size: 26px;
+                font-weight: 700;
+                line-height: 1.2;
             }
-            /* Enterprise Panel / Box */
+
+            /* Enterprise Surface Panel */
             .sv-panel {
-                background-color: #131b2e;
-                border: 1px solid #23314d;
-                border-radius: 10px;
-                padding: 20px;
-                margin-bottom: 18px;
+                background-color: #151F2B;
+                border: 1px solid #263442;
+                border-radius: 8px;
+                padding: 18px;
+                margin-bottom: 16px;
             }
+
             /* Status Pills */
-            .status-safe { color: #4ade80; font-weight: 800; }
-            .status-warning { color: #fbbf24; font-weight: 800; }
-            .status-critical { color: #f87171; font-weight: 800; }
+            .badge-safe {
+                background-color: rgba(52, 211, 153, 0.12);
+                color: #34D399;
+                border: 1px solid rgba(52, 211, 153, 0.3);
+                padding: 3px 8px;
+                border-radius: 4px;
+                font-weight: 600;
+                font-size: 12px;
+            }
+            .badge-warning {
+                background-color: rgba(251, 191, 36, 0.12);
+                color: #FBBF24;
+                border: 1px solid rgba(251, 191, 36, 0.3);
+                padding: 3px 8px;
+                border-radius: 4px;
+                font-weight: 600;
+                font-size: 12px;
+            }
+            .badge-critical {
+                background-color: rgba(248, 113, 113, 0.12);
+                color: #F87171;
+                border: 1px solid rgba(248, 113, 113, 0.3);
+                padding: 3px 8px;
+                border-radius: 4px;
+                font-weight: 600;
+                font-size: 12px;
+            }
+
             /* Custom Tab Styling */
             .stTabs [data-baseweb="tab-list"] {
-                gap: 8px;
+                gap: 6px;
+                border-bottom: 1px solid #263442;
+                padding-bottom: 4px;
             }
             .stTabs [data-baseweb="tab"] {
                 border-radius: 6px;
-                padding: 8px 16px;
-                background-color: #162035;
-                color: #94a3b8;
+                padding: 6px 14px;
+                background-color: transparent;
+                color: #94A3B8;
+                font-size: 13px;
+                font-weight: 500;
+                border: 1px solid transparent;
+            }
+            .stTabs [data-baseweb="tab"]:hover {
+                color: #F1F5F9;
+                background-color: rgba(38, 52, 66, 0.4);
             }
             .stTabs [aria-selected="true"] {
-                background-color: #2563eb !important;
-                color: #ffffff !important;
+                background-color: #1A2634 !important;
+                color: #38BDF8 !important;
+                border: 1px solid #263442 !important;
+            }
+
+            /* Streamlit Controls */
+            .stButton > button[kind="primary"] {
+                background-color: #0284C7;
+                color: #FFFFFF;
+                border: 1px solid #38BDF8;
+                border-radius: 6px;
+                font-weight: 600;
+                font-size: 13px;
+                padding: 6px 16px;
+                transition: all 0.15s ease;
+            }
+            .stButton > button[kind="primary"]:hover {
+                background-color: #0369A1;
+                border-color: #7DD3FC;
+            }
+            .stButton > button:not([kind="primary"]) {
+                background-color: #151F2B;
+                color: #F1F5F9;
+                border: 1px solid #263442;
+                border-radius: 6px;
+                font-weight: 500;
+                font-size: 13px;
+                transition: all 0.15s ease;
+            }
+            .stButton > button:not([kind="primary"]):hover {
+                border-color: #38BDF8;
+                color: #38BDF8;
+            }
+            [data-testid="stDataFrame"] {
+                border: 1px solid #263442;
+                border-radius: 6px;
+                overflow: hidden;
             }
         </style>
         """
@@ -302,96 +380,189 @@ def inject_custom_css(theme: str):
         <style>
             /* Base Theme - Light Industrial */
             .stApp {
-                background-color: #f8fafc;
-                color: #0f172a;
-                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                background-color: #F8FAFC;
+                color: #0F172A;
+                font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             }
             [data-testid="stSidebar"] {
-                background-color: #ffffff;
-                border-right: 1px solid #e2e8f0;
+                background-color: #FFFFFF;
+                border-right: 1px solid #E2E8F0;
             }
+            [data-testid="stSidebar"] hr {
+                border-top: 1px solid #E2E8F0 !important;
+                margin: 12px 0 !important;
+            }
+
             /* Top Navigation Bar */
             .top-nav {
-                background: #ffffff;
-                border: 1px solid #e2e8f0;
-                border-radius: 12px;
-                padding: 12px 22px;
-                margin-bottom: 22px;
+                background-color: #FFFFFF;
+                border: 1px solid #E2E8F0;
+                border-radius: 8px;
+                padding: 10px 18px;
+                margin-bottom: 20px;
                 display: flex;
                 align-items: center;
                 justify-content: space-between;
-                box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+                box-shadow: 0 1px 3px rgba(0,0,0,0.02);
             }
             .brand-title {
-                color: #0284c7;
-                font-weight: 800;
-                font-size: 20px;
+                color: #0284C7;
+                font-weight: 700;
+                font-size: 16px;
                 letter-spacing: 0.5px;
-                margin: 0;
+                display: flex;
+                align-items: center;
+                gap: 8px;
             }
             .page-crumb {
-                color: #64748b;
-                font-size: 14px;
-                font-weight: 600;
+                color: #64748B;
+                font-size: 13px;
+                font-weight: 500;
             }
             .model-pill-ready {
-                background-color: rgba(34, 197, 94, 0.12);
-                color: #16a34a;
-                border: 1px solid #22c55e;
-                padding: 4px 12px;
-                border-radius: 20px;
-                font-size: 12px;
-                font-weight: 700;
-                letter-spacing: 0.4px;
+                background-color: rgba(5, 150, 105, 0.1);
+                color: #059669;
+                border: 1px solid rgba(5, 150, 105, 0.25);
+                padding: 4px 10px;
+                border-radius: 6px;
+                font-size: 11px;
+                font-weight: 600;
+                letter-spacing: 0.3px;
             }
-            /* KPI Metric Cards */
+            .model-pill-warn {
+                background-color: rgba(217, 119, 6, 0.1);
+                color: #D97706;
+                border: 1px solid rgba(217, 119, 6, 0.25);
+                padding: 4px 10px;
+                border-radius: 6px;
+                font-size: 11px;
+                font-weight: 600;
+                letter-spacing: 0.3px;
+            }
+
+            /* Metric Cards */
             .metric-card {
-                background: #ffffff;
-                border: 1px solid #e2e8f0;
-                border-radius: 10px;
-                padding: 16px;
-                text-align: center;
-                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+                background: #FFFFFF;
+                border: 1px solid #E2E8F0;
+                border-radius: 8px;
+                padding: 14px 16px;
+                text-align: left;
+                box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
             }
             .metric-card-title {
-                color: #64748b;
-                font-size: 12px;
-                font-weight: 700;
+                color: #64748B;
+                font-size: 11px;
+                font-weight: 600;
                 text-transform: uppercase;
-                letter-spacing: 0.6px;
-                margin-bottom: 6px;
+                letter-spacing: 0.5px;
+                margin-bottom: 4px;
+                display: flex;
+                align-items: center;
+                gap: 6px;
             }
             .metric-card-value {
-                color: #0f172a;
-                font-size: 28px;
-                font-weight: 800;
+                color: #0F172A;
+                font-size: 26px;
+                font-weight: 700;
+                line-height: 1.2;
             }
-            /* Enterprise Panel / Box */
+
+            /* Enterprise Surface Panel */
             .sv-panel {
-                background-color: #ffffff;
-                border: 1px solid #e2e8f0;
-                border-radius: 10px;
-                padding: 20px;
-                margin-bottom: 18px;
-                box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+                background-color: #FFFFFF;
+                border: 1px solid #E2E8F0;
+                border-radius: 8px;
+                padding: 18px;
+                margin-bottom: 16px;
+                box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
             }
+
             /* Status Pills */
-            .status-safe { color: #16a34a; font-weight: 800; }
-            .status-warning { color: #d97706; font-weight: 800; }
-            .status-critical { color: #dc2626; font-weight: 800; }
+            .badge-safe {
+                background-color: rgba(5, 150, 105, 0.1);
+                color: #059669;
+                border: 1px solid rgba(5, 150, 105, 0.25);
+                padding: 3px 8px;
+                border-radius: 4px;
+                font-weight: 600;
+                font-size: 12px;
+            }
+            .badge-warning {
+                background-color: rgba(217, 119, 6, 0.1);
+                color: #D97706;
+                border: 1px solid rgba(217, 119, 6, 0.25);
+                padding: 3px 8px;
+                border-radius: 4px;
+                font-weight: 600;
+                font-size: 12px;
+            }
+            .badge-critical {
+                background-color: rgba(220, 38, 38, 0.1);
+                color: #DC2626;
+                border: 1px solid rgba(220, 38, 38, 0.25);
+                padding: 3px 8px;
+                border-radius: 4px;
+                font-weight: 600;
+                font-size: 12px;
+            }
+
             /* Custom Tab Styling */
             .stTabs [data-baseweb="tab-list"] {
-                gap: 8px;
+                gap: 6px;
+                border-bottom: 1px solid #E2E8F0;
+                padding-bottom: 4px;
             }
             .stTabs [data-baseweb="tab"] {
                 border-radius: 6px;
-                padding: 8px 16px;
-                background-color: #f1f5f9;
-                color: #64748b;
+                padding: 6px 14px;
+                background-color: transparent;
+                color: #64748B;
+                font-size: 13px;
+                font-weight: 500;
+                border: 1px solid transparent;
+            }
+            .stTabs [data-baseweb="tab"]:hover {
+                color: #0F172A;
+                background-color: #F1F5F9;
             }
             .stTabs [aria-selected="true"] {
-                background-color: #2563eb !important;
-                color: #ffffff !important;
+                background-color: #E0F2FE !important;
+                color: #0284C7 !important;
+                border: 1px solid #BAE6FD !important;
+            }
+
+            /* Streamlit Controls */
+            .stButton > button[kind="primary"] {
+                background-color: #0284C7;
+                color: #FFFFFF;
+                border: 1px solid #0284C7;
+                border-radius: 6px;
+                font-weight: 600;
+                font-size: 13px;
+                padding: 6px 16px;
+                transition: all 0.15s ease;
+            }
+            .stButton > button[kind="primary"]:hover {
+                background-color: #0369A1;
+                border-color: #0369A1;
+            }
+            .stButton > button:not([kind="primary"]) {
+                background-color: #FFFFFF;
+                color: #0F172A;
+                border: 1px solid #E2E8F0;
+                border-radius: 6px;
+                font-weight: 500;
+                font-size: 13px;
+                transition: all 0.15s ease;
+            }
+            .stButton > button:not([kind="primary"]):hover {
+                border-color: #0284C7;
+                color: #0284C7;
+            }
+            [data-testid="stDataFrame"] {
+                border: 1px solid #E2E8F0;
+                border-radius: 6px;
+                overflow: hidden;
             }
         </style>
         """
@@ -402,28 +573,29 @@ def inject_custom_css(theme: str):
 # 5. TOP NAVIGATION BAR COMPONENT
 # ============================================================================
 def render_top_navbar(current_page: str, is_model_verified: bool):
-    """Render the top enterprise bar with branding, breadcrumb, model status, and theme toggle."""
+    """Render the enterprise top bar with branding, breadcrumb, model status, and theme toggle."""
     model_status_html = (
-        "<span class='model-pill-ready'>🟢 YOLOv8 Ready (CPU)</span>"
+        "<span class='model-pill-ready'>🟢 YOLOv8n Online (CPU)</span>"
         if is_model_verified
-        else "<span class='model-pill-ready' style='color:#f59e0b; border-color:#f59e0b;'>⚠️ YOLOv8 Fallback</span>"
+        else "<span class='model-pill-warn'>⚠️ YOLOv8 Fallback</span>"
     )
 
     col_brand, col_status, col_theme = st.columns([5, 3, 2])
 
     with col_brand:
         st.markdown(
-            f"<div style='display:flex; align-items:center; gap:12px; padding-top:4px;'>"
-            f"<span style='font-size:26px;'>🛡️</span>"
-            f"<div><span class='brand-title'>SAFETY VISION</span><br>"
-            f"<span class='page-crumb'>Enterprise Safety Management Portal &bull; <strong>{current_page}</strong></span>"
-            f"</div></div>",
+            f"<div style='display: flex; align-items: center; gap: 8px; padding-top: 4px;'>"
+            f"<span style='font-size: 18px;'>🛡️</span>"
+            f"<span class='brand-title'>SAFETY VISION</span>"
+            f"<span style='color: #64748B;'>/</span>"
+            f"<span class='page-crumb'>{current_page}</span>"
+            f"</div>",
             unsafe_allow_html=True,
         )
 
     with col_status:
         st.markdown(
-            f"<div style='text-align:center; padding-top:10px;'>{model_status_html}</div>",
+            f"<div style='text-align: center; padding-top: 6px;'>{model_status_html}</div>",
             unsafe_allow_html=True,
         )
 
@@ -434,39 +606,36 @@ def render_top_navbar(current_page: str, is_model_verified: bool):
             st.session_state.theme = "Light Theme" if current_theme == "Dark Theme" else "Dark Theme"
             st.rerun()
 
-    st.markdown("<hr style='margin: 12px 0 20px 0; border: none; border-top: 1px solid rgba(148,163,184,0.15);'>", unsafe_allow_html=True)
+    st.markdown("<hr style='margin: 8px 0 18px 0; border: none; border-top: 1px solid #263442;'>", unsafe_allow_html=True)
 
 
 # ============================================================================
 # 6. PAGE 1: DASHBOARD
 # ============================================================================
 def render_dashboard(active_inspection: Optional[Dict[str, Any]], history: List[Dict[str, Any]]):
-    """Render the executive safety dashboard with KPIs, charts, and recent audit logs."""
-    st.markdown("### 📊 Safety Operations Dashboard")
-    st.caption("Real-time construction safety overview, compliance trends, and incident alerts.")
+    """Render the executive safety dashboard with KPIs, distribution charts, and recent scans."""
+    st.markdown("### 📊 Operational Safety Dashboard")
+    st.caption("Active job site overview, PPE compliance rates, and recent surveillance logs.")
 
-    # Check if we have inspection data
     has_data = active_inspection is not None or len(history) > 0
 
     if not has_data:
         st.markdown(
             """
             <div class='sv-panel' style='text-align: center; padding: 48px 24px;'>
-                <span style='font-size: 54px;'>🏗️</span>
-                <h3 style='margin: 12px 0 6px 0;'>No Safety Inspections Conducted Yet</h3>
-                <p style='color: #94a3b8; max-width: 520px; margin: 0 auto 20px auto;'>
-                    The portal has not performed any PPE compliance scans in this session.
-                    Upload a site photo or select a test sample to evaluate workers, hardhats, and vests.
+                <span style='font-size: 48px;'>🏗️</span>
+                <h3 style='margin: 12px 0 6px 0;'>No Site Inspections Recorded Yet</h3>
+                <p style='color: #94A3B8; max-width: 500px; margin: 0 auto 20px auto; font-size: 14px;'>
+                    Start by scanning an on-site photo or running a CCTV video feed to evaluate worker hardhat and safety-vest compliance.
                 </p>
             </div>
             """,
             unsafe_allow_html=True,
         )
-        if st.button("🚀 Start First Inspection", type="primary"):
+        if st.button("🚀 Conduct First Inspection", type="primary"):
             navigate_to("New Inspection")
         return
 
-    # Derive statistics from active inspection (or latest history entry)
     current = active_inspection if active_inspection is not None else history[0]
     summary = current["summary"] if "summary" in current else current
 
@@ -479,90 +648,89 @@ def render_dashboard(active_inspection: Optional[Dict[str, Any]], history: List[
     status = summary.get("site_status", "Safe")
 
     if status == "Safe":
-        status_color = "#22c55e"
+        status_color = "#34D399"
         status_badge = "✅ SAFE"
     elif status == "Warning":
-        status_color = "#f59e0b"
+        status_color = "#FBBF24"
         status_badge = "⚠️ WARNING"
     else:
-        status_color = "#ef4444"
+        status_color = "#F87171"
         status_badge = "🚨 CRITICAL"
 
-    # KPI Row
+    # KPI Metric Cards Row
     k1, k2, k3, k4, k5, k6 = st.columns(6)
     with k1:
         st.markdown(
-            f"<div class='metric-card'><div class='metric-card-title'>Total Workers</div>"
+            f"<div class='metric-card'><div class='metric-card-title'>👥 Total Workers</div>"
             f"<div class='metric-card-value'>{total_w}</div></div>",
             unsafe_allow_html=True,
         )
     with k2:
         st.markdown(
-            f"<div class='metric-card'><div class='metric-card-title'>Compliant</div>"
-            f"<div class='metric-card-value' style='color:#22c55e;'>{comp_w}</div></div>",
+            f"<div class='metric-card'><div class='metric-card-title'>✅ Compliant</div>"
+            f"<div class='metric-card-value' style='color:#34D399;'>{comp_w}</div></div>",
             unsafe_allow_html=True,
         )
     with k3:
         st.markdown(
-            f"<div class='metric-card'><div class='metric-card-title'>Violations</div>"
-            f"<div class='metric-card-value' style='color:#ef4444;'>{viol_w}</div></div>",
+            f"<div class='metric-card'><div class='metric-card-title'>🚨 Violations</div>"
+            f"<div class='metric-card-value' style='color:#F87171;'>{viol_w}</div></div>",
             unsafe_allow_html=True,
         )
     with k4:
         st.markdown(
-            f"<div class='metric-card'><div class='metric-card-title'>Needs Review</div>"
-            f"<div class='metric-card-value' style='color:#f59e0b;'>{review_w}</div></div>",
+            f"<div class='metric-card'><div class='metric-card-title'>⚠️ Needs Review</div>"
+            f"<div class='metric-card-value' style='color:#FBBF24;'>{review_w}</div></div>",
             unsafe_allow_html=True,
         )
     with k5:
         st.markdown(
-            f"<div class='metric-card'><div class='metric-card-title'>Compliance Rate</div>"
-            f"<div class='metric-card-value'>{rate}%</div></div>",
+            f"<div class='metric-card'><div class='metric-card-title'>📈 Compliance Rate</div>"
+            f"<div class='metric-card-value' style='color:#38BDF8;'>{rate}%</div></div>",
             unsafe_allow_html=True,
         )
     with k6:
         st.markdown(
-            f"<div class='metric-card'><div class='metric-card-title'>Site Status</div>"
+            f"<div class='metric-card'><div class='metric-card-title'>🛡️ Site Status</div>"
             f"<div class='metric-card-value' style='color:{status_color}; font-size:20px;'>{status_badge}</div></div>",
             unsafe_allow_html=True,
         )
 
-    st.markdown("<div style='margin-top:20px;'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='margin-top:16px;'></div>", unsafe_allow_html=True)
 
-    # Main Dashboard Visuals: Distribution Chart + Alerts
+    # Operational Visuals: Compliance Distribution & Active Advisory
     c_chart, c_alerts = st.columns([3, 2])
 
     with c_chart:
-        st.markdown("#### 📈 Compliance Distribution")
+        st.markdown("#### 📊 Worker Compliance Distribution")
         chart_data = pd.DataFrame({
-            "Status Category": ["Compliant Workers", "PPE Violations", "Needs Review"],
+            "Status Category": ["Compliant", "Violations", "Needs Review"],
             "Worker Count": [comp_w, viol_w, review_w],
         }).set_index("Status Category")
-        st.bar_chart(chart_data, color="#2563eb", height=240)
+        st.bar_chart(chart_data, color="#0284C7", height=230)
 
     with c_alerts:
-        st.markdown("#### 🚨 Latest Safety Directive")
+        st.markdown("#### 📋 Operational Safety Directive")
         if total_w == 0:
             st.warning(
-                "No workers detected. The image may be from an unsupported angle (for example overhead) "
-                "or workers are too small. Try a front or side view."
+                "No workers detected. The image may be from an unsupported perspective (such as overhead) "
+                "or workers are too distant. Try a front or side eye-level angle."
             )
         else:
             advisory_msg = get_action_recommendation(summary)
-
             if status == "Safe":
-                st.success(f"**Routine Surveillance Active:**\n\n{advisory_msg}")
+                st.success(f"**Site Status: Normal Surveillance**\n\n{advisory_msg}")
             elif status == "Warning":
-                st.warning(f"**Immediate Attention Required:**\n\n{advisory_msg}")
+                st.warning(f"**Attention Required:**\n\n{advisory_msg}")
             else:
-                st.error(f"**Severe Safety Violation:**\n\n{advisory_msg}")
+                st.error(f"**Critical Safety Alert:**\n\n{advisory_msg}")
 
         active_label = current.get("image_name", "Live Scan")
-        st.caption(f"Inspection source: `{active_label}`")
+        st.caption(f"Active scan reference: `{active_label}`")
 
         c_act1, c_act2 = st.columns(2)
         with c_act1:
-            if st.button("🔍 Conduct New Scan", use_container_width=True):
+            if st.button("🔍 Run New Inspection", use_container_width=True):
                 navigate_to("New Inspection")
         with c_act2:
             if active_inspection is not None:
@@ -580,6 +748,8 @@ def render_dashboard(active_inspection: Optional[Dict[str, Any]], history: List[
                 "Date & Time": h["timestamp"],
                 "Site Image": h["image_name"],
                 "Workers": h["total_workers"],
+                "Compliant": h.get("compliant_count", 0),
+                "Violations": h.get("violation_count", 0),
                 "Compliance Rate": f"{h['compliance_rate']}%",
                 "Status": h["site_status"],
             }
@@ -594,39 +764,44 @@ def render_dashboard(active_inspection: Optional[Dict[str, Any]], history: List[
 # 7. PAGE 2: NEW INSPECTION
 # ============================================================================
 def render_new_inspection(model: Any):
-    """Render the dedicated inspection creation and inference workflow page."""
-    st.markdown("### 🔍 Conduct New Safety Inspection")
-    st.caption("Upload an on-site photo or choose a verified Roboflow dataset sample for YOLOv8 inference.")
+    """Render the inspection creation and inference workflow page."""
+    st.markdown("### 🔍 New Safety Inspection")
+    st.caption("Upload a site photograph or select a benchmark test sample for automated YOLOv8 compliance evaluation.")
 
     col_input, col_config = st.columns([3, 2])
 
-    sample_files = (
-        sorted([f for f in os.listdir(SAMPLE_DIR) if f.endswith((".jpg", ".png", ".jpeg"))])
-        if os.path.exists(SAMPLE_DIR)
-        else []
-    )
+    sample_files = []
+    sample_base = ""
+    for s_dir in SAMPLE_DIRS:
+        if os.path.exists(s_dir):
+            found = sorted([f for f in os.listdir(s_dir) if f.endswith((".jpg", ".png", ".jpeg"))])
+            if found:
+                sample_files = found
+                sample_base = s_dir
+                break
 
     with col_input:
-        st.markdown("#### 1. Select Construction Site Image")
+        st.markdown("#### 1. Image Source")
 
         image_mode = st.radio(
-            "Image Source",
-            ["Sample Dataset Image", "Upload Custom Photo"],
+            "Source Type",
+            ["Benchmark Sample Images", "Upload Custom Photo"],
             horizontal=True,
+            label_visibility="collapsed",
         )
 
         input_image = None
         source_label = ""
         source_path = ""
 
-        if image_mode == "Sample Dataset Image" and sample_files:
+        if image_mode == "Benchmark Sample Images" and sample_files:
             selected_file = st.selectbox(
-                "Choose Roboflow Construction Site Safety Sample:",
+                "Choose Verified Construction Site Sample:",
                 sample_files,
-                index=4 if len(sample_files) > 4 else 0,
+                index=0,
             )
             source_label = selected_file
-            source_path = os.path.join(SAMPLE_DIR, selected_file)
+            source_path = os.path.join(sample_base, selected_file)
             try:
                 input_image = Image.open(source_path)
                 if input_image.mode != "RGB":
@@ -635,7 +810,7 @@ def render_new_inspection(model: Any):
                 st.error(f"Failed to load sample image: {e}")
         else:
             uploaded_file = st.file_uploader(
-                "Upload Site Photo (JPG, PNG)",
+                "Upload Site Photo (JPG, PNG, JPEG)",
                 type=["jpg", "jpeg", "png"],
                 help="High-resolution site image showing workers with hardhats and safety vests.",
             )
@@ -648,32 +823,32 @@ def render_new_inspection(model: Any):
                 except Exception as e:
                     st.error(f"Failed to parse uploaded image: {e}")
 
-        # Image Preview Card
         if input_image is not None:
-            st.image(input_image, caption=f"Selected: {source_label}", use_container_width=True)
+            st.image(input_image, caption=f"Loaded Image: {source_label}", use_container_width=True)
 
     with col_config:
-        st.markdown("#### 2. Inspection Parameters")
+        st.markdown("#### 2. Compliance Parameters")
 
         if input_image is not None:
             st.markdown(
                 f"""
-                <div class='sv-panel' style='padding: 14px;'>
-                    <strong>Image Information:</strong><br>
-                    &bull; Resolution: <code>{input_image.size[0]} x {input_image.size[1]} px</code><br>
-                    &bull; Color Channels: <code>{input_image.mode} (3 Channels)</code><br>
-                    &bull; Source File: <code>{source_label}</code>
+                <div class='sv-panel' style='padding: 12px 16px; margin-bottom: 14px;'>
+                    <strong>Image Specifications:</strong><br>
+                    <span style='color:#94A3B8; font-size:13px;'>
+                    &bull; Dimensions: <code>{input_image.size[0]} &times; {input_image.size[1]} px</code><br>
+                    &bull; Color Format: <code>{input_image.mode}</code><br>
+                    &bull; Source: <code>{source_label}</code>
+                    </span>
                 </div>
                 """,
                 unsafe_allow_html=True,
             )
 
-        # Mandatory Gear Selection
         gear_choice = st.radio(
-            "Mandatory Site Equipment",
+            "Mandatory PPE Requirements",
             ["Hardhat + Safety Vest", "Hardhat Only", "Safety Vest Only"],
             index=0,
-            help="Select PPE requirements enforced for this specific construction zone.",
+            help="Select PPE standards enforced for this site inspection.",
         )
         if gear_choice == "Hardhat Only":
             required_gear_mode = "hardhat_only"
@@ -682,26 +857,23 @@ def render_new_inspection(model: Any):
         else:
             required_gear_mode = "both"
 
-        # Expandable Advanced Configuration
         with st.expander("⚙️ Advanced Detection Settings", expanded=False):
             conf_threshold = st.slider(
-                "Confidence Threshold (Scales Per-Class Minimums)",
+                "Sensitivity Slider (Scales Per-Class Thresholds)",
                 min_value=0.10,
                 max_value=0.90,
                 value=0.25,
                 step=0.05,
-                help="Scales per-class thresholds (Base: Person 0.30, Hardhat 0.30, NO-Hardhat 0.20, Safety Vest 0.20, NO-Safety Vest 0.20). Slider at 0.25 represents 1.0x baseline scale.",
+                help="Scales per-class thresholds (Base: Person 0.30, Hardhat 0.30, NO-Hardhat 0.20, Safety Vest 0.20). Slider at 0.25 represents 1.0x baseline scale.",
             )
             show_gear_boxes = st.checkbox("Draw Gear Bounding Boxes", value=True)
-            show_zones = st.checkbox("Outline Body Zones (Head 35% / Torso 15-75%)", value=False)
+            show_zones = st.checkbox("Outline Body Zones (Head 35% / Torso 15–75%)", value=False)
 
-        st.markdown("<div style='margin-top: 24px;'></div>", unsafe_allow_html=True)
+        st.markdown("<div style='margin-top: 20px;'></div>", unsafe_allow_html=True)
 
-        # Primary Run Action
         run_disabled = input_image is None
         if st.button("🔍 Run Compliance Check", type="primary", use_container_width=True, disabled=run_disabled):
-            with st.spinner("Analyzing site imagery with YOLOv8 & calculating zone compliance on CPU..."):
-                # 1. Run YOLOv8 CPU Inference
+            with st.spinner("Executing YOLOv8 inference & spatial compliance logic on CPU..."):
                 detections = run_detection(
                     image=input_image,
                     model=model,
@@ -709,11 +881,7 @@ def render_new_inspection(model: Any):
                     device="cpu",
                 )
 
-                # 2. Evaluate Spatial PPE Compliance
-                # Pass image height for person-size reliability check and
-                # the sidebar strict_hardhat toggle.
-                import numpy as _np
-                _img_h = float(_np.array(input_image).shape[0])
+                _img_h = float(np.array(input_image).shape[0])
                 evaluation = evaluate_site_compliance(
                     detections=detections,
                     required_gear=required_gear_mode,
@@ -721,7 +889,6 @@ def render_new_inspection(model: Any):
                     strict_hardhat=st.session_state.strict_hardhat,
                 )
 
-                # 3. Generate Annotated Visualization
                 annotated_img = annotate_image(
                     image=input_image,
                     workers=evaluation["workers"],
@@ -731,7 +898,6 @@ def render_new_inspection(model: Any):
                 )
                 annotated_bytes = encode_image_bytes(annotated_img, format_ext="JPEG")
 
-                # 4. Construct Inspection Object
                 inspection_id = f"INSP-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
                 timestamp_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
@@ -756,13 +922,9 @@ def render_new_inspection(model: Any):
                     },
                 }
 
-                # Update Active Inspection & Persistent History
                 st.session_state.active_inspection = inspection_record
                 save_inspection_to_history(inspection_record)
-
                 st.success(f"✅ Inspection `{inspection_id}` completed successfully!")
-
-                # Immediate navigation to Inspection Results
                 navigate_to("Inspection Results")
 
 
@@ -770,7 +932,7 @@ def render_new_inspection(model: Any):
 # 8. PAGE 3: INSPECTION RESULTS
 # ============================================================================
 def render_inspection_results(active_inspection: Optional[Dict[str, Any]]):
-    """Render dedicated inspection outcome views with tabbed visualizers and KPIs."""
+    """Render inspection outcome views with tabbed visualizers and KPIs."""
     st.markdown("### 🎯 Inspection Results & Visual Evidence")
     st.caption("AI-annotated site inspection overlays, compliance ratios, and actionable safety advisories.")
 
@@ -782,12 +944,11 @@ def render_inspection_results(active_inspection: Optional[Dict[str, Any]]):
 
     summary = active_inspection["summary"]
     workers = active_inspection["workers"]
-    unassigned = active_inspection["unassigned_gear"]
 
     # Header Card
     st.markdown(
         f"""
-        <div class='sv-panel' style='padding: 12px 18px; margin-bottom: 16px;'>
+        <div class='sv-panel' style='padding: 10px 16px; margin-bottom: 14px;'>
             <strong>Inspection ID:</strong> <code>{active_inspection['id']}</code> &nbsp;|&nbsp;
             <strong>Analyzed Image:</strong> <code>{active_inspection['image_name']}</code> &nbsp;|&nbsp;
             <strong>Timestamp:</strong> <code>{active_inspection['timestamp']}</code>
@@ -796,55 +957,53 @@ def render_inspection_results(active_inspection: Optional[Dict[str, Any]]):
         unsafe_allow_html=True,
     )
 
-    # KPI Banner
     status = summary["site_status"]
-    status_color = "#22c55e" if status == "Safe" else ("#f59e0b" if status == "Warning" else "#ef4444")
+    status_color = "#34D399" if status == "Safe" else ("#FBBF24" if status == "Warning" else "#F87171")
     status_badge = f"✅ {status.upper()}" if status == "Safe" else (f"⚠️ {status.upper()}" if status == "Warning" else f"🚨 {status.upper()}")
 
     r1, r2, r3, r4, r5, r6 = st.columns(6)
     with r1:
         st.markdown(
-            f"<div class='metric-card'><div class='metric-card-title'>Workers Detected</div>"
+            f"<div class='metric-card'><div class='metric-card-title'>👥 Total Workers</div>"
             f"<div class='metric-card-value'>{summary['total_workers']}</div></div>",
             unsafe_allow_html=True,
         )
     with r2:
         st.markdown(
-            f"<div class='metric-card'><div class='metric-card-title'>Compliant</div>"
-            f"<div class='metric-card-value' style='color:#22c55e;'>{summary['compliant_count']}</div></div>",
+            f"<div class='metric-card'><div class='metric-card-title'>✅ Compliant</div>"
+            f"<div class='metric-card-value' style='color:#34D399;'>{summary['compliant_count']}</div></div>",
             unsafe_allow_html=True,
         )
     with r3:
         st.markdown(
-            f"<div class='metric-card'><div class='metric-card-title'>Violations</div>"
-            f"<div class='metric-card-value' style='color:#ef4444;'>{summary['violation_count']}</div></div>",
+            f"<div class='metric-card'><div class='metric-card-title'>🚨 Violations</div>"
+            f"<div class='metric-card-value' style='color:#F87171;'>{summary['violation_count']}</div></div>",
             unsafe_allow_html=True,
         )
     with r4:
         st.markdown(
-            f"<div class='metric-card'><div class='metric-card-title'>Needs Review</div>"
-            f"<div class='metric-card-value' style='color:#f59e0b;'>{summary.get('needs_review_count', 0)}</div></div>",
+            f"<div class='metric-card'><div class='metric-card-title'>⚠️ Needs Review</div>"
+            f"<div class='metric-card-value' style='color:#FBBF24;'>{summary.get('needs_review_count', 0)}</div></div>",
             unsafe_allow_html=True,
         )
     with r5:
         st.markdown(
-            f"<div class='metric-card'><div class='metric-card-title'>Compliance Rate</div>"
-            f"<div class='metric-card-value'>{summary['compliance_rate']}%</div></div>",
+            f"<div class='metric-card'><div class='metric-card-title'>📈 Compliance Rate</div>"
+            f"<div class='metric-card-value' style='color:#38BDF8;'>{summary['compliance_rate']}%</div></div>",
             unsafe_allow_html=True,
         )
     with r6:
         st.markdown(
-            f"<div class='metric-card'><div class='metric-card-title'>Site Status</div>"
+            f"<div class='metric-card'><div class='metric-card-title'>🛡️ Site Status</div>"
             f"<div class='metric-card-value' style='color:{status_color}; font-size:20px;'>{status_badge}</div></div>",
             unsafe_allow_html=True,
         )
 
-    # Advisory Banner
-    st.markdown("<div style='margin-top:16px;'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='margin-top:14px;'></div>", unsafe_allow_html=True)
     if summary.get("total_workers", 0) == 0:
         st.warning(
-            "No workers detected. The image may be from an unsupported angle (for example overhead) "
-            "or workers are too small. Try a front or side view."
+            "No workers detected. The image may be from an unsupported perspective (such as overhead) "
+            "or workers are too distant. Try a front or side eye-level angle."
         )
     else:
         advisory = get_action_recommendation(summary)
@@ -855,7 +1014,7 @@ def render_inspection_results(active_inspection: Optional[Dict[str, Any]]):
         else:
             st.error(f"📋 **Site Safety Directive:** {advisory}")
 
-    # Visual Inspection Tabs
+    # Visual Evidence Tabs
     st.markdown("---")
     st.markdown("#### Visual Evidence Tabs")
 
@@ -868,28 +1027,27 @@ def render_inspection_results(active_inspection: Optional[Dict[str, Any]]):
     with tab_annotated:
         st.image(
             active_inspection["annotated_image"],
-            caption="AI Annotated Inspection (Green: Compliant, Red: Violation, Orange: Unknown)",
+            caption="AI Annotated Detection (Green: Compliant, Red: Violation, Amber: Needs Review)",
             use_container_width=True,
         )
 
     with tab_side_by_side:
         c_left, c_right = st.columns(2)
         with c_left:
-            st.image(active_inspection["image"], caption="Original Unprocessed Photo", use_container_width=True)
+            st.image(active_inspection["image"], caption="Original Site Photograph", use_container_width=True)
         with c_right:
-            st.image(active_inspection["annotated_image"], caption="AI Detection & Compliance", use_container_width=True)
+            st.image(active_inspection["annotated_image"], caption="AI Spatial Detection & Compliance", use_container_width=True)
 
     with tab_raw:
-        st.image(active_inspection["image"], caption="Original High-Resolution Image", use_container_width=True)
+        st.image(active_inspection["image"], caption="Original Unprocessed Site Photograph", use_container_width=True)
 
-    # Next Steps Navigation
     st.markdown("---")
     c_btn1, c_btn2 = st.columns(2)
     with c_btn1:
         if st.button("👷 Inspect Individual Workers (Worker Audits)", use_container_width=True):
             navigate_to("Worker Audits")
     with c_btn2:
-        if st.button("📑 Export PDF/CSV Compliance Report", use_container_width=True):
+        if st.button("📑 Export Compliance Report & Artifacts", use_container_width=True):
             navigate_to("Reports & Exports")
 
 
@@ -897,9 +1055,9 @@ def render_inspection_results(active_inspection: Optional[Dict[str, Any]]):
 # 9. PAGE 4: WORKER AUDITS
 # ============================================================================
 def render_worker_audits(active_inspection: Optional[Dict[str, Any]]):
-    """Render the granular worker audit table and individual crop drill-down inspector."""
-    st.markdown("### 👷 Granular Worker Audits & Drill-Down Inspector")
-    st.caption("Inspect individual worker detections, body zone alignment, and gear evidence.")
+    """Render granular worker compliance audit table and individual crop drill-down inspector."""
+    st.markdown("### 👷 Worker Compliance Audits & Inspector")
+    st.caption("Inspect individual worker detections, body zone attribution, and equipment evidence.")
 
     if active_inspection is None:
         st.info("ℹ️ No active inspection available. Conduct an inspection to evaluate workers.")
@@ -912,13 +1070,12 @@ def render_worker_audits(active_inspection: Optional[Dict[str, Any]]):
 
     if not workers:
         st.warning(
-            "No workers detected. The image may be from an unsupported angle (for example overhead) "
-            "or workers are too small. Try a front or side view."
+            "No workers detected in this inspection scene. Try an image with clearer worker visibility."
         )
         if "annotated_image" in active_inspection:
             st.image(
                 active_inspection["annotated_image"],
-                caption="AI Annotated Inspection (Gear Detections)",
+                caption="AI Annotated Inspection",
                 use_container_width=True,
             )
         if st.button("Back to New Inspection"):
@@ -932,7 +1089,7 @@ def render_worker_audits(active_inspection: Optional[Dict[str, Any]]):
 
     # Drill-Down Inspector
     st.markdown("---")
-    st.markdown("#### 2. Individual Worker Drill-Down Inspector (Zoom Magnifier)")
+    st.markdown("#### 2. Individual Worker Drill-Down Inspector")
     st.caption("Select a worker from the dropdown to inspect their cropped ROI and zone evidence:")
 
     worker_labels = [
@@ -943,7 +1100,6 @@ def render_worker_audits(active_inspection: Optional[Dict[str, Any]]):
     selected_idx = worker_labels.index(selected_label)
     selected_worker = workers[selected_idx]
 
-    # Crop worker bounding box with zone overlays
     worker_crop = crop_worker_roi(input_image, selected_worker, padding_pct=0.10, show_zones=True)
 
     col_crop, col_details = st.columns([1, 2])
@@ -951,20 +1107,20 @@ def render_worker_audits(active_inspection: Optional[Dict[str, Any]]):
     with col_crop:
         st.image(
             worker_crop,
-            caption=f"Worker #{selected_worker['worker_id']} Cropped ROI",
+            caption=f"Worker #{selected_worker['worker_id']} Cropped ROI (Zones Displayed)",
             use_container_width=True,
         )
 
     with col_details:
         w_status = selected_worker["status"]
-        stat_color = "#22c55e" if w_status == "Compliant" else ("#ef4444" if "Missing" in w_status else "#f59e0b")
+        stat_color = "#34D399" if w_status == "Compliant" else ("#F87171" if "Missing" in w_status else "#FBBF24")
 
         st.markdown(
             f"""
             <div class='sv-panel' style='padding: 16px; margin-bottom: 12px;'>
                 <h4 style='margin:0 0 10px 0;'>Worker #{selected_worker['worker_id']} Profile</h4>
                 <p style='margin:4px 0;'><strong>Overall Status:</strong> <span style='color:{stat_color}; font-weight:bold;'>{w_status}</span></p>
-                <p style='margin:4px 0;'><strong>Person Confidence:</strong> {int(selected_worker.get('confidence', 1.0) * 100)}%</p>
+                <p style='margin:4px 0;'><strong>Person Detection Confidence:</strong> {int(selected_worker.get('confidence', 1.0) * 100)}%</p>
                 <p style='margin:4px 0;'><strong>Head Protection (Hardhat):</strong> {selected_worker['hardhat_status'].capitalize()}</p>
                 <p style='margin:4px 0;'><strong>Torso Protection (Safety Vest):</strong> {selected_worker['vest_status'].capitalize()}</p>
             </div>
@@ -991,20 +1147,19 @@ def render_worker_audits(active_inspection: Optional[Dict[str, Any]]):
 # 10. PAGE 5: INSPECTION HISTORY
 # ============================================================================
 def render_inspection_history(history: List[Dict[str, Any]], model: Any):
-    """Render the persistent history of all completed site inspections with review actions."""
+    """Render persistent history of completed site inspections with review actions."""
     st.markdown("### 📜 Site Inspection History")
-    st.caption("Audit log of all previously completed construction site safety inspections. Select any record to load its full results.")
+    st.caption("Chronological record of completed construction site safety inspections. Select any record to review results.")
 
     if not history:
-        st.info("ℹ️ No historical inspections recorded yet. Once an inspection is executed, it will be logged here.")
+        st.info("ℹ️ No historical inspections recorded yet. Executed inspections will appear here.")
         if st.button("Start First Inspection"):
             navigate_to("New Inspection")
         return
 
-    # Render History Cards with interactive View Results actions
     for idx, item in enumerate(history):
         status = item["site_status"]
-        status_color = "#22c55e" if status == "Safe" else ("#f59e0b" if status == "Warning" else "#ef4444")
+        status_color = "#34D399" if status == "Safe" else ("#FBBF24" if status == "Warning" else "#F87171")
         item_id = item["id"]
 
         with st.container():
@@ -1012,28 +1167,26 @@ def render_inspection_history(history: List[Dict[str, Any]], model: Any):
 
             with c_info:
                 st.markdown(
-                    f"<span style='font-size:16px; font-weight:700; color:#38bdf8;'>{item_id}</span><br>"
-                    f"<span style='font-size:13px; color:#94a3b8;'>Date: {item['timestamp']}</span><br>"
-                    f"<span style='font-size:13px; color:#94a3b8;'>Image: <code>{item['image_name']}</code></span>",
+                    f"<span style='font-size:15px; font-weight:700; color:#38BDF8;'>{item_id}</span><br>"
+                    f"<span style='font-size:12px; color:#94A3B8;'>Date: {item['timestamp']}</span><br>"
+                    f"<span style='font-size:12px; color:#94A3B8;'>Source: <code>{item['image_name']}</code></span>",
                     unsafe_allow_html=True,
                 )
 
             with c_stats:
                 st.markdown(
-                    f"<span style='font-size:18px; font-weight:800; color:{status_color};'>{status.upper()}</span><br>"
-                    f"<span style='font-size:13px; color:#94a3b8;'>Compliance: <strong>{item['compliance_rate']}%</strong></span><br>"
-                    f"<span style='font-size:13px; color:#94a3b8;'>Workers: <strong>{item['compliant_count']}/{item['total_workers']} compliant</strong></span>",
+                    f"<span style='font-size:16px; font-weight:700; color:{status_color};'>{status.upper()}</span><br>"
+                    f"<span style='font-size:12px; color:#94A3B8;'>Compliance Rate: <strong>{item['compliance_rate']}%</strong></span><br>"
+                    f"<span style='font-size:12px; color:#94A3B8;'>Workers: <strong>{item['compliant_count']}/{item['total_workers']} compliant</strong></span>",
                     unsafe_allow_html=True,
                 )
 
             with c_btn:
-                st.markdown("<div style='padding-top:14px;'></div>", unsafe_allow_html=True)
+                st.markdown("<div style='padding-top:10px;'></div>", unsafe_allow_html=True)
                 if st.button("🔍 View Results", key=f"view_hist_{item_id}_{idx}", use_container_width=True):
-                    # 1. Check if full object is in session store
                     if item_id in st.session_state.inspections_store:
                         st.session_state.active_inspection = st.session_state.inspections_store[item_id]
                         navigate_to("Inspection Results")
-                    # 2. Re-construct from image path if available on disk
                     elif item.get("image_path") and os.path.exists(item["image_path"]):
                         with st.spinner(f"Reloading inspection for {item['image_name']}..."):
                             reloaded_img = Image.open(item["image_path"]).convert("RGB")
@@ -1041,8 +1194,7 @@ def render_inspection_history(history: List[Dict[str, Any]], model: Any):
                             conf_t = item.get("settings", {}).get("conf_threshold", 0.25)
 
                             detections = run_detection(reloaded_img, model=model, conf_threshold=conf_t, device="cpu")
-                            import numpy as _np2
-                            _h2 = float(_np2.array(reloaded_img).shape[0])
+                            _h2 = float(np.array(reloaded_img).shape[0])
                             evaluation = evaluate_site_compliance(
                                 detections,
                                 required_gear=req_mode,
@@ -1072,16 +1224,16 @@ def render_inspection_history(history: List[Dict[str, Any]], model: Any):
                     else:
                         st.info("Full image not cached in memory for this session.")
 
-            st.markdown("<hr style='margin: 8px 0 12px 0; border: none; border-top: 1px solid rgba(148,163,184,0.1);'>", unsafe_allow_html=True)
+            st.markdown("<hr style='margin: 8px 0 12px 0; border: none; border-top: 1px solid #263442;'>", unsafe_allow_html=True)
 
 
 # ============================================================================
 # 11. PAGE 6: REPORTS & EXPORTS
 # ============================================================================
 def render_reports_exports(active_inspection: Optional[Dict[str, Any]]):
-    """Render the export portal for generating CSV reports and downloading annotated images."""
+    """Render export portal for generating CSV reports and downloading annotated images."""
     st.markdown("### 📑 Regulatory Compliance Reports & Exports")
-    st.caption("Generate official safety audit logs and export annotated photographic evidence.")
+    st.caption("Generate official safety inspection logs and export annotated photographic evidence.")
 
     if active_inspection is None:
         st.warning("⚠️ No active inspection data available to export. Conduct an inspection first.")
@@ -1093,22 +1245,24 @@ def render_reports_exports(active_inspection: Optional[Dict[str, Any]]):
     workers = active_inspection["workers"]
     timestamp_slug = datetime.now().strftime("%Y%m%d_%H%M%S")
 
-    # Audit Overview Card
+    # Overview Card
     st.markdown(
         f"""
         <div class='sv-panel'>
-            <h4>Executive Inspection Summary</h4>
+            <h4 style='margin-top:0;'>Executive Inspection Summary</h4>
+            <span style='color:#94A3B8; font-size:13px;'>
             &bull; <strong>Inspection ID:</strong> <code>{active_inspection['id']}</code><br>
             &bull; <strong>Source Image:</strong> <code>{active_inspection['image_name']}</code><br>
-            &bull; <strong>Execution Date:</strong> <code>{active_inspection['timestamp']}</code><br>
+            &bull; <strong>Execution Timestamp:</strong> <code>{active_inspection['timestamp']}</code><br>
             &bull; <strong>Site Safety Grade:</strong> <strong>{summary['site_status'].upper()}</strong> ({summary['compliance_rate']}% Compliance)<br>
             &bull; <strong>Worker Breakdown:</strong> {summary['total_workers']} Detected | {summary['compliant_count']} Compliant | {summary['violation_count']} Violations | {summary.get('needs_review_count', 0)} Needs Review
+            </span>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
-    # Worker Audit Table Preview
+    # Worker Record Table Preview
     st.markdown("#### Worker Record Table")
     st.dataframe(pd.DataFrame(format_worker_table(workers)), use_container_width=True)
 
@@ -1122,9 +1276,9 @@ def render_reports_exports(active_inspection: Optional[Dict[str, Any]]):
     col_csv, col_img = st.columns(2)
     with col_csv:
         st.download_button(
-            label="📥 Download Official CSV Audit Report",
+            label="📥 Download Inspection CSV Report",
             data=csv_data,
-            file_name=f"PPE_Safety_Audit_{timestamp_slug}.csv",
+            file_name=f"PPE_Safety_Inspection_{timestamp_slug}.csv",
             mime="text/csv",
             use_container_width=True,
         )
@@ -1143,13 +1297,13 @@ def render_reports_exports(active_inspection: Optional[Dict[str, Any]]):
 # ============================================================================
 def render_settings(model: Any, is_model_verified: bool):
     """Render portal configuration, model verification details, and viva reference specs."""
-    st.markdown("### ⚙️ Portal Settings & Model Specifications")
-    st.caption("Engine runtime configuration, class taxonomy verification, and academic viva reference.")
+    st.markdown("### ⚙️ System Settings & Model Specifications")
+    st.caption("Engine runtime configuration, class taxonomy verification, and academic reference.")
 
     # 1. Interface Theme
-    st.markdown("#### 1. Interface Appearance")
+    st.markdown("#### 1. Interface Theme")
     theme_choice = st.radio(
-        "Select Portal Theme:",
+        "Select Theme:",
         ["Dark Theme", "Light Theme"],
         index=0 if st.session_state.theme == "Dark Theme" else 1,
         horizontal=True,
@@ -1169,9 +1323,9 @@ def render_settings(model: Any, is_model_verified: bool):
         st.markdown(
             f"""
             <div class='sv-panel' style='padding: 16px;'>
-                <strong>Model File:</strong> <code>{active_path}</code><br>
+                <strong>Model Weight File:</strong> <code>{active_path}</code><br>
                 <strong>Architecture:</strong> <code>YOLOv8n (Nano)</code><br>
-                <strong>Execution Hardware:</strong> <code>CPU Inference (Zero GPU required)</code><br>
+                <strong>Inference Hardware:</strong> <code>CPU Mode</code><br>
                 <strong>Dataset:</strong> <code>Roboflow Construction Site Safety (v28)</code>
             </div>
             """,
@@ -1185,13 +1339,12 @@ def render_settings(model: Any, is_model_verified: bool):
                 <strong>Model Class Integrity:</strong> <code>{status_text}</code><br>
                 <strong>Class Count:</strong> <code>{len(EXPECTED_CLASSES)} Classes</code><br>
                 <strong>Compliance Engine:</strong> <code>Pure Python Spatial Reasoner</code><br>
-                <strong>Caching:</strong> <code>Enabled via @st.cache_resource</code>
+                <strong>Caching:</strong> <code>Enabled (@st.cache_resource)</code>
             </div>
             """,
             unsafe_allow_html=True,
         )
 
-    # Class Taxonomy Table
     st.markdown("##### Model Class Taxonomy (Verified against PROJECT_CONTEXT.md)")
     class_table_data = [
         {"Class ID": cid, "Class Name": cname, "Application Role": "Base Worker Box" if cid == 5 else ("Head Protection Evidence" if cid in (0, 2) else ("Torso Protection Evidence" if cid in (7, 4) else "Contextual Class (Ignored in logic)"))}
@@ -1201,15 +1354,15 @@ def render_settings(model: Any, is_model_verified: bool):
 
     st.markdown("---")
 
-    # 3. Compliance Rule Reference (Viva Sheet)
-    st.markdown("#### 3. Compliance Logic & Viva Quick Reference")
+    # 3. Compliance Rule Reference
+    st.markdown("#### 3. Compliance Logic & Reference Thresholds")
     st.markdown(
         f"""
         * **Base YOLO Inference Confidence:** <code>0.10</code> (low threshold pass to retain small candidate gear boxes).
         * **Per-Class Confidence Filtering:** Person: <code>0.30</code> | Hardhat: <code>0.30</code> | NO-Hardhat: <code>0.20</code> | Safety Vest: <code>0.20</code> | NO-Safety Vest: <code>0.20</code>.
         * **Head Zone Range:** Top <code>{int(HEAD_ZONE_BOTTOM * 100)}%</code> of worker bounding box (0.0 to {HEAD_ZONE_BOTTOM}).
         * **Torso Zone Range:** <code>{int(TORSO_ZONE_TOP * 100)}%</code> to <code>{int(TORSO_ZONE_BOTTOM * 100)}%</code> of worker bounding box.
-        * **Overlap Metric:** Intersection-over-Gear ($\\\\text{{IoG}} = \\\\frac{{\\\\text{{Area}}(\\\\text{{Gear}} \\\\cap \\\\text{{Zone}})}}{{\\\\text{{Area}}(\\\\text{{Gear}})}}$).
+        * **Overlap Metric:** Intersection over Gear Area ($\\\\text{{IoG}} = \\\\frac{{\\\\text{{Area}}(\\\\text{{Gear}} \\\\cap \\\\text{{Zone}})}}{{\\\\text{{Area}}(\\\\text{{Gear}})}}$).
         * **Overlap Threshold:** Minimum <code>{int(OVERLAP_THRESHOLD * 100)}%</code> (&ge; {OVERLAP_THRESHOLD}) required for zone association.
         * **Safe Site Threshold:** &ge; {SITE_SAFE_THRESHOLD}% compliance rate.
         * **Warning Site Threshold:** &ge; {SITE_WARNING_THRESHOLD}% and &lt; {SITE_SAFE_THRESHOLD}%.
@@ -1221,11 +1374,10 @@ def render_settings(model: Any, is_model_verified: bool):
 # 13. PAGE: CCTV-STYLE VIDEO PPE INSPECTION
 # ============================================================================
 def render_video_inspection(model: Any):
-    """Render the CCTV-style continuous video PPE compliance inspection interface."""
+    """Render the CCTV video PPE compliance surveillance interface."""
     st.markdown("### 📹 CCTV Surveillance PPE Inspection")
-    st.caption("Sequential CCTV-style analysis: continuous playback, interval inference, and H.264 video export on CPU.")
+    st.caption("Sequential video processing: continuous playback, interval inference, and H.264 video export.")
 
-    # Show banner if previous inspection results exist
     cached_results = st.session_state.get("video_results")
     if cached_results is not None:
         c_banner, c_bbtn = st.columns([4, 1])
@@ -1235,7 +1387,6 @@ def render_video_inspection(model: Any):
             if st.button("👉 View Results", use_container_width=True):
                 navigate_to("Inspection Results")
 
-    # Upload and Configuration Columns
     c_upload, c_config = st.columns([3, 2])
 
     with c_upload:
@@ -1254,7 +1405,7 @@ def render_video_inspection(model: Any):
             uploaded_video = st.file_uploader(
                 "Select Video File (.mp4, .avi, .mov)",
                 type=["mp4", "avi", "mov"],
-                help=f"Upload site surveillance footage. Videos longer than {MAX_VIDEO_SECONDS}s will be warned/capped at {MAX_VIDEO_SECONDS}s from start.",
+                help=f"Upload site surveillance footage. Processing is capped at the first {MAX_VIDEO_SECONDS}s from start.",
             )
 
             if uploaded_video is not None:
@@ -1264,7 +1415,7 @@ def render_video_inspection(model: Any):
                     <div class='sv-panel' style='padding: 12px; margin-top: 8px;'>
                         <strong>Selected Footage:</strong> <code>{uploaded_video.name}</code><br>
                         <strong>File Size:</strong> <code>{file_mb} MB</code><br>
-                        <strong>Processing Cap:</strong> First {MAX_VIDEO_SECONDS} seconds from start | Width &le; {MAX_FRAME_WIDTH}px
+                        <strong>Processing Limit:</strong> First {MAX_VIDEO_SECONDS} seconds | Width &le; {MAX_FRAME_WIDTH}px
                     </div>
                     """,
                     unsafe_allow_html=True,
@@ -1319,15 +1470,14 @@ def render_video_inspection(model: Any):
         show_gear_boxes = st.checkbox("Draw Gear Bounding Boxes", value=True, key="cctv_gear_box_cb")
         show_zones = st.checkbox("Outline Body Zones (Head / Torso)", value=False, key="cctv_zones_cb")
         temporal_smoothing = st.checkbox(
-            "Temporal Anti-Flicker Smoothing",
+            "Temporal Summary Smoothing",
             value=True,
             key="cctv_temporal_smoothing_cb",
-            help=f"Applies a {TEMPORAL_SMOOTHING_WINDOW}-frame rolling filter to suppress transient posture and angle flickers from skewing audit statistics.",
+            help=f"Applies a {TEMPORAL_SMOOTHING_WINDOW}-frame rolling filter to smooth aggregate counts and rates across video frames.",
         )
 
     st.markdown("<div style='margin-top: 20px;'></div>", unsafe_allow_html=True)
 
-    # Run Action
     if video_source == "Upload file":
         run_disabled = uploaded_video is None
     else:
@@ -1365,24 +1515,18 @@ def process_cctv_video_upload(
     conf_threshold: float,
     show_gear_boxes: bool,
     show_zones: bool,
-    start_seconds: float = 0.0,
-    temporal_smoothing: bool = True,
+    start_seconds: float,
+    temporal_smoothing: bool,
 ):
-    """Process uploaded video sequentially: resize, interval inference, annotate, encode H.264 MP4."""
-    suffix = os.path.splitext(uploaded_video.name)[1]
-    if not suffix:
-        suffix = ".mp4"
-
-    # NamedTemporaryFile closed before cv2.VideoCapture opens it, deleted in finally block
-    in_temp = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
-    in_temp_path = in_temp.name
-
+    """Save uploaded video file to a temporary location and run the CCTV inspection pipeline."""
+    temp_dir = tempfile.mkdtemp()
     try:
-        in_temp.write(uploaded_video.getbuffer())
-        in_temp.close()
+        temp_input_path = os.path.join(temp_dir, uploaded_video.name)
+        with open(temp_input_path, "wb") as f:
+            f.write(uploaded_video.getbuffer())
 
         execute_cctv_pipeline(
-            video_path=in_temp_path,
+            video_path=temp_input_path,
             video_display_name=uploaded_video.name,
             model=model,
             required_gear=required_gear,
@@ -1393,11 +1537,7 @@ def process_cctv_video_upload(
             temporal_smoothing=temporal_smoothing,
         )
     finally:
-        if os.path.exists(in_temp_path):
-            try:
-                os.remove(in_temp_path)
-            except OSError:
-                pass
+        shutil.rmtree(temp_dir, ignore_errors=True)
 
 
 def process_cctv_youtube_link(
@@ -1407,8 +1547,8 @@ def process_cctv_youtube_link(
     conf_threshold: float,
     show_gear_boxes: bool,
     show_zones: bool,
-    start_seconds: float = 0.0,
-    temporal_smoothing: bool = True,
+    start_seconds: float,
+    temporal_smoothing: bool,
 ):
     """Download YouTube video via yt-dlp into a temp dir and run the CCTV inspection pipeline."""
     if not is_valid_youtube_url(youtube_url):
@@ -1418,18 +1558,18 @@ def process_cctv_youtube_link(
         )
         return
 
-    temp_dir = tempfile.mkdtemp(prefix="safety_vision_yt_")
+    temp_dir = tempfile.mkdtemp()
     try:
         with st.spinner("📥 Extracting metadata and downloading YouTube video stream..."):
             try:
                 downloaded_file = download_youtube(youtube_url, temp_dir)
             except YouTubeDownloadError as e:
-                st.error(f"❌ {e}")
+                st.error(f"❌ YouTube Download Error: {e}")
                 return
             except Exception as e:
                 st.error(
                     f"❌ Unexpected error downloading YouTube video: {e}. "
-                    "Please consider downloading the video file yourself and using the 'Upload file' mode."
+                    "Please download the video file manually and use 'Upload file' mode."
                 )
                 return
 
@@ -1457,102 +1597,64 @@ def execute_cctv_pipeline(
     conf_threshold: float,
     show_gear_boxes: bool,
     show_zones: bool,
-    start_seconds: float = 0.0,
-    temporal_smoothing: bool = True,
+    start_seconds: float,
+    temporal_smoothing: bool,
 ):
-    """Core CCTV processing pipeline: seek, interval inference, annotation, and H.264 MP4 export."""
-    out_temp = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
-    out_mp4_path = out_temp.name
-    out_temp.close()
-
+    """Execute the core CCTV video processing, per-frame inference, temporal smoothing, and MP4 generation."""
     cap = cv2.VideoCapture(video_path)
     if not cap.isOpened():
-        st.error("❌ OpenCV could not open or decode the video stream.")
-        if os.path.exists(out_mp4_path):
-            try:
-                os.remove(out_mp4_path)
-            except OSError:
-                pass
+        st.error("❌ Failed to open video source. Please check the file format.")
         return
 
-    try:
-        raw_fps = cap.get(cv2.CAP_PROP_FPS)
-        raw_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-        safe_fps = validate_and_get_fps(raw_fps)
-        total_frames = max(0, raw_frames)
+    raw_fps = cap.get(cv2.CAP_PROP_FPS)
+    safe_fps = compute_output_fps(raw_fps, max_fps=OUTPUT_MAX_FPS)
+    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    duration_sec = calculate_video_duration(total_frames, raw_fps)
 
-        if total_frames <= 0:
-            st.error("❌ Video file contains zero readable frames.")
-            cap.release()
-            return
+    start_frame_idx, max_frames = compute_cctv_frame_range(
+        total_frames=total_frames,
+        fps=raw_fps,
+        start_seconds=start_seconds,
+        max_duration_seconds=MAX_VIDEO_SECONDS,
+    )
 
-        duration_sec = calculate_video_duration(total_frames, safe_fps)
-
-        # Validate start time
-        if start_seconds >= duration_sec:
-            st.error(
-                f"❌ Start time ({start_seconds:.1f}s) is beyond the total video duration ({duration_sec:.1f}s). "
-                "Please specify a start time within the video duration."
-            )
-            cap.release()
-            return
-
-        # Calculate CCTV frame range from start_seconds
-        start_frame_idx, end_frame_idx = compute_cctv_frame_range(
-            total_frames=total_frames,
-            fps=safe_fps,
-            start_seconds=start_seconds,
-            max_seconds=MAX_VIDEO_SECONDS,
+    if total_frames > max_frames:
+        st.warning(
+            f"⏱️ Video duration is {duration_sec:.1f}s. Inspection is capped at the first "
+            f"{MAX_VIDEO_SECONDS}s ({max_frames} frames) starting from {start_seconds:.1f}s."
         )
-        total_to_process = end_frame_idx - start_frame_idx
 
-        if total_to_process <= 0:
-            st.error("❌ Zero frames eligible for processing.")
-            cap.release()
-            return
+    cap.set(cv2.CAP_PROP_POS_FRAMES, start_frame_idx)
 
-        # Check duration cap warning (MAX_VIDEO_SECONDS = 30 from start)
-        remaining_sec = max(0.0, duration_sec - start_seconds)
-        if remaining_sec > MAX_VIDEO_SECONDS:
-            st.warning(
-                f"⚠️ Remaining video duration from {start_seconds:.1f}s ({remaining_sec:.1f}s) exceeds MAX_VIDEO_SECONDS ({MAX_VIDEO_SECONDS}s). "
-                f"Only the first {MAX_VIDEO_SECONDS} seconds from {start_seconds:.1f}s will be analyzed."
-            )
+    progress_bar = st.progress(0, text="Initializing CCTV surveillance analysis on CPU...")
+    status_text = st.empty()
 
-        # Seek to starting frame
-        if start_frame_idx > 0:
-            cap.set(cv2.CAP_PROP_POS_FRAMES, start_frame_idx)
+    analyzed_records: List[Dict[str, Any]] = []
+    annotated_frames_rgb: List[np.ndarray] = []
 
-        # Progress UI
-        st.markdown("---")
-        st.markdown("#### ⏳ Analyzing CCTV Video Stream...")
-        prog_bar = st.progress(0.0)
-        status_line = st.empty()
-        preview_container = st.empty()
+    last_workers: List[Dict[str, Any]] = []
+    last_unassigned: List[Dict[str, Any]] = []
 
-        annotated_frames_rgb: List[np.ndarray] = []
-        analyzed_records: List[Dict[str, Any]] = []
+    out_mp4_fd, out_mp4_path = tempfile.mkstemp(suffix=".mp4")
+    os.close(out_mp4_fd)
 
-        last_workers: List[Dict[str, Any]] = []
-        last_unassigned: List[Dict[str, Any]] = []
-
-        start_time = time.time()
-
-        for step_idx in range(total_to_process):
-            ret, bgr_frame = cap.read()
-            if not ret or bgr_frame is None or bgr_frame.size == 0:
+    try:
+        for step_idx in range(max_frames):
+            ret, frame_bgr = cap.read()
+            if not ret or frame_bgr is None:
                 break
 
-            orig_h, orig_w = bgr_frame.shape[:2]
-            new_w, new_h = compute_resized_dimensions(orig_w, orig_h, max_width=MAX_FRAME_WIDTH)
-            if (new_w, new_h) != (orig_w, orig_h):
-                bgr_frame = cv2.resize(bgr_frame, (new_w, new_h), interpolation=cv2.INTER_AREA)
+            orig_h, orig_w = frame_bgr.shape[:2]
+            target_w, target_h = compute_resized_dimensions(orig_w, orig_h, max_width=MAX_FRAME_WIDTH)
+            if target_w != orig_h or target_h != orig_h:
+                frame_bgr = cv2.resize(frame_bgr, (target_w, target_h), interpolation=cv2.INTER_AREA)
 
-            rgb_frame = cv2.cvtColor(bgr_frame, cv2.COLOR_BGR2RGB)
+            rgb_frame = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
+            pil_frame = Image.fromarray(rgb_frame)
+
             current_frame_idx = start_frame_idx + step_idx
             timestamp_sec = round(current_frame_idx / safe_fps, 2)
 
-            # Check if this frame undergoes inference (every PROCESS_EVERY_N-th frame)
             if is_analyzed_frame(step_idx, process_every_n=PROCESS_EVERY_N):
                 detections = run_detection(
                     image=rgb_frame,
@@ -1572,16 +1674,17 @@ def execute_cctv_pipeline(
                 total_w = evaluation["summary"]["total_workers"]
                 comp_w = evaluation["summary"]["compliant_count"]
                 viol_w = evaluation["summary"]["violation_count"]
-                review_w = evaluation["summary"]["needs_review_count"]
-                rate = evaluation["summary"]["compliance_rate"] if total_w > 0 else None
+                rev_w = evaluation["summary"].get("needs_review_count", evaluation["summary"].get("unknown_count", 0))
+                comp_rate = evaluation["summary"]["compliance_rate"]
 
-                annotated_frame = annotate_image(
-                    image=rgb_frame,
+                annotated_pil = annotate_image(
+                    image=pil_frame,
                     workers=last_workers,
                     unassigned_gear=last_unassigned,
                     show_gear_boxes=show_gear_boxes,
                     show_zones=show_zones,
                 )
+                annotated_rgb = np.array(annotated_pil)
 
                 analyzed_records.append({
                     "frame_number": current_frame_idx,
@@ -1589,57 +1692,49 @@ def execute_cctv_pipeline(
                     "total_workers": total_w,
                     "compliant_count": comp_w,
                     "violation_count": viol_w,
-                    "needs_review_count": review_w,
-                    "compliance_rate": rate,
-                    "annotated_image": annotated_frame,
+                    "needs_review_count": rev_w,
+                    "compliance_rate": comp_rate,
+                    "workers": last_workers,
+                    "annotated_image": annotated_pil,
                 })
             else:
-                # Frames in between: draw the most recent detections and statuses on the actual frame
-                annotated_frame = annotate_image(
-                    image=rgb_frame,
+                annotated_pil = annotate_image(
+                    image=pil_frame,
                     workers=last_workers,
                     unassigned_gear=last_unassigned,
                     show_gear_boxes=show_gear_boxes,
                     show_zones=show_zones,
                 )
+                annotated_rgb = np.array(annotated_pil)
 
-            annotated_frames_rgb.append(annotated_frame)
+            annotated_frames_rgb.append(annotated_rgb)
 
-            # Update progress, elapsed time, and preview
-            elapsed = round(time.time() - start_time, 1)
-            pct = (step_idx + 1) / total_to_process
-            prog_bar.progress(pct)
-            status_line.caption(
-                f"Processing frame {step_idx + 1}/{total_to_process} ({int(pct * 100)}%) | "
-                f"Video time: {timestamp_sec:.2f}s | Elapsed: {elapsed}s"
+            pct = int(((step_idx + 1) / max_frames) * 100)
+            progress_bar.progress(
+                pct,
+                text=f"Analyzing CCTV Video: Frame {step_idx + 1}/{max_frames} (t={timestamp_sec:.1f}s)...",
             )
-            preview_container.image(
-                annotated_frame,
-                caption=f"CCTV Stream Preview — Frame #{current_frame_idx} (t={timestamp_sec:.2f}s)",
-                use_container_width=True,
+            status_text.caption(
+                f"Progress: {pct}% | Analyzed: {len(analyzed_records)} frames | Buffer: {len(annotated_frames_rgb)} rendered"
             )
 
-        cap.release()
+        progress_bar.empty()
+        status_text.empty()
 
         if not analyzed_records:
-            st.error("❌ No frames could be analyzed.")
+            st.error("❌ No frames could be decoded from this video. Please check the file format.")
             return
 
-        # Write annotated video to H.264 MP4 using imageio and imageio-ffmpeg
-        video_bytes: Optional[bytes] = None
-        write_error: Optional[str] = None
+        video_bytes = None
+        write_error = None
         try:
-            write_annotated_h264_video(
-                frames_rgb=annotated_frames_rgb,
-                output_path=out_mp4_path,
-                fps=safe_fps,
-            )
-            with open(out_mp4_path, "rb") as vf:
-                video_bytes = vf.read()
+            with st.spinner("Encoding annotated H.264 MP4 playback video..."):
+                write_annotated_video(annotated_frames_rgb, out_mp4_path, fps=safe_fps)
+                with open(out_mp4_path, "rb") as vf:
+                    video_bytes = vf.read()
         except Exception as e:
             write_error = str(e)
 
-        # Summary computed on the ANALYZED frames (with anti-flicker smoothing if enabled)
         if temporal_smoothing:
             smoothed_records = apply_temporal_smoothing(
                 analyzed_records,
@@ -1663,7 +1758,6 @@ def execute_cctv_pipeline(
             "temporal_smoothing": temporal_smoothing,
         }
 
-        # Save to session state so results survive reruns
         st.session_state.video_results = {
             "video_filename": video_display_name,
             "metadata": metadata_dict,
@@ -1688,7 +1782,7 @@ def execute_cctv_pipeline(
 
 
 def render_video_results_view(video_results: Dict[str, Any]):
-    """Render the CCTV video results: video player, metrics, charts, table, and moments gallery."""
+    """Render CCTV video results: video player, metrics, charts, table, and moments gallery."""
     summary = video_results["summary"]
     analyzed = video_results["analyzed_records"]
     meta = video_results["metadata"]
@@ -1702,10 +1796,9 @@ def render_video_results_view(video_results: Dict[str, Any]):
         else ""
     )
 
-    # Header Panel
     st.markdown(
         f"""
-        <div class='sv-panel' style='padding: 12px 18px; margin-bottom: 16px;'>
+        <div class='sv-panel' style='padding: 10px 16px; margin-bottom: 14px;'>
             <strong>Source Video:</strong> <code>{filename}</code> &nbsp;|&nbsp;
             <strong>Duration:</strong> <code>{meta['duration_sec']:.1f}s</code> &nbsp;|&nbsp;
             <strong>Inference Stride:</strong> <code>Every {PROCESS_EVERY_N} frames</code> &nbsp;|&nbsp;
@@ -1715,10 +1808,9 @@ def render_video_results_view(video_results: Dict[str, Any]):
         unsafe_allow_html=True,
     )
 
-    # 1. Video Player & Download
     st.markdown("#### 🎬 Annotated CCTV Playback")
     if write_error:
-        st.error(f"⚠️ Video file encoding error: {write_error}. Audit statistics remain available below.")
+        st.error(f"⚠️ Video file encoding error: {write_error}. Inspection statistics remain available below.")
 
     if video_bytes:
         st.video(video_bytes, format="video/mp4")
@@ -1730,19 +1822,16 @@ def render_video_results_view(video_results: Dict[str, Any]):
             use_container_width=True,
         )
     else:
-        st.info("Video player unavailable, but all analytical audit metrics are presented below.")
+        st.info("Video player unavailable, but analytical inspection metrics are presented below.")
 
-    st.markdown("<div style='margin-top: 20px;'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='margin-top: 16px;'></div>", unsafe_allow_html=True)
 
-    # Anti-flicker banner if active
     if meta.get("temporal_smoothing"):
         st.info(
-            f"🛡️ **Temporal Anti-Flicker Active:** Summary metrics are calculated using a {TEMPORAL_SMOOTHING_WINDOW}-frame "
-            "rolling median filter. Transient detection flickers caused by rapid head-turns, occlusions, and body-angle shifts "
-            "are smoothed out so temporary postures do not unfairly degrade your site compliance rate."
+            f"🛡️ **Temporal Summary Smoothing Active:** Summary metrics are calculated using a {TEMPORAL_SMOOTHING_WINDOW}-frame "
+            "rolling median filter over surrounding frames to smooth aggregate counts and compliance rates across video frames."
         )
 
-    # 2. Executive KPI Metric Row (Computed on analyzed frames only)
     k1, k2, k3, k4, k5 = st.columns(5)
     with k1:
         st.markdown(
@@ -1753,17 +1842,17 @@ def render_video_results_view(video_results: Dict[str, Any]):
     with k2:
         st.markdown(
             f"<div class='metric-card'><div class='metric-card-title'>Frames With Workers</div>"
-            f"<div class='metric-card-value' style='color:#38bdf8;'>{summary['frames_with_workers']}</div></div>",
+            f"<div class='metric-card-value' style='color:#38BDF8;'>{summary['frames_with_workers']}</div></div>",
             unsafe_allow_html=True,
         )
     with k3:
         st.markdown(
             f"<div class='metric-card'><div class='metric-card-title'>Frames No Workers</div>"
-            f"<div class='metric-card-value' style='color:#94a3b8;'>{summary['frames_without_workers']}</div></div>",
+            f"<div class='metric-card-value' style='color:#94A3B8;'>{summary['frames_without_workers']}</div></div>",
             unsafe_allow_html=True,
         )
     with k4:
-        viol_color = "#ef4444" if summary["frames_with_violations"] > 0 else "#22c55e"
+        viol_color = "#F87171" if summary["frames_with_violations"] > 0 else "#34D399"
         st.markdown(
             f"<div class='metric-card'><div class='metric-card-title'>Frames With Violations</div>"
             f"<div class='metric-card-value' style='color:{viol_color};'>{summary['frames_with_violations']}</div></div>",
@@ -1771,16 +1860,15 @@ def render_video_results_view(video_results: Dict[str, Any]):
         )
     with k5:
         rate_display = f"{summary['average_compliance_rate']}%" if summary["has_worker_frames"] else "N/A"
-        rate_color = "#22c55e" if (summary["has_worker_frames"] and summary["average_compliance_rate"] >= 85.0) else ("#f59e0b" if summary["has_worker_frames"] and summary["average_compliance_rate"] >= 60.0 else "#ef4444")
+        rate_color = "#34D399" if (summary["has_worker_frames"] and summary["average_compliance_rate"] >= 85.0) else ("#FBBF24" if summary["has_worker_frames"] and summary["average_compliance_rate"] >= 60.0 else "#F87171")
         st.markdown(
             f"<div class='metric-card'><div class='metric-card-title'>Avg Compliance Rate</div>"
             f"<div class='metric-card-value' style='color:{rate_color};'>{rate_display}</div></div>",
             unsafe_allow_html=True,
         )
 
-    st.markdown("<div style='margin-top: 20px;'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='margin-top: 16px;'></div>", unsafe_allow_html=True)
 
-    # 3. Compliance Rate Over Time Line Chart (Grouped by second)
     st.markdown("#### 📈 Compliance Rate Over Time (By Second)")
     chart_rows = []
     for f in analyzed:
@@ -1791,11 +1879,10 @@ def render_video_results_view(video_results: Dict[str, Any]):
         })
     df_chart = pd.DataFrame(chart_rows).set_index("Time (s)")
     if summary["has_worker_frames"]:
-        st.line_chart(df_chart, color="#2563eb", height=240)
+        st.line_chart(df_chart, color="#0284C7", height=230)
     else:
         st.info("ℹ️ No workers were detected in the analyzed frames to plot compliance trends.")
 
-    # 4. Top Moments with the Most Violations Gallery (Top 3)
     st.markdown("---")
     st.markdown("#### 🚨 Top Risk Moments (Most Violations)")
     top_moments = summary.get("top_violation_moments", [])
@@ -1812,7 +1899,6 @@ def render_video_results_view(video_results: Dict[str, Any]):
     else:
         st.success("✅ Clean Video Surveillance: Zero PPE violations detected across all analyzed frames!")
 
-    # 5. Per-Frame Table & CSV Download
     st.markdown("---")
     st.markdown("#### 📋 Analyzed Frames Breakdown")
     table_rows = []
@@ -1832,34 +1918,25 @@ def render_video_results_view(video_results: Dict[str, Any]):
     df_table = pd.DataFrame(table_rows)
     st.dataframe(df_table, use_container_width=True)
 
-    # Actions
     c_csv, c_reset = st.columns([2, 1])
     with c_csv:
         csv_content = generate_cctv_csv_report(analyzed, summary, filename)
         st.download_button(
-            "📥 Download CCTV Audit CSV Report",
+            "📥 Download CCTV Inspection CSV",
             data=csv_content,
-            file_name=f"cctv_audit_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+            file_name=f"cctv_inspection_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
             mime="text/csv",
             use_container_width=True,
         )
-    with c_reset:
-        if st.button("🔄 Analyze Another Video", use_container_width=True):
-            st.session_state.video_results = None
-            navigate_to("New Inspection")
 
 
 # ============================================================================
-# 13. MAIN APPLICATION ORCHESTRATOR
+# 14. MAIN APPLICATION ORCHESTRATOR
 # ============================================================================
 def main():
-    # Initialize session state
     init_session_state()
-
-    # Apply CSS matching current theme
     inject_custom_css(st.session_state.theme)
 
-    # Load cached YOLOv8 Model on CPU
     active_model_path = resolve_model_path()
     try:
         model = get_detector(active_model_path)
@@ -1868,27 +1945,25 @@ def main():
         st.error(f"❌ Error loading YOLO model from `{active_model_path}`: {e}")
         st.stop()
 
-    # ------------------------------------------------------------------------
-    # SIDEBAR NAVIGATION
-    # ------------------------------------------------------------------------
     with st.sidebar:
         st.markdown(
             """
-            <div style='text-align: center; padding: 12px 0 16px 0;'>
-                <span style='font-size: 38px;'>🛡️</span>
-                <h3 style='margin: 4px 0 0 0; color: #38bdf8;'>SAFETY VISION</h3>
-                <span style='font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px;'>Construction Portal</span>
+            <div style='display: flex; align-items: center; gap: 10px; padding: 6px 4px 14px 4px;'>
+                <div style='width: 34px; height: 34px; border-radius: 8px; background: rgba(56, 189, 248, 0.12); border: 1px solid rgba(56, 189, 248, 0.3); display: flex; align-items: center; justify-content: center; font-size: 18px;'>🛡️</div>
+                <div>
+                    <div style='font-size: 15px; font-weight: 700; letter-spacing: 0.5px; color: #38BDF8;'>SAFETY VISION</div>
+                    <div style='font-size: 10px; color: #94A3B8; font-weight: 500; text-transform: uppercase; letter-spacing: 0.8px;'>AI Surveillance Platform</div>
+                </div>
             </div>
             """,
             unsafe_allow_html=True,
         )
 
-        st.markdown("<hr style='margin: 8px 0 12px 0; border: none; border-top: 1px solid rgba(148,163,184,0.2);'>", unsafe_allow_html=True)
+        st.markdown("<hr style='margin: 4px 0 10px 0;'>", unsafe_allow_html=True)
 
-        # ── Inspection Mode Selector (Image vs Video) ────────────────────
         st.markdown(
-            "<span style='font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;'>"
-            "Inspection Mode</span>",
+            "<span style='font-size: 11px; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;'>"
+            "Surveillance Mode</span>",
             unsafe_allow_html=True,
         )
         mode_options = ["Image", "Video"]
@@ -1904,7 +1979,7 @@ def main():
             st.session_state.inspection_mode = selected_mode
             st.rerun()
 
-        st.markdown("<hr style='margin: 8px 0 16px 0; border: none; border-top: 1px solid rgba(148,163,184,0.2);'>", unsafe_allow_html=True)
+        st.markdown("<hr style='margin: 8px 0 12px 0;'>", unsafe_allow_html=True)
 
         pages = [
             "Dashboard",
@@ -1915,11 +1990,20 @@ def main():
             "Reports & Exports",
             "Settings",
         ]
+        page_icons = {
+            "Dashboard": "📊 Dashboard",
+            "New Inspection": "🔍 New Inspection",
+            "Inspection Results": "🎯 Inspection Results",
+            "Worker Audits": "👷 Worker Audits",
+            "Inspection History": "📜 Inspection History",
+            "Reports & Exports": "📑 Reports & Exports",
+            "Settings": "⚙️ Settings",
+        }
 
-        # Use st.radio for navigation with synced session state
         selected_nav = st.radio(
             "Navigation Menu",
             options=pages,
+            format_func=lambda x: page_icons.get(x, x),
             index=pages.index(st.session_state.nav_radio) if st.session_state.nav_radio in pages else 0,
             label_visibility="collapsed",
         )
@@ -1929,12 +2013,11 @@ def main():
             st.session_state.nav_radio = selected_nav
             st.rerun()
 
-        st.markdown("<hr style='margin: 20px 0 16px 0; border: none; border-top: 1px solid rgba(148,163,184,0.2);'>", unsafe_allow_html=True)
+        st.markdown("<hr style='margin: 16px 0 12px 0;'>", unsafe_allow_html=True)
 
-        # ── Hardhat Enforcement Policy ────────────────────────────────────
         st.markdown(
-            "<span style='font-size:11px; color:#94a3b8; text-transform:uppercase; "
-            "letter-spacing:0.5px;'>Hardhat Policy</span>",
+            "<span style='font-size:11px; color:#94A3B8; text-transform:uppercase; "
+            "letter-spacing:0.5px; font-weight:600;'>Hardhat Policy</span>",
             unsafe_allow_html=True,
         )
         st.session_state.strict_hardhat = st.checkbox(
@@ -1947,25 +2030,18 @@ def main():
                 "Unreliable persons are always flagged as Needs Review regardless."
             ),
         )
-        st.markdown(
-            "<hr style='margin: 12px 0 16px 0; border: none; border-top: 1px solid rgba(148,163,184,0.2);'>",
-            unsafe_allow_html=True,
-        )
 
-        # Sidebar Footer
+        st.markdown("<hr style='margin: 12px 0 12px 0;'>", unsafe_allow_html=True)
+
         st.caption(f"**Engine:** YOLOv8 (CPU Mode)\n\n**Weights:** `{os.path.basename(active_model_path)}`")
         if is_model_verified:
-            st.caption("✅ 10 Classes Verified")
+            st.caption("🟢 10 Classes Verified")
 
-    # ------------------------------------------------------------------------
-    # TOP NAVBAR & ROUTING
-    # ------------------------------------------------------------------------
     render_top_navbar(st.session_state.current_page, is_model_verified)
 
     active_insp = st.session_state.active_inspection
     history_list = st.session_state.inspection_history
 
-    # Route to selected page based on mode and navigation
     if st.session_state.inspection_mode == "Video":
         if st.session_state.current_page == "New Inspection":
             render_video_inspection(model)
@@ -1988,7 +2064,6 @@ def main():
         elif st.session_state.current_page == "Settings":
             render_settings(model, is_model_verified)
     else:
-        # Image Mode: route to selected page (stays exactly as it was)
         if st.session_state.current_page == "Dashboard":
             render_dashboard(active_insp, history_list)
         elif st.session_state.current_page == "New Inspection":
