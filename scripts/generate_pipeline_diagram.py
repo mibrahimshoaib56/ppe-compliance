@@ -71,7 +71,7 @@ def create_pipeline_diagram(output_png: str, output_svg: str):
     # 2. YOLOv8 DETECTOR STAGE
     draw_card(4.8, 6.2, 3.7, 2.6, bg_color="#EEF2FF", border_color="#4F46E5", lw=2.0)
     ax.text(6.65, 8.45, "2. YOLOv8n INFERENCE", fontsize=11, fontweight="bold", color="#4338CA", ha="center")
-    ax.text(6.65, 7.95, "Ultralytics YOLOv8 Nano\n(130 Layers, 3.14M Params)", fontsize=9.5, color="#1E1B4B", ha="center", va="center", fontweight="bold")
+    ax.text(6.65, 7.95, "Ultralytics YOLOv8 Nano\n(129 Layers, 3.01M Params)", fontsize=9.5, color="#1E1B4B", ha="center", va="center", fontweight="bold")
     ax.text(6.65, 7.05, "• Base Conf = 0.10 (prevents NMS drop)\n• 10 Trained Classes:\n  Person, Hardhat, NO-Hardhat,\n  Safety Vest, NO-Safety Vest, Context", fontsize=8.8, color="#3730A3", ha="center", va="center")
 
     # Arrow 2 -> 3
@@ -130,8 +130,8 @@ def create_pipeline_diagram(output_png: str, output_svg: str):
     # 8. TEMPORAL SMOOTHING & OUTPUT STAGE
     draw_card(0.5, 2.3, 2.9, 2.6, bg_color="#F8FAFC", border_color="#475569", lw=2.0)
     ax.text(1.95, 4.55, "8. AGGREGATION & UI", fontsize=11, fontweight="bold", color="#334155", ha="center")
-    ax.text(1.95, 3.95, "Temporal Smoothing (Video):\n7-frame rolling median filter", fontsize=8.5, color="#1E293B", ha="center")
-    ax.text(1.95, 3.1, "Site Safety Metrics:\n• Compliance Rate = Compliant / All\n• Safe (≥85%) | Warning | Critical\n\nReporting Artifacts:\n• Streamlit Interactive Dashboard\n• Risk Moments Gallery (Top 3)\n• CSV Audit Trail Export", fontsize=8.0, color="#334155", ha="center", va="center")
+    ax.text(1.95, 3.95, "Temporal Smoothing (Video):\n7-frame median on counts & rate", fontsize=8.5, color="#1E293B", ha="center")
+    ax.text(1.95, 3.1, "Site Safety Metrics:\n• Compliance Rate = Compliant / All\n• Safe (≥85%) | Warning | Critical\n\nReporting Artifacts:\n• Streamlit Interactive Dashboard\n• Risk Moments Gallery (Top 3)\n• CSV Inspection Log Export", fontsize=8.0, color="#334155", ha="center", va="center")
 
     # Bottom Footer Note
     ax.text(
