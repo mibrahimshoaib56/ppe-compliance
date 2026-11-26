@@ -46,11 +46,11 @@ from src.utils import (
     crop_worker_roi,
     encode_image_bytes,
     format_worker_table,
-    generate_cctv_csv_report,
     generate_csv_report,
     get_action_recommendation,
 )
 from src.video import (
+    FALLBACK_FPS,
     MAX_FRAME_WIDTH,
     MAX_VIDEO_SECONDS,
     OUTPUT_MAX_FPS,
@@ -63,10 +63,12 @@ from src.video import (
     compute_max_frames_to_process,
     compute_output_fps,
     compute_resized_dimensions,
-    extract_frame_at_timestamp,
+    compute_start_frame_index,
+    generate_cctv_csv_report,
     is_analyzed_frame,
     summarize_cctv_results,
-    write_annotated_video,
+    validate_and_get_fps,
+    write_annotated_h264_video,
 )
 from src.youtube import (
     MAX_YOUTUBE_DURATION_SECONDS,
@@ -81,7 +83,7 @@ from src.youtube import (
 # ============================================================================
 st.set_page_config(
     page_title="SAFETY VISION — AI Surveillance Platform",
-    page_icon="🛡️",
+    page_icon=None,
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -575,9 +577,9 @@ def inject_custom_css(theme: str):
 def render_top_navbar(current_page: str, is_model_verified: bool):
     """Render the enterprise top bar with branding, breadcrumb, model status, and theme toggle."""
     model_status_html = (
-        "<span class='model-pill-ready'>🟢 YOLOv8n Online (CPU)</span>"
+        "<span class='model-pill-ready'>● YOLOv8n Online (CPU)</span>"
         if is_model_verified
-        else "<span class='model-pill-warn'>⚠️ YOLOv8 Fallback</span>"
+        else "<span class='model-pill-warn'>● YOLOv8 Fallback</span>"
     )
 
     col_brand, col_status, col_theme = st.columns([5, 3, 2])
@@ -585,7 +587,7 @@ def render_top_navbar(current_page: str, is_model_verified: bool):
     with col_brand:
         st.markdown(
             f"<div style='display: flex; align-items: center; gap: 8px; padding-top: 4px;'>"
-            f"<span style='font-size: 18px;'>🛡️</span>"
+            f"<svg width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='#38BDF8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' style='vertical-align:middle;margin-right:2px;'><path d='M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z'/></svg>"
             f"<span class='brand-title'>SAFETY VISION</span>"
             f"<span style='color: #64748B;'>/</span>"
             f"<span class='page-crumb'>{current_page}</span>"
@@ -601,7 +603,7 @@ def render_top_navbar(current_page: str, is_model_verified: bool):
 
     with col_theme:
         current_theme = st.session_state.theme
-        theme_icon = "☀️ Light" if current_theme == "Dark Theme" else "🌙 Dark"
+        theme_icon = "Light" if current_theme == "Dark Theme" else "Dark"
         if st.button(f"{theme_icon} Mode", key="top_theme_toggle", use_container_width=True):
             st.session_state.theme = "Light Theme" if current_theme == "Dark Theme" else "Dark Theme"
             st.rerun()
@@ -614,7 +616,7 @@ def render_top_navbar(current_page: str, is_model_verified: bool):
 # ============================================================================
 def render_dashboard(active_inspection: Optional[Dict[str, Any]], history: List[Dict[str, Any]]):
     """Render the executive safety dashboard with KPIs, distribution charts, and recent scans."""
-    st.markdown("### 📊 Operational Safety Dashboard")
+    st.markdown("### Operational Safety Dashboard")
     st.caption("Active job site overview, PPE compliance rates, and recent surveillance logs.")
 
     has_data = active_inspection is not None or len(history) > 0
@@ -623,7 +625,7 @@ def render_dashboard(active_inspection: Optional[Dict[str, Any]], history: List[
         st.markdown(
             """
             <div class='sv-panel' style='text-align: center; padding: 48px 24px;'>
-                <span style='font-size: 48px;'>🏗️</span>
+                <div style='font-size: 13px; text-transform: uppercase; letter-spacing: 1px; color: #38BDF8; font-weight: 600; margin-bottom: 8px;'>[ SURVEILLANCE STANDBY ]</div>
                 <h3 style='margin: 12px 0 6px 0;'>No Site Inspections Recorded Yet</h3>
                 <p style='color: #94A3B8; max-width: 500px; margin: 0 auto 20px auto; font-size: 14px;'>
                     Start by scanning an on-site photo or running a CCTV video feed to evaluate worker hardhat and safety-vest compliance.
@@ -632,7 +634,7 @@ def render_dashboard(active_inspection: Optional[Dict[str, Any]], history: List[
             """,
             unsafe_allow_html=True,
         )
-        if st.button("🚀 Conduct First Inspection", type="primary"):
+        if st.button("Conduct First Inspection", type="primary"):
             navigate_to("New Inspection")
         return
 
@@ -649,49 +651,49 @@ def render_dashboard(active_inspection: Optional[Dict[str, Any]], history: List[
 
     if status == "Safe":
         status_color = "#34D399"
-        status_badge = "✅ SAFE"
+        status_badge = "SAFE"
     elif status == "Warning":
         status_color = "#FBBF24"
-        status_badge = "⚠️ WARNING"
+        status_badge = "WARNING"
     else:
         status_color = "#F87171"
-        status_badge = "🚨 CRITICAL"
+        status_badge = "CRITICAL"
 
     # KPI Metric Cards Row
     k1, k2, k3, k4, k5, k6 = st.columns(6)
     with k1:
         st.markdown(
-            f"<div class='metric-card'><div class='metric-card-title'>👥 Total Workers</div>"
+            f"<div class='metric-card'><div class='metric-card-title'>Total Workers</div>"
             f"<div class='metric-card-value'>{total_w}</div></div>",
             unsafe_allow_html=True,
         )
     with k2:
         st.markdown(
-            f"<div class='metric-card'><div class='metric-card-title'>✅ Compliant</div>"
+            f"<div class='metric-card'><div class='metric-card-title'>Compliant</div>"
             f"<div class='metric-card-value' style='color:#34D399;'>{comp_w}</div></div>",
             unsafe_allow_html=True,
         )
     with k3:
         st.markdown(
-            f"<div class='metric-card'><div class='metric-card-title'>🚨 Violations</div>"
+            f"<div class='metric-card'><div class='metric-card-title'>Violations</div>"
             f"<div class='metric-card-value' style='color:#F87171;'>{viol_w}</div></div>",
             unsafe_allow_html=True,
         )
     with k4:
         st.markdown(
-            f"<div class='metric-card'><div class='metric-card-title'>⚠️ Needs Review</div>"
+            f"<div class='metric-card'><div class='metric-card-title'>Needs Review</div>"
             f"<div class='metric-card-value' style='color:#FBBF24;'>{review_w}</div></div>",
             unsafe_allow_html=True,
         )
     with k5:
         st.markdown(
-            f"<div class='metric-card'><div class='metric-card-title'>📈 Compliance Rate</div>"
+            f"<div class='metric-card'><div class='metric-card-title'>Compliance Rate</div>"
             f"<div class='metric-card-value' style='color:#38BDF8;'>{rate}%</div></div>",
             unsafe_allow_html=True,
         )
     with k6:
         st.markdown(
-            f"<div class='metric-card'><div class='metric-card-title'>🛡️ Site Status</div>"
+            f"<div class='metric-card'><div class='metric-card-title'>Site Status</div>"
             f"<div class='metric-card-value' style='color:{status_color}; font-size:20px;'>{status_badge}</div></div>",
             unsafe_allow_html=True,
         )
@@ -702,7 +704,7 @@ def render_dashboard(active_inspection: Optional[Dict[str, Any]], history: List[
     c_chart, c_alerts = st.columns([3, 2])
 
     with c_chart:
-        st.markdown("#### 📊 Worker Compliance Distribution")
+        st.markdown("#### Worker Compliance Distribution")
         chart_data = pd.DataFrame({
             "Status Category": ["Compliant", "Violations", "Needs Review"],
             "Worker Count": [comp_w, viol_w, review_w],
@@ -710,7 +712,7 @@ def render_dashboard(active_inspection: Optional[Dict[str, Any]], history: List[
         st.bar_chart(chart_data, color="#0284C7", height=230)
 
     with c_alerts:
-        st.markdown("#### 📋 Operational Safety Directive")
+        st.markdown("#### Operational Safety Directive")
         if total_w == 0:
             st.warning(
                 "No workers detected. The image may be from an unsupported perspective (such as overhead) "
@@ -730,16 +732,16 @@ def render_dashboard(active_inspection: Optional[Dict[str, Any]], history: List[
 
         c_act1, c_act2 = st.columns(2)
         with c_act1:
-            if st.button("🔍 Run New Inspection", use_container_width=True):
+            if st.button("Run New Inspection", use_container_width=True):
                 navigate_to("New Inspection")
         with c_act2:
             if active_inspection is not None:
-                if st.button("👉 View Active Results", type="primary", use_container_width=True):
+                if st.button("View Active Results", type="primary", use_container_width=True):
                     navigate_to("Inspection Results")
 
     # Recent Inspection Table
     st.markdown("---")
-    st.markdown("#### 📜 Recent Site Inspections")
+    st.markdown("#### Recent Site Inspections")
 
     if history:
         history_df = pd.DataFrame([
@@ -765,7 +767,7 @@ def render_dashboard(active_inspection: Optional[Dict[str, Any]], history: List[
 # ============================================================================
 def render_new_inspection(model: Any):
     """Render the inspection creation and inference workflow page."""
-    st.markdown("### 🔍 New Safety Inspection")
+    st.markdown("### New Safety Inspection")
     st.caption("Upload a site photograph or select a benchmark test sample for automated YOLOv8 compliance evaluation.")
 
     col_input, col_config = st.columns([3, 2])
@@ -857,7 +859,7 @@ def render_new_inspection(model: Any):
         else:
             required_gear_mode = "both"
 
-        with st.expander("⚙️ Advanced Detection Settings", expanded=False):
+        with st.expander("Advanced Detection Settings", expanded=False):
             conf_threshold = st.slider(
                 "Sensitivity Slider (Scales Per-Class Thresholds)",
                 min_value=0.10,
@@ -872,7 +874,7 @@ def render_new_inspection(model: Any):
         st.markdown("<div style='margin-top: 20px;'></div>", unsafe_allow_html=True)
 
         run_disabled = input_image is None
-        if st.button("🔍 Run Compliance Check", type="primary", use_container_width=True, disabled=run_disabled):
+        if st.button("Run Compliance Check", type="primary", use_container_width=True, disabled=run_disabled):
             with st.spinner("Executing YOLOv8 inference & spatial compliance logic on CPU..."):
                 detections = run_detection(
                     image=input_image,
@@ -924,7 +926,7 @@ def render_new_inspection(model: Any):
 
                 st.session_state.active_inspection = inspection_record
                 save_inspection_to_history(inspection_record)
-                st.success(f"✅ Inspection `{inspection_id}` completed successfully!")
+                st.success(f"Inspection `{inspection_id}` completed successfully.")
                 navigate_to("Inspection Results")
 
 
@@ -932,122 +934,260 @@ def render_new_inspection(model: Any):
 # 8. PAGE 3: INSPECTION RESULTS
 # ============================================================================
 def render_inspection_results(active_inspection: Optional[Dict[str, Any]]):
-    """Render inspection outcome views with tabbed visualizers and KPIs."""
-    st.markdown("### 🎯 Inspection Results & Visual Evidence")
+    """Render the AI inspection workstation: summary metrics, high-res viewer, and worker analysis."""
+    st.markdown("### Inspection Results & Spatial Evidence")
     st.caption("AI-annotated site inspection overlays, compliance ratios, and actionable safety advisories.")
 
     if active_inspection is None:
-        st.warning("⚠️ No active inspection available to display. Conduct an inspection first.")
+        st.warning("No active inspection available to display. Conduct an inspection first.")
         if st.button("Go to New Inspection"):
             navigate_to("New Inspection")
         return
 
     summary = active_inspection["summary"]
     workers = active_inspection["workers"]
+    image_input = active_inspection["image"]
+    annotated_img = active_inspection["annotated_image"]
 
-    # Header Card
+    # 1. Compact Inspection Summary Header
+    status = summary["site_status"]
+    status_color = "#34D399" if status == "Safe" else ("#FBBF24" if status == "Warning" else "#F87171")
+    status_text = status.upper()
+
     st.markdown(
         f"""
-        <div class='sv-panel' style='padding: 10px 16px; margin-bottom: 14px;'>
-            <strong>Inspection ID:</strong> <code>{active_inspection['id']}</code> &nbsp;|&nbsp;
-            <strong>Analyzed Image:</strong> <code>{active_inspection['image_name']}</code> &nbsp;|&nbsp;
-            <strong>Timestamp:</strong> <code>{active_inspection['timestamp']}</code>
+        <div class='sv-panel' style='padding: 10px 16px; margin-bottom: 12px; display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center;'>
+            <div>
+                <strong>Inspection ID:</strong> <code>{active_inspection['id']}</code> &nbsp;|&nbsp;
+                <strong>Source:</strong> <code>{active_inspection['image_name']}</code> &nbsp;|&nbsp;
+                <strong>Timestamp:</strong> <code>{active_inspection['timestamp']}</code>
+            </div>
+            <div>
+                <span style='font-size: 11px; text-transform:uppercase; color:#94A3B8; font-weight:600; margin-right:8px;'>Evaluation Grade:</span>
+                <span class='badge-{"safe" if status=="Safe" else ("warning" if status=="Warning" else "critical")}'>{status_text}</span>
+            </div>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
-    status = summary["site_status"]
-    status_color = "#34D399" if status == "Safe" else ("#FBBF24" if status == "Warning" else "#F87171")
-    status_badge = f"✅ {status.upper()}" if status == "Safe" else (f"⚠️ {status.upper()}" if status == "Warning" else f"🚨 {status.upper()}")
-
+    # 2. Compact Metrics Bar
     r1, r2, r3, r4, r5, r6 = st.columns(6)
     with r1:
         st.markdown(
-            f"<div class='metric-card'><div class='metric-card-title'>👥 Total Workers</div>"
+            f"<div class='metric-card'><div class='metric-card-title'>Total Workers</div>"
             f"<div class='metric-card-value'>{summary['total_workers']}</div></div>",
             unsafe_allow_html=True,
         )
     with r2:
         st.markdown(
-            f"<div class='metric-card'><div class='metric-card-title'>✅ Compliant</div>"
+            f"<div class='metric-card'><div class='metric-card-title'>Compliant</div>"
             f"<div class='metric-card-value' style='color:#34D399;'>{summary['compliant_count']}</div></div>",
             unsafe_allow_html=True,
         )
     with r3:
         st.markdown(
-            f"<div class='metric-card'><div class='metric-card-title'>🚨 Violations</div>"
+            f"<div class='metric-card'><div class='metric-card-title'>Violations</div>"
             f"<div class='metric-card-value' style='color:#F87171;'>{summary['violation_count']}</div></div>",
             unsafe_allow_html=True,
         )
     with r4:
         st.markdown(
-            f"<div class='metric-card'><div class='metric-card-title'>⚠️ Needs Review</div>"
+            f"<div class='metric-card'><div class='metric-card-title'>Needs Review</div>"
             f"<div class='metric-card-value' style='color:#FBBF24;'>{summary.get('needs_review_count', 0)}</div></div>",
             unsafe_allow_html=True,
         )
     with r5:
         st.markdown(
-            f"<div class='metric-card'><div class='metric-card-title'>📈 Compliance Rate</div>"
+            f"<div class='metric-card'><div class='metric-card-title'>Compliance Rate</div>"
             f"<div class='metric-card-value' style='color:#38BDF8;'>{summary['compliance_rate']}%</div></div>",
             unsafe_allow_html=True,
         )
     with r6:
         st.markdown(
-            f"<div class='metric-card'><div class='metric-card-title'>🛡️ Site Status</div>"
-            f"<div class='metric-card-value' style='color:{status_color}; font-size:20px;'>{status_badge}</div></div>",
+            f"<div class='metric-card'><div class='metric-card-title'>Site Status</div>"
+            f"<div class='metric-card-value' style='color:{status_color}; font-size:20px; font-weight:700;'>{status_text}</div></div>",
             unsafe_allow_html=True,
         )
 
-    st.markdown("<div style='margin-top:14px;'></div>", unsafe_allow_html=True)
+    # Safety Advisory Callout
     if summary.get("total_workers", 0) == 0:
         st.warning(
-            "No workers detected. The image may be from an unsupported perspective (such as overhead) "
-            "or workers are too distant. Try a front or side eye-level angle."
+            "No workers detected in scene. Camera perspective may be overhead or workers are obscured. "
+            "Use eye-level or elevated vantage point."
         )
     else:
         advisory = get_action_recommendation(summary)
         if status == "Safe":
-            st.success(f"📋 **Site Safety Directive:** {advisory}")
+            st.success(f"**Site Safety Directive:** {advisory}")
         elif status == "Warning":
-            st.warning(f"📋 **Site Safety Directive:** {advisory}")
+            st.warning(f"**Site Safety Directive:** {advisory}")
         else:
-            st.error(f"📋 **Site Safety Directive:** {advisory}")
+            st.error(f"**Site Safety Directive:** {advisory}")
 
-    # Visual Evidence Tabs
-    st.markdown("---")
-    st.markdown("#### Visual Evidence Tabs")
+    st.markdown("<div style='margin-top: 14px;'></div>", unsafe_allow_html=True)
 
-    tab_annotated, tab_side_by_side, tab_raw = st.tabs([
-        "🎯 AI Annotated Image",
-        "⚖️ Side-by-Side Comparison",
-        "📷 Original Image",
+    # 3. Main Annotated Media Viewer (Hero Element)
+    st.markdown("#### Primary Inspection Viewer")
+
+    # Legend Bar directly above viewer
+    st.markdown(
+        """
+        <div style='display:flex; flex-wrap:wrap; gap:16px; align-items:center; background:#101820; border:1px solid #263442; border-radius:6px; padding:6px 14px; margin-bottom:10px; font-size:12px;'>
+            <span style='color:#94A3B8; font-weight:600; text-transform:uppercase;'>Detection Legend:</span>
+            <span><span style='color:#34D399; font-weight:bold;'>&#9679;</span> Compliant Worker (Hardhat + Vest)</span>
+            <span><span style='color:#F87171; font-weight:bold;'>&#9679;</span> PPE Violation (Missing Gear)</span>
+            <span><span style='color:#FBBF24; font-weight:bold;'>&#9679;</span> Needs Review / Ambiguous</span>
+            <span><span style='color:#38BDF8; font-weight:bold;'>&#9679;</span> Detected PPE Gear Box</span>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    tab_annotated, tab_side_by_side, tab_raw, tab_raw_boxes = st.tabs([
+        "Annotated Detection Overlay",
+        "Side-by-Side Comparison",
+        "Original Site Photograph",
+        "Raw Detection Coordinates",
     ])
 
     with tab_annotated:
+        img_np = np.array(image_input)
+        h_px, w_px = img_np.shape[:2]
         st.image(
-            active_inspection["annotated_image"],
-            caption="AI Annotated Detection (Green: Compliant, Red: Violation, Amber: Needs Review)",
+            annotated_img,
+            caption=f"AI Annotated Detection Overlay | Resolution: {w_px}x{h_px} px | Detected Workers: {len(workers)}",
             use_container_width=True,
         )
 
     with tab_side_by_side:
         c_left, c_right = st.columns(2)
         with c_left:
-            st.image(active_inspection["image"], caption="Original Site Photograph", use_container_width=True)
+            st.image(image_input, caption="Original Site Photograph", use_container_width=True)
         with c_right:
-            st.image(active_inspection["annotated_image"], caption="AI Spatial Detection & Compliance", use_container_width=True)
+            st.image(annotated_img, caption="AI Spatial Detection & Compliance Overlay", use_container_width=True)
 
     with tab_raw:
-        st.image(active_inspection["image"], caption="Original Unprocessed Site Photograph", use_container_width=True)
+        st.image(image_input, caption="Original Unprocessed Site Photograph", use_container_width=True)
 
+    with tab_raw_boxes:
+        all_dets = active_inspection.get("detections", [])
+        if all_dets:
+            det_rows = [
+                {
+                    "Class": d["class_name"],
+                    "Confidence": f"{int(d.get('confidence', 1.0) * 100)}%",
+                    "BBox [x1, y1, x2, y2]": [round(float(c), 1) for c in d["bbox"]],
+                }
+                for d in all_dets
+            ]
+            st.dataframe(pd.DataFrame(det_rows), use_container_width=True)
+        else:
+            st.info("No raw detection items recorded.")
+
+    # 4. Contextual Worker & Violation Analysis Section
     st.markdown("---")
-    c_btn1, c_btn2 = st.columns(2)
+    st.markdown("#### Worker Compliance Analysis & Spatial Drill-Down")
+
+    if not workers:
+        st.info("No workers detected in this scene for individual spatial analysis.")
+    else:
+        col_roster, col_drilldown = st.columns([1, 1])
+
+        with col_roster:
+            st.markdown("##### Worker Roster")
+
+            filter_choice = st.radio(
+                "Filter Workers by Status:",
+                ["All", "Violations Only", "Compliant Only", "Needs Review"],
+                horizontal=True,
+                key="results_worker_filter",
+            )
+
+            filtered_workers = workers
+            if filter_choice == "Violations Only":
+                filtered_workers = [w for w in workers if w["status"] not in ("Compliant", "Needs Review")]
+            elif filter_choice == "Compliant Only":
+                filtered_workers = [w for w in workers if w["status"] == "Compliant"]
+            elif filter_choice == "Needs Review":
+                filtered_workers = [w for w in workers if w["status"] == "Needs Review"]
+
+            if not filtered_workers:
+                st.info(f"No workers match the '{filter_choice}' filter.")
+            else:
+                table_records = format_worker_table(filtered_workers)
+                st.dataframe(pd.DataFrame(table_records), use_container_width=True)
+
+        with col_drilldown:
+            st.markdown("##### Selected Worker Spatial Evidence")
+
+            worker_options = {
+                f"Worker #{w['worker_id']} - {w['status']} ({int(w.get('confidence', 1.0)*100)}% conf)": w
+                for w in workers
+            }
+            selected_key = st.selectbox(
+                "Select Worker to Inspect Body Zones & Assigned PPE:",
+                list(worker_options.keys()),
+                key="results_worker_select",
+            )
+            selected_worker = worker_options[selected_key]
+
+            worker_crop = crop_worker_roi(image_input, selected_worker, padding_pct=0.10, show_zones=True)
+
+            sub_crop, sub_info = st.columns([1, 1])
+            with sub_crop:
+                st.image(
+                    worker_crop,
+                    caption=f"Worker #{selected_worker['worker_id']} ROI (Head 35% / Torso 15-75%)",
+                    use_container_width=True,
+                )
+
+            with sub_info:
+                w_status = selected_worker["status"]
+                stat_badge_class = "badge-safe" if w_status == "Compliant" else ("badge-warning" if w_status == "Needs Review" else "badge-critical")
+
+                st.markdown(
+                    f"""
+                    <div class='sv-panel' style='padding: 12px; margin-bottom: 8px;'>
+                        <div style='display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;'>
+                            <strong>Worker #{selected_worker['worker_id']}</strong>
+                            <span class='{stat_badge_class}'>{w_status.upper()}</span>
+                        </div>
+                        <div style='font-size:12px; color:#94A3B8; line-height:1.6;'>
+                            <strong>Person Confidence:</strong> {int(selected_worker.get('confidence', 1.0) * 100)}%<br>
+                            <strong>Head Zone:</strong> {selected_worker['hardhat_status'].capitalize()}<br>
+                            <strong>Torso Zone:</strong> {selected_worker['vest_status'].capitalize()}
+                        </div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+
+                assigned_gear = selected_worker.get("assigned_gear", [])
+                if assigned_gear:
+                    gear_data = [
+                        {
+                            "Item": g["class_name"],
+                            "Conf": f"{int(g.get('confidence', 1.0)*100)}%",
+                            "IoG": f"{int(g.get('overlap', 0.0)*100)}%",
+                        }
+                        for g in assigned_gear
+                    ]
+                    st.dataframe(pd.DataFrame(gear_data), use_container_width=True, height=120)
+                else:
+                    st.caption("No assigned PPE detected within head or torso zones.")
+
+    # 5. Action Toolbar
+    st.markdown("---")
+    c_btn1, c_btn2, c_btn3 = st.columns(3)
     with c_btn1:
-        if st.button("👷 Inspect Individual Workers (Worker Audits)", use_container_width=True):
-            navigate_to("Worker Audits")
+        if st.button("Conduct New Inspection", use_container_width=True):
+            navigate_to("New Inspection")
     with c_btn2:
-        if st.button("📑 Export Compliance Report & Artifacts", use_container_width=True):
+        if st.button("Open Worker Audits Inspector", use_container_width=True):
+            navigate_to("Worker Audits")
+    with c_btn3:
+        if st.button("Export Compliance Report & Logs", use_container_width=True):
             navigate_to("Reports & Exports")
 
 
@@ -1056,11 +1196,11 @@ def render_inspection_results(active_inspection: Optional[Dict[str, Any]]):
 # ============================================================================
 def render_worker_audits(active_inspection: Optional[Dict[str, Any]]):
     """Render granular worker compliance audit table and individual crop drill-down inspector."""
-    st.markdown("### 👷 Worker Compliance Audits & Inspector")
+    st.markdown("### Worker Compliance Audits & Inspector")
     st.caption("Inspect individual worker detections, body zone attribution, and equipment evidence.")
 
     if active_inspection is None:
-        st.info("ℹ️ No active inspection available. Conduct an inspection to evaluate workers.")
+        st.info("No active inspection available. Conduct an inspection to evaluate workers.")
         if st.button("Go to New Inspection"):
             navigate_to("New Inspection")
         return
@@ -1148,11 +1288,11 @@ def render_worker_audits(active_inspection: Optional[Dict[str, Any]]):
 # ============================================================================
 def render_inspection_history(history: List[Dict[str, Any]], model: Any):
     """Render persistent history of completed site inspections with review actions."""
-    st.markdown("### 📜 Site Inspection History")
+    st.markdown("### Site Inspection History")
     st.caption("Chronological record of completed construction site safety inspections. Select any record to review results.")
 
     if not history:
-        st.info("ℹ️ No historical inspections recorded yet. Executed inspections will appear here.")
+        st.info("No historical inspections recorded yet. Executed inspections will appear here.")
         if st.button("Start First Inspection"):
             navigate_to("New Inspection")
         return
@@ -1183,7 +1323,7 @@ def render_inspection_history(history: List[Dict[str, Any]], model: Any):
 
             with c_btn:
                 st.markdown("<div style='padding-top:10px;'></div>", unsafe_allow_html=True)
-                if st.button("🔍 View Results", key=f"view_hist_{item_id}_{idx}", use_container_width=True):
+                if st.button("View Results", key=f"view_hist_{item_id}_{idx}", use_container_width=True):
                     if item_id in st.session_state.inspections_store:
                         st.session_state.active_inspection = st.session_state.inspections_store[item_id]
                         navigate_to("Inspection Results")
@@ -1232,11 +1372,11 @@ def render_inspection_history(history: List[Dict[str, Any]], model: Any):
 # ============================================================================
 def render_reports_exports(active_inspection: Optional[Dict[str, Any]]):
     """Render export portal for generating CSV reports and downloading annotated images."""
-    st.markdown("### 📑 Regulatory Compliance Reports & Exports")
+    st.markdown("### Regulatory Compliance Reports & Exports")
     st.caption("Generate official safety inspection logs and export annotated photographic evidence.")
 
     if active_inspection is None:
-        st.warning("⚠️ No active inspection data available to export. Conduct an inspection first.")
+        st.warning("No active inspection data available to export. Conduct an inspection first.")
         if st.button("Go to New Inspection"):
             navigate_to("New Inspection")
         return
@@ -1276,7 +1416,7 @@ def render_reports_exports(active_inspection: Optional[Dict[str, Any]]):
     col_csv, col_img = st.columns(2)
     with col_csv:
         st.download_button(
-            label="📥 Download Inspection CSV Report",
+            label="Download Inspection CSV Report (.csv)",
             data=csv_data,
             file_name=f"PPE_Safety_Inspection_{timestamp_slug}.csv",
             mime="text/csv",
@@ -1284,7 +1424,7 @@ def render_reports_exports(active_inspection: Optional[Dict[str, Any]]):
         )
     with col_img:
         st.download_button(
-            label="🖼️ Download Annotated Evidence Photo (JPG)",
+            label="Download Annotated Evidence Photo (.jpg)",
             data=annotated_bytes,
             file_name=f"Annotated_Evidence_{timestamp_slug}.jpg",
             mime="image/jpeg",
@@ -1297,7 +1437,7 @@ def render_reports_exports(active_inspection: Optional[Dict[str, Any]]):
 # ============================================================================
 def render_settings(model: Any, is_model_verified: bool):
     """Render portal configuration, model verification details, and viva reference specs."""
-    st.markdown("### ⚙️ System Settings & Model Specifications")
+    st.markdown("### System Settings & Model Specifications")
     st.caption("Engine runtime configuration, class taxonomy verification, and academic reference.")
 
     # 1. Interface Theme
@@ -1332,7 +1472,7 @@ def render_settings(model: Any, is_model_verified: bool):
             unsafe_allow_html=True,
         )
     with m_col2:
-        status_text = "✅ Fully Verified (10/10 Classes)" if is_model_verified else "⚠️ Fallback Mode"
+        status_text = "● Fully Verified (10/10 Classes)" if is_model_verified else "● Fallback Mode"
         st.markdown(
             f"""
             <div class='sv-panel' style='padding: 16px;'>
@@ -1375,16 +1515,16 @@ def render_settings(model: Any, is_model_verified: bool):
 # ============================================================================
 def render_video_inspection(model: Any):
     """Render the CCTV video PPE compliance surveillance interface."""
-    st.markdown("### 📹 CCTV Surveillance PPE Inspection")
+    st.markdown("### CCTV Surveillance PPE Inspection")
     st.caption("Sequential video processing: continuous playback, interval inference, and H.264 video export.")
 
     cached_results = st.session_state.get("video_results")
     if cached_results is not None:
         c_banner, c_bbtn = st.columns([4, 1])
         with c_banner:
-            st.info("ℹ️ Completed video inspection results are available in **Inspection Results**.")
+            st.info("Completed video inspection results are available in Inspection Results.")
         with c_bbtn:
-            if st.button("👉 View Results", use_container_width=True):
+            if st.button("View Results", use_container_width=True):
                 navigate_to("Inspection Results")
 
     c_upload, c_config = st.columns([3, 2])
@@ -1421,7 +1561,7 @@ def render_video_inspection(model: Any):
                     unsafe_allow_html=True,
                 )
         else:
-            st.info("ℹ️ Only use videos you are allowed to analyze. Downloading from YouTube may be restricted by its terms.")
+            st.info("Notice: Only use videos you are allowed to analyze. Downloading from YouTube may be restricted by its terms.")
             youtube_url = st.text_input(
                 "YouTube Video URL",
                 placeholder="https://www.youtube.com/watch?v=...",
@@ -1483,7 +1623,7 @@ def render_video_inspection(model: Any):
     else:
         run_disabled = not bool(youtube_url and youtube_url.strip())
 
-    if st.button("🎬 Run CCTV Compliance Inspection", type="primary", use_container_width=True, disabled=run_disabled):
+    if st.button("Run CCTV Compliance Inspection", type="primary", use_container_width=True, disabled=run_disabled):
         if video_source == "Upload file":
             process_cctv_video_upload(
                 uploaded_video=uploaded_video,
@@ -1553,22 +1693,22 @@ def process_cctv_youtube_link(
     """Download YouTube video via yt-dlp into a temp dir and run the CCTV inspection pipeline."""
     if not is_valid_youtube_url(youtube_url):
         st.error(
-            "❌ Invalid YouTube URL. Please provide a link starting with "
+            "Invalid YouTube URL. Please provide a link starting with "
             "https://www.youtube.com/, https://youtube.com/, https://m.youtube.com/, or https://youtu.be/"
         )
         return
 
     temp_dir = tempfile.mkdtemp()
     try:
-        with st.spinner("📥 Extracting metadata and downloading YouTube video stream..."):
+        with st.spinner("Extracting metadata and downloading YouTube video stream..."):
             try:
                 downloaded_file = download_youtube(youtube_url, temp_dir)
             except YouTubeDownloadError as e:
-                st.error(f"❌ YouTube Download Error: {e}")
+                st.error(f"YouTube Download Error: {e}")
                 return
             except Exception as e:
                 st.error(
-                    f"❌ Unexpected error downloading YouTube video: {e}. "
+                    f"Unexpected error downloading YouTube video: {e}. "
                     "Please download the video file manually and use 'Upload file' mode."
                 )
                 return
@@ -1603,7 +1743,7 @@ def execute_cctv_pipeline(
     """Execute the core CCTV video processing, per-frame inference, temporal smoothing, and MP4 generation."""
     cap = cv2.VideoCapture(video_path)
     if not cap.isOpened():
-        st.error("❌ Failed to open video source. Please check the file format.")
+        st.error("Failed to open video source. Please check the file format.")
         return
 
     raw_fps = cap.get(cv2.CAP_PROP_FPS)
@@ -1620,7 +1760,7 @@ def execute_cctv_pipeline(
 
     if total_frames > max_frames:
         st.warning(
-            f"⏱️ Video duration is {duration_sec:.1f}s. Inspection is capped at the first "
+            f"Video duration is {duration_sec:.1f}s. Inspection is capped at the first "
             f"{MAX_VIDEO_SECONDS}s ({max_frames} frames) starting from {start_seconds:.1f}s."
         )
 
@@ -1722,14 +1862,14 @@ def execute_cctv_pipeline(
         status_text.empty()
 
         if not analyzed_records:
-            st.error("❌ No frames could be decoded from this video. Please check the file format.")
+            st.error("No frames could be decoded from this video. Please check the file format.")
             return
 
         video_bytes = None
         write_error = None
         try:
             with st.spinner("Encoding annotated H.264 MP4 playback video..."):
-                write_annotated_video(annotated_frames_rgb, out_mp4_path, fps=safe_fps)
+                write_annotated_h264_video(annotated_frames_rgb, out_mp4_path, fps=safe_fps)
                 with open(out_mp4_path, "rb") as vf:
                     video_bytes = vf.read()
         except Exception as e:
@@ -1768,7 +1908,7 @@ def execute_cctv_pipeline(
             "write_error": write_error,
         }
 
-        st.success(f"✅ Video processing complete! Analyzed {len(analyzed_records)} frames ({len(annotated_frames_rgb)} total frames rendered).")
+        st.success(f"Video processing complete! Analyzed {len(analyzed_records)} frames ({len(annotated_frames_rgb)} total frames rendered).")
         navigate_to("Inspection Results")
 
     finally:
@@ -1808,14 +1948,14 @@ def render_video_results_view(video_results: Dict[str, Any]):
         unsafe_allow_html=True,
     )
 
-    st.markdown("#### 🎬 Annotated CCTV Playback")
+    st.markdown("#### Annotated CCTV Playback")
     if write_error:
-        st.error(f"⚠️ Video file encoding error: {write_error}. Inspection statistics remain available below.")
+        st.error(f"Video file encoding error: {write_error}. Inspection statistics remain available below.")
 
     if video_bytes:
         st.video(video_bytes, format="video/mp4")
         st.download_button(
-            "📥 Download Annotated CCTV Video (.mp4)",
+            "Download Annotated CCTV Video (.mp4)",
             data=video_bytes,
             file_name=f"annotated_cctv_{filename}.mp4",
             mime="video/mp4",
@@ -1828,7 +1968,7 @@ def render_video_results_view(video_results: Dict[str, Any]):
 
     if meta.get("temporal_smoothing"):
         st.info(
-            f"🛡️ **Temporal Summary Smoothing Active:** Summary metrics are calculated using a {TEMPORAL_SMOOTHING_WINDOW}-frame "
+            f"**Temporal Summary Smoothing Active:** Summary metrics are calculated using a {TEMPORAL_SMOOTHING_WINDOW}-frame "
             "rolling median filter over surrounding frames to smooth aggregate counts and compliance rates across video frames."
         )
 
@@ -1869,7 +2009,7 @@ def render_video_results_view(video_results: Dict[str, Any]):
 
     st.markdown("<div style='margin-top: 16px;'></div>", unsafe_allow_html=True)
 
-    st.markdown("#### 📈 Compliance Rate Over Time (By Second)")
+    st.markdown("#### Compliance Rate Over Time (By Second)")
     chart_rows = []
     for f in analyzed:
         r_val = f["compliance_rate"] if f["total_workers"] > 0 else None
@@ -1884,7 +2024,7 @@ def render_video_results_view(video_results: Dict[str, Any]):
         st.info("ℹ️ No workers were detected in the analyzed frames to plot compliance trends.")
 
     st.markdown("---")
-    st.markdown("#### 🚨 Top Risk Moments (Most Violations)")
+    st.markdown("#### Top Risk Moments (High Violations)")
     top_moments = summary.get("top_violation_moments", [])
     if top_moments:
         st.caption(f"Displaying up to {TOP_VIOLATION_FRAMES_COUNT} moments with the highest count of non-compliant workers:")
@@ -1897,10 +2037,10 @@ def render_video_results_view(video_results: Dict[str, Any]):
                     use_container_width=True,
                 )
     else:
-        st.success("✅ Clean Video Surveillance: Zero PPE violations detected across all analyzed frames!")
+        st.success("Clean Video Surveillance: Zero PPE violations detected across all analyzed frames!")
 
     st.markdown("---")
-    st.markdown("#### 📋 Analyzed Frames Breakdown")
+    st.markdown("#### Analyzed Frames Breakdown")
     table_rows = []
     for idx, f in enumerate(analyzed, start=1):
         rate_cell = f"{f['compliance_rate']:.1f}%" if f["total_workers"] > 0 and f["compliance_rate"] is not None else "N/A (No Workers)"
@@ -1922,7 +2062,7 @@ def render_video_results_view(video_results: Dict[str, Any]):
     with c_csv:
         csv_content = generate_cctv_csv_report(analyzed, summary, filename)
         st.download_button(
-            "📥 Download CCTV Inspection CSV",
+            "Download CCTV Inspection CSV (.csv)",
             data=csv_content,
             file_name=f"cctv_inspection_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
             mime="text/csv",
@@ -1942,14 +2082,16 @@ def main():
         model = get_detector(active_model_path)
         is_model_verified = verify_model_classes(model)
     except Exception as e:
-        st.error(f"❌ Error loading YOLO model from `{active_model_path}`: {e}")
+        st.error(f"Error loading YOLO model from `{active_model_path}`: {e}")
         st.stop()
 
     with st.sidebar:
         st.markdown(
             """
             <div style='display: flex; align-items: center; gap: 10px; padding: 6px 4px 14px 4px;'>
-                <div style='width: 34px; height: 34px; border-radius: 8px; background: rgba(56, 189, 248, 0.12); border: 1px solid rgba(56, 189, 248, 0.3); display: flex; align-items: center; justify-content: center; font-size: 18px;'>🛡️</div>
+                <div style='width: 34px; height: 34px; border-radius: 8px; background: rgba(56, 189, 248, 0.12); border: 1px solid rgba(56, 189, 248, 0.3); display: flex; align-items: center; justify-content: center;'>
+                    <svg width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='#38BDF8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z'/></svg>
+                </div>
                 <div>
                     <div style='font-size: 15px; font-weight: 700; letter-spacing: 0.5px; color: #38BDF8;'>SAFETY VISION</div>
                     <div style='font-size: 10px; color: #94A3B8; font-weight: 500; text-transform: uppercase; letter-spacing: 0.8px;'>AI Surveillance Platform</div>
@@ -1991,13 +2133,13 @@ def main():
             "Settings",
         ]
         page_icons = {
-            "Dashboard": "📊 Dashboard",
-            "New Inspection": "🔍 New Inspection",
-            "Inspection Results": "🎯 Inspection Results",
-            "Worker Audits": "👷 Worker Audits",
-            "Inspection History": "📜 Inspection History",
-            "Reports & Exports": "📑 Reports & Exports",
-            "Settings": "⚙️ Settings",
+            "Dashboard": "Dashboard",
+            "New Inspection": "New Inspection",
+            "Inspection Results": "Inspection Results",
+            "Worker Audits": "Worker Audits",
+            "Inspection History": "Inspection History",
+            "Reports & Exports": "Reports & Exports",
+            "Settings": "Settings",
         }
 
         selected_nav = st.radio(
@@ -2035,7 +2177,7 @@ def main():
 
         st.caption(f"**Engine:** YOLOv8 (CPU Mode)\n\n**Weights:** `{os.path.basename(active_model_path)}`")
         if is_model_verified:
-            st.caption("🟢 10 Classes Verified")
+            st.caption("● 10 Classes Verified")
 
     render_top_navbar(st.session_state.current_page, is_model_verified)
 
@@ -2050,8 +2192,8 @@ def main():
             if video_res is not None:
                 render_video_results_view(video_res)
             else:
-                st.warning("⚠️ No active video inspection results available. Please run a video inspection first.")
-                if st.button("🎬 Go to Video Inspection", type="primary"):
+                st.warning("No active video inspection results available. Please run a video inspection first.")
+                if st.button("Go to Video Inspection", type="primary"):
                     navigate_to("New Inspection")
         elif st.session_state.current_page == "Dashboard":
             render_dashboard(active_insp, history_list)
