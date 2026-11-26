@@ -198,6 +198,8 @@ def save_inspection_to_history(inspection_record: Dict[str, Any]):
 def navigate_to(page_name: str):
     """Programmatically switch active page and trigger a rerun."""
     st.session_state.in_app = True
+    if page_name == "Dashboard":
+        st.session_state.dash_kpi_animated = False
     st.session_state.current_page = page_name
     st.session_state.nav_radio = page_name
     st.rerun()
@@ -589,10 +591,75 @@ def inject_custom_css(theme: str):
                 }
                 .stButton > button,
                 .metric-card,
+                .metric-card-kpi,
+                .chart-entrance-wrapper,
+                .results-entrance,
                 [data-testid="stSidebar"] [data-testid="stRadio"] [role="radiogroup"] label {
                     transform: none !important;
+                    opacity: 1 !important;
                 }
             }
+
+            /* --- Phase 13: Dashboard and Inspection Animation Keyframes --- */
+            @keyframes svFadeIn {
+                from { opacity: 0; }
+                to { opacity: 1; }
+            }
+
+            @keyframes svFadeUp {
+                from {
+                    opacity: 0;
+                    transform: translateY(10px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+
+            /* Dashboard KPI Entrance and Stagger */
+            .metric-card-kpi {
+                animation: svFadeUp 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+                opacity: 0;
+            }
+            .kpi-delay-1 { animation-delay: 0.04s; }
+            .kpi-delay-2 { animation-delay: 0.09s; }
+            .kpi-delay-3 { animation-delay: 0.14s; }
+            .kpi-delay-4 { animation-delay: 0.19s; }
+            .kpi-delay-5 { animation-delay: 0.24s; }
+            .kpi-delay-6 { animation-delay: 0.29s; }
+
+            /* Chart Container Entrance */
+            .chart-entrance-wrapper {
+                animation: svFadeUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+                opacity: 0;
+                animation-delay: 0.25s;
+            }
+
+            /* Image Upload Preview and Inspection Action */
+            .preview-fade-in {
+                animation: svFadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            }
+
+            .inspection-action-wrapper button[kind="primary"] {
+                border-color: #A3E635 !important;
+                box-shadow: 0 4px 14px rgba(163, 230, 53, 0.3) !important;
+                transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+            }
+            .inspection-action-wrapper button[kind="primary"]:hover:not(:disabled) {
+                transform: translateY(-2px) !important;
+                box-shadow: 0 6px 20px rgba(163, 230, 53, 0.45) !important;
+            }
+
+            /* Inspection Results Staggered Reveal */
+            .results-entrance {
+                animation: svFadeUp 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+                opacity: 0;
+            }
+            .results-delay-1 { animation-delay: 0.05s; }
+            .results-delay-2 { animation-delay: 0.12s; }
+            .results-delay-3 { animation-delay: 0.20s; }
+            .results-delay-4 { animation-delay: 0.28s; }
         </style>
         """
     else:
@@ -960,18 +1027,71 @@ def inject_custom_css(theme: str):
                 }
                 .stButton > button,
                 .metric-card,
+                .metric-card-kpi,
+                .chart-entrance-wrapper,
+                .results-entrance,
                 [data-testid="stSidebar"] [data-testid="stRadio"] [role="radiogroup"] label {
                     transform: none !important;
+                    opacity: 1 !important;
                 }
             }
-                border-radius: 4px;
-                overflow: hidden;
+
+            /* --- Phase 13: Dashboard and Inspection Animation Keyframes (Light) --- */
+            @keyframes svFadeIn {
+                from { opacity: 0; }
+                to { opacity: 1; }
             }
-            div[data-testid="stAlert"] {
-                border-radius: 4px;
-                border: 1px solid var(--border-color);
-                padding: 10px 14px;
+
+            @keyframes svFadeUp {
+                from {
+                    opacity: 0;
+                    transform: translateY(10px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
             }
+
+            .metric-card-kpi {
+                animation: svFadeUp 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+                opacity: 0;
+            }
+            .kpi-delay-1 { animation-delay: 0.04s; }
+            .kpi-delay-2 { animation-delay: 0.09s; }
+            .kpi-delay-3 { animation-delay: 0.14s; }
+            .kpi-delay-4 { animation-delay: 0.19s; }
+            .kpi-delay-5 { animation-delay: 0.24s; }
+            .kpi-delay-6 { animation-delay: 0.29s; }
+
+            .chart-entrance-wrapper {
+                animation: svFadeUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+                opacity: 0;
+                animation-delay: 0.25s;
+            }
+
+            .preview-fade-in {
+                animation: svFadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            }
+
+            .inspection-action-wrapper button[kind="primary"] {
+                border-color: var(--accent-primary) !important;
+                box-shadow: 0 4px 14px rgba(2, 132, 199, 0.3) !important;
+                transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+            }
+            .inspection-action-wrapper button[kind="primary"]:hover:not(:disabled) {
+                transform: translateY(-2px) !important;
+                box-shadow: 0 6px 20px rgba(2, 132, 199, 0.45) !important;
+            }
+
+            .results-entrance {
+                animation: svFadeUp 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+                opacity: 0;
+            }
+            .results-delay-1 { animation-delay: 0.05s; }
+            .results-delay-2 { animation-delay: 0.12s; }
+            .results-delay-3 { animation-delay: 0.20s; }
+            .results-delay-4 { animation-delay: 0.28s; }
         </style>
         """
     st.markdown(css, unsafe_allow_html=True)
@@ -1531,41 +1651,77 @@ def render_dashboard(active_inspection: Optional[Dict[str, Any]], history: List[
     rate_color = "#22C55E" if rate >= 85.0 else ("#F59E0B" if rate >= 60.0 else "#EF4444")
 
     # B. Safety Overview / KPI Section
+    should_animate_count = not st.session_state.get("dash_kpi_animated", False)
+    if should_animate_count:
+        st.session_state.dash_kpi_animated = True
+
     k1, k2, k3, k4, k5, k6 = st.columns(6)
     with k1:
         st.markdown(
-            f"<div class='metric-card'><div class='metric-card-title'>Total Workers</div>"
-            f"<div class='metric-card-value'>{total_w}</div></div>",
+            f"<div class='metric-card metric-card-kpi kpi-delay-1'><div class='metric-card-title'>Total Workers</div>"
+            f"<div class='metric-card-value'><span class='kpi-count' data-target='{total_w}'>{total_w}</span></div></div>",
             unsafe_allow_html=True,
         )
     with k2:
         st.markdown(
-            f"<div class='metric-card'><div class='metric-card-title'>Compliant</div>"
-            f"<div class='metric-card-value' style='color:#22C55E;'>{comp_w}</div></div>",
+            f"<div class='metric-card metric-card-kpi kpi-delay-2'><div class='metric-card-title'>Compliant</div>"
+            f"<div class='metric-card-value' style='color:#22C55E;'><span class='kpi-count' data-target='{comp_w}'>{comp_w}</span></div></div>",
             unsafe_allow_html=True,
         )
     with k3:
         st.markdown(
-            f"<div class='metric-card'><div class='metric-card-title'>Violations</div>"
-            f"<div class='metric-card-value' style='color:{viol_color};'>{viol_w}</div></div>",
+            f"<div class='metric-card metric-card-kpi kpi-delay-3'><div class='metric-card-title'>Violations</div>"
+            f"<div class='metric-card-value' style='color:{viol_color};'><span class='kpi-count' data-target='{viol_w}'>{viol_w}</span></div></div>",
             unsafe_allow_html=True,
         )
     with k4:
         st.markdown(
-            f"<div class='metric-card'><div class='metric-card-title'>Needs Review</div>"
-            f"<div class='metric-card-value' style='color:{review_color};'>{review_w}</div></div>",
+            f"<div class='metric-card metric-card-kpi kpi-delay-4'><div class='metric-card-title'>Needs Review</div>"
+            f"<div class='metric-card-value' style='color:{review_color};'><span class='kpi-count' data-target='{review_w}'>{review_w}</span></div></div>",
             unsafe_allow_html=True,
         )
     with k5:
         st.markdown(
-            f"<div class='metric-card'><div class='metric-card-title'>Compliance Rate</div>"
-            f"<div class='metric-card-value' style='color:{rate_color};'>{rate:.1f}%</div></div>",
+            f"<div class='metric-card metric-card-kpi kpi-delay-5'><div class='metric-card-title'>Compliance Rate</div>"
+            f"<div class='metric-card-value' style='color:{rate_color};'><span class='kpi-count' data-target='{rate:.1f}' data-percent='true'>{rate:.1f}%</span></div></div>",
             unsafe_allow_html=True,
         )
     with k6:
         st.markdown(
-            f"<div class='metric-card'><div class='metric-card-title'>Site Status</div>"
+            f"<div class='metric-card metric-card-kpi kpi-delay-6'><div class='metric-card-title'>Site Status</div>"
             f"<div style='margin-top: 4px;'><span class='{status_badge_class}' style='font-size: 13px; padding: 4px 10px;'>{status_label}</span></div></div>",
+            unsafe_allow_html=True,
+        )
+
+    if should_animate_count:
+        st.markdown(
+            """
+            <script>
+            (function() {
+                var els = document.querySelectorAll('.kpi-count:not([data-animated])');
+                els.forEach(function(el) {
+                    el.setAttribute('data-animated', 'true');
+                    var target = parseFloat(el.getAttribute('data-target'));
+                    var isPercent = el.getAttribute('data-percent') === 'true';
+                    if (isNaN(target) || target <= 0) return;
+                    var startTime = performance.now();
+                    var duration = 550;
+                    function step(now) {
+                        var progress = Math.min((now - startTime) / duration, 1);
+                        var ease = 1 - Math.pow(1 - progress, 3);
+                        var val = target * ease;
+                        el.innerText = isPercent ? val.toFixed(1) + '%' : Math.round(val);
+                        if (progress < 1) {
+                            requestAnimationFrame(step);
+                        } else {
+                            el.innerText = isPercent ? target.toFixed(1) + '%' : target;
+                        }
+                    }
+                    requestAnimationFrame(step);
+                });
+            })();
+            </script>
+            """,
             unsafe_allow_html=True,
         )
 
@@ -1575,6 +1731,7 @@ def render_dashboard(active_inspection: Optional[Dict[str, Any]], history: List[
     c_chart, c_directive = st.columns([3, 2])
 
     with c_chart:
+        st.markdown("<div class='chart-entrance-wrapper'>", unsafe_allow_html=True)
         st.markdown("#### Worker Compliance Distribution")
         if total_w == 0:
             st.info("No personnel detected in the active scene to plot compliance distribution.")
@@ -1603,6 +1760,7 @@ def render_dashboard(active_inspection: Optional[Dict[str, Any]], history: List[
                 .configure_view(strokeWidth=0)
             )
             st.altair_chart(bar_chart, use_container_width=True)
+        st.markdown("</div>", unsafe_allow_html=True)
 
     with c_directive:
         st.markdown("#### Operational Safety Directive")
@@ -1805,6 +1963,7 @@ def render_new_inspection(model: Any):
         # Image Preview Display
         st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
         if input_image is not None:
+            st.markdown("<div class='preview-fade-in'>", unsafe_allow_html=True)
             st.image(input_image, caption=f"Inspection Source: {source_label}", use_container_width=True)
             # Compact Specifications Bar
             st.markdown(
@@ -1816,6 +1975,7 @@ def render_new_inspection(model: Any):
                 """,
                 unsafe_allow_html=True,
             )
+            st.markdown("</div>", unsafe_allow_html=True)
         else:
             st.markdown(
                 """
@@ -1890,6 +2050,7 @@ def render_new_inspection(model: Any):
         run_disabled = input_image is None
         btn_label = "Run Compliance Check" if not run_disabled else "Select an Image to Run Check"
 
+        st.markdown("<div class='inspection-action-wrapper'>", unsafe_allow_html=True)
         if st.button(btn_label, key="new_insp_run_btn", type="primary", use_container_width=True, disabled=run_disabled):
             with st.spinner("Executing YOLOv8 inference & spatial compliance logic on CPU..."):
                 detections = run_detection(
@@ -1944,6 +2105,7 @@ def render_new_inspection(model: Any):
                 save_inspection_to_history(inspection_record)
                 st.success(f"Inspection `{inspection_id}` completed successfully.")
                 navigate_to("Inspection Results")
+        st.markdown("</div>", unsafe_allow_html=True)
 
 
 # ============================================================================
@@ -1997,15 +2159,17 @@ def render_inspection_results(active_inspection: Optional[Dict[str, Any]]):
 
     st.markdown(
         f"""
-        <div class='sv-panel' style='padding: 10px 16px; margin-bottom: 12px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center;'>
-            <div>
-                <strong>Inspection ID:</strong> <code>{active_inspection['id']}</code> &nbsp;|&nbsp;
-                <strong>Source:</strong> <code>{active_inspection['image_name']}</code> &nbsp;|&nbsp;
-                <strong>Timestamp:</strong> <code>{active_inspection['timestamp']}</code>
-            </div>
-            <div>
-                <span style='font-size: 11px; text-transform: uppercase; color: #94A3B8; font-weight: 600; margin-right: 8px;'>Site Evaluation:</span>
-                <span class='{status_badge_class}' style='font-size: 12px; padding: 4px 10px;'>{status_label}</span>
+        <div class='results-entrance results-delay-1'>
+            <div class='sv-panel' style='padding: 10px 16px; margin-bottom: 12px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center;'>
+                <div>
+                    <strong>Inspection ID:</strong> <code>{active_inspection['id']}</code> &nbsp;|&nbsp;
+                    <strong>Source:</strong> <code>{active_inspection['image_name']}</code> &nbsp;|&nbsp;
+                    <strong>Timestamp:</strong> <code>{active_inspection['timestamp']}</code>
+                </div>
+                <div>
+                    <span style='font-size: 11px; text-transform: uppercase; color: #94A3B8; font-weight: 600; margin-right: 8px;'>Site Evaluation:</span>
+                    <span class='{status_badge_class}' style='font-size: 12px; padding: 4px 10px;'>{status_label}</span>
+                </div>
             </div>
         </div>
         """,
@@ -2023,43 +2187,45 @@ def render_inspection_results(active_inspection: Optional[Dict[str, Any]]):
     review_color = "#F59E0B" if review_w > 0 else "#94A3B8"
     rate_color = "#22C55E" if rate >= 85.0 else ("#F59E0B" if rate >= 60.0 else "#EF4444")
 
+    st.markdown("<div class='results-entrance results-delay-2'>", unsafe_allow_html=True)
     r1, r2, r3, r4, r5, r6 = st.columns(6)
     with r1:
         st.markdown(
-            f"<div class='metric-card'><div class='metric-card-title'>Total Workers</div>"
+            f"<div class='metric-card metric-card-kpi kpi-delay-1'><div class='metric-card-title'>Total Workers</div>"
             f"<div class='metric-card-value'>{total_w}</div></div>",
             unsafe_allow_html=True,
         )
     with r2:
         st.markdown(
-            f"<div class='metric-card'><div class='metric-card-title'>Compliant</div>"
+            f"<div class='metric-card metric-card-kpi kpi-delay-2'><div class='metric-card-title'>Compliant</div>"
             f"<div class='metric-card-value' style='color:#22C55E;'>{comp_w}</div></div>",
             unsafe_allow_html=True,
         )
     with r3:
         st.markdown(
-            f"<div class='metric-card'><div class='metric-card-title'>Violations</div>"
+            f"<div class='metric-card metric-card-kpi kpi-delay-3'><div class='metric-card-title'>Violations</div>"
             f"<div class='metric-card-value' style='color:{viol_color};'>{viol_w}</div></div>",
             unsafe_allow_html=True,
         )
     with r4:
         st.markdown(
-            f"<div class='metric-card'><div class='metric-card-title'>Needs Review</div>"
+            f"<div class='metric-card metric-card-kpi kpi-delay-4'><div class='metric-card-title'>Needs Review</div>"
             f"<div class='metric-card-value' style='color:{review_color};'>{review_w}</div></div>",
             unsafe_allow_html=True,
         )
     with r5:
         st.markdown(
-            f"<div class='metric-card'><div class='metric-card-title'>Compliance Rate</div>"
+            f"<div class='metric-card metric-card-kpi kpi-delay-5'><div class='metric-card-title'>Compliance Rate</div>"
             f"<div class='metric-card-value' style='color:{rate_color};'>{rate:.1f}%</div></div>",
             unsafe_allow_html=True,
         )
     with r6:
         st.markdown(
-            f"<div class='metric-card'><div class='metric-card-title'>Site Status</div>"
+            f"<div class='metric-card metric-card-kpi kpi-delay-6'><div class='metric-card-title'>Site Status</div>"
             f"<div style='margin-top: 4px;'><span class='{status_badge_class}' style='font-size: 13px; padding: 4px 10px;'>{status_label}</span></div></div>",
             unsafe_allow_html=True,
         )
+    st.markdown("</div>", unsafe_allow_html=True)
 
     # 3. Compact Contextual Safety Advisory
     st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
@@ -2073,15 +2239,18 @@ def render_inspection_results(active_inspection: Optional[Dict[str, Any]]):
         bg_adv = "rgba(34, 197, 94, 0.05)" if status == "Safe" else ("rgba(245, 158, 11, 0.05)" if status == "Warning" else "rgba(239, 68, 68, 0.05)")
         st.markdown(
             f"""
-            <div style='background: {bg_adv}; border: 1px solid var(--border-color); border-left: 4px solid {status_color}; border-radius: 4px; padding: 10px 14px; margin-bottom: 12px; font-size: 13px;'>
-                <strong style='color: {status_color}; text-transform: uppercase;'>Site Directive:</strong>
-                <span style='color: #F1F5F9; margin-left: 6px;'>{advisory_msg}</span>
+            <div class='results-entrance results-delay-3'>
+                <div style='background: {bg_adv}; border: 1px solid var(--border-color); border-left: 4px solid {status_color}; border-radius: 4px; padding: 10px 14px; margin-bottom: 12px; font-size: 13px;'>
+                    <strong style='color: {status_color}; text-transform: uppercase;'>Site Directive:</strong>
+                    <span style='color: #F1F5F9; margin-left: 6px;'>{advisory_msg}</span>
+                </div>
             </div>
             """,
             unsafe_allow_html=True,
         )
 
     # 4. Visual Evidence Viewer (Centerpiece)
+    st.markdown("<div class='results-entrance results-delay-4'>", unsafe_allow_html=True)
     st.markdown("#### Visual Evidence Viewer")
 
     # Legend Bar directly above viewer
@@ -2138,6 +2307,7 @@ def render_inspection_results(active_inspection: Optional[Dict[str, Any]]):
             st.dataframe(pd.DataFrame(det_rows), use_container_width=True)
         else:
             st.info("No raw detection items recorded.")
+    st.markdown("</div>", unsafe_allow_html=True)
 
     # 5. Worker Analysis & Selected Worker Spatial Evidence
     st.markdown("---")
