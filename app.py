@@ -832,7 +832,7 @@ def render_top_navbar(current_page: str, is_model_verified: bool):
 # ============================================================================
 def render_landing_page():
     """Render the standalone modern industrial welcome and landing portal for Safety Vision."""
-    # Hide sidebar and collapse handle completely on the landing page
+    # Hide sidebar and collapse handle completely on the landing page & inject smooth landing animations
     st.markdown(
         """
         <style>
@@ -846,6 +846,201 @@ def render_landing_page():
                 padding-top: 1.5rem;
                 padding-bottom: 3.5rem;
             }
+
+            /* --- Phase 11: Landing Page Animation Keyframes --- */
+            @keyframes landingFadeIn {
+                from {
+                    opacity: 0;
+                }
+                to {
+                    opacity: 1;
+                }
+            }
+
+            @keyframes landingFadeUp {
+                from {
+                    opacity: 0;
+                    transform: translateY(14px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+
+            @keyframes landingScanline {
+                0% {
+                    top: 0%;
+                    opacity: 0;
+                }
+                12% {
+                    opacity: 0.95;
+                }
+                88% {
+                    opacity: 0.95;
+                }
+                100% {
+                    top: 98%;
+                    opacity: 0;
+                }
+            }
+
+            @keyframes landingSlowZoom {
+                0% {
+                    transform: scale(1.0);
+                }
+                100% {
+                    transform: scale(1.035);
+                }
+            }
+
+            /* Staggered Hero Entrance */
+            .landing-brand {
+                opacity: 0;
+                animation: landingFadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+                animation-delay: 0.05s;
+            }
+
+            .landing-badge {
+                opacity: 0;
+                animation: landingFadeUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+                animation-delay: 0.15s;
+            }
+
+            .landing-title {
+                opacity: 0;
+                animation: landingFadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+                animation-delay: 0.25s;
+            }
+
+            .landing-desc {
+                opacity: 0;
+                animation: landingFadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+                animation-delay: 0.38s;
+            }
+
+            .landing-enter-container {
+                opacity: 0;
+                animation: landingFadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+                animation-delay: 0.50s;
+            }
+
+            .landing-specs {
+                opacity: 0;
+                animation: landingFadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+                animation-delay: 0.62s;
+            }
+
+            .landing-section-header {
+                opacity: 0;
+                animation: landingFadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+                animation-delay: 0.65s;
+            }
+
+            /* Worksite Visual Card & Scanner */
+            .landing-visual-card {
+                opacity: 0;
+                animation: landingFadeUp 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+                animation-delay: 0.30s;
+                position: relative;
+                overflow: hidden;
+                border-radius: 8px;
+                background: #151515;
+                border: 1px solid #292929;
+            }
+
+            .landing-visual-media {
+                position: relative;
+                overflow: hidden;
+                border-radius: 4px;
+            }
+
+            .landing-visual-media [data-testid="stImage"] img {
+                animation: landingSlowZoom 14s ease-in-out infinite alternate;
+                transform-origin: center center;
+                display: block;
+                width: 100%;
+                will-change: transform;
+            }
+
+            .landing-scanline {
+                position: absolute;
+                left: 0;
+                right: 0;
+                height: 2px;
+                z-index: 10;
+                pointer-events: none;
+                background: linear-gradient(90deg, transparent 0%, #A3E635 25%, #F7FEE7 50%, #A3E635 75%, transparent 100%);
+                box-shadow: 0 0 12px 2px rgba(163, 230, 53, 0.75), 0 0 4px rgba(163, 230, 53, 0.9);
+                animation: landingScanline 4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+            }
+
+            /* ENTER SAFETY SYSTEM Button Interaction */
+            .landing-enter-container button,
+            button[data-testid="stBaseButton-primary"],
+            div[data-testid="stButton"] button[kind="primary"] {
+                transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+                            box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+                            background-color 0.2s ease,
+                            filter 0.15s ease !important;
+                will-change: transform, box-shadow;
+            }
+            .landing-enter-container button:hover,
+            button[data-testid="stBaseButton-primary"]:hover,
+            div[data-testid="stButton"] button[kind="primary"]:hover {
+                transform: translateY(-2px) !important;
+                box-shadow: 0 6px 20px rgba(163, 230, 53, 0.4), 0 0 0 1px rgba(163, 230, 53, 0.6) !important;
+            }
+            .landing-enter-container button:active,
+            button[data-testid="stBaseButton-primary"]:active,
+            div[data-testid="stButton"] button[kind="primary"]:active {
+                transform: translateY(0px) scale(0.99) !important;
+                box-shadow: 0 2px 8px rgba(163, 230, 53, 0.3) !important;
+                filter: brightness(0.92);
+            }
+
+            /* Staggered Feature Cards */
+            .landing-feature-card {
+                opacity: 0;
+                animation: landingFadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+                transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), 
+                            border-color 0.25s ease, 
+                            box-shadow 0.25s ease;
+                background: #151515;
+                border: 1px solid #292929;
+                border-radius: 8px;
+                padding: 1.25rem 1.15rem;
+                min-height: 190px;
+                display: flex;
+                flex-direction: column;
+                justify-content: flex-start;
+                border-top: 3px solid #A3E635 !important;
+            }
+            .landing-feature-card:hover {
+                transform: translateY(-4px);
+                border-color: rgba(163, 230, 53, 0.45) !important;
+                box-shadow: 0 10px 24px -4px rgba(0, 0, 0, 0.6), 0 0 14px rgba(163, 230, 53, 0.12) !important;
+            }
+            .landing-f1 { animation-delay: 0.70s; }
+            .landing-f2 { animation-delay: 0.80s; }
+            .landing-f3 { animation-delay: 0.90s; }
+            .landing-f4 { animation-delay: 1.00s; }
+
+            /* Accessibility: Respect prefers-reduced-motion */
+            @media (prefers-reduced-motion: reduce) {
+                *, ::before, ::after {
+                    animation-duration: 0.01ms !important;
+                    animation-iteration-count: 1 !important;
+                    transition-duration: 0.01ms !important;
+                    scroll-behavior: auto !important;
+                }
+                .landing-visual-media [data-testid="stImage"] img {
+                    animation: none !important;
+                }
+                .landing-scanline {
+                    display: none !important;
+                }
+            }
         </style>
         """,
         unsafe_allow_html=True,
@@ -856,7 +1051,7 @@ def render_landing_page():
     with h_brand:
         st.markdown(
             """
-            <div style="display:flex; align-items:center; gap:12px;">
+            <div class="landing-brand" style="display:flex; align-items:center; gap:12px;">
                 <div style="width:40px; height:40px; border-radius:6px; background:#151515; border:1px solid #292929; display:flex; align-items:center; justify-content:center;">
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#A3E635" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
@@ -890,14 +1085,14 @@ def render_landing_page():
         st.markdown(
             """
             <div style="padding-right: 1.5rem;">
-                <div style="display:inline-flex; align-items:center; gap:8px; background:rgba(163, 230, 53, 0.12); border:1px solid rgba(163, 230, 53, 0.35); border-radius:4px; padding:4px 12px; margin-bottom:1.25rem;">
+                <div class="landing-badge" style="display:inline-flex; align-items:center; gap:8px; background:rgba(163, 230, 53, 0.12); border:1px solid rgba(163, 230, 53, 0.35); border-radius:4px; padding:4px 12px; margin-bottom:1.25rem;">
                     <span style="display:inline-block; width:6px; height:6px; border-radius:50%; background:#A3E635;"></span>
                     <span style="font-size:0.75rem; font-weight:700; color:#A3E635; letter-spacing:0.08em; text-transform:uppercase;">AI-POWERED CONSTRUCTION SAFETY</span>
                 </div>
-                <h1 style="font-size: 2.9rem; font-weight: 800; color: #F1F5F9; letter-spacing: -0.03em; line-height: 1.12; margin: 0 0 1.25rem 0;">
+                <h1 class="landing-title" style="font-size: 2.9rem; font-weight: 800; color: #F1F5F9; letter-spacing: -0.03em; line-height: 1.12; margin: 0 0 1.25rem 0;">
                     BUILDING SAFER WORKSITES WITH AI
                 </h1>
-                <p style="font-size: 1.05rem; color: #94A3B8; line-height: 1.65; margin: 0 0 2rem 0;">
+                <p class="landing-desc" style="font-size: 1.05rem; color: #94A3B8; line-height: 1.65; margin: 0 0 2rem 0;">
                     SAFETY VISION delivers automated computer vision intelligence to detect missing hardhats and high-visibility safety vests across hazardous industrial worksites in real time, preventing occupational hazards and ensuring regulatory site compliance.
                 </p>
             </div>
@@ -905,6 +1100,7 @@ def render_landing_page():
             unsafe_allow_html=True,
         )
 
+        st.markdown("<div class='landing-enter-container'>", unsafe_allow_html=True)
         col_enter, _ = st.columns([7, 3])
         with col_enter:
             if st.button("ENTER SAFETY SYSTEM →", type="primary", use_container_width=True, key="landing_btn_enter"):
@@ -912,10 +1108,11 @@ def render_landing_page():
                 st.session_state.current_page = "Dashboard"
                 st.session_state.nav_radio = "Dashboard"
                 st.rerun()
+        st.markdown("</div>", unsafe_allow_html=True)
 
         st.markdown(
             """
-            <div style="display:flex; flex-wrap:wrap; align-items:center; gap:20px; margin-top:2rem; padding-top:1.25rem; border-top:1px solid #292929; font-size:0.8rem; color:#94A3B8;">
+            <div class="landing-specs" style="display:flex; flex-wrap:wrap; align-items:center; gap:20px; margin-top:2rem; padding-top:1.25rem; border-top:1px solid #292929; font-size:0.8rem; color:#94A3B8;">
                 <div style="display:flex; align-items:center; gap:6px;">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#A3E635" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
                     <span>OSHA 1926.100 & ANSI 107 Compliant</span>
@@ -940,11 +1137,13 @@ def render_landing_page():
             im = Image.open(img_source)
             st.markdown(
                 """
-                <div style="background:#151515; border:1px solid #292929; border-radius:8px; padding:10px 10px 6px 10px;">
+                <div class="landing-visual-card" style="padding:10px 10px 8px 10px;">
                     <div style="display:flex; justify-content:space-between; align-items:center; padding:2px 4px 8px 4px; border-bottom:1px solid #292929; margin-bottom:8px;">
                         <span style="font-size:0.72rem; font-weight:700; color:#A3E635; letter-spacing:0.06em;">● LIVE WORKSITE FEED</span>
                         <span style="font-size:0.7rem; color:#94A3B8; font-family:monospace;">CAM-04 · 1080P</span>
                     </div>
+                    <div class="landing-visual-media">
+                        <div class="landing-scanline"></div>
                 """,
                 unsafe_allow_html=True,
             )
@@ -953,14 +1152,14 @@ def render_landing_page():
                 caption="Worksite Safety Surveillance — PPE Compliance Monitoring Active",
                 use_container_width=True,
             )
-            st.markdown("</div>", unsafe_allow_html=True)
+            st.markdown("</div></div>", unsafe_allow_html=True)
 
     st.markdown("<div style='margin-top: 3.5rem; margin-bottom: 1.5rem; border-top: 1px solid #292929;'></div>", unsafe_allow_html=True)
 
     # Feature Highlights (4 Columns)
     st.markdown(
         """
-        <div style="margin-bottom: 1.25rem;">
+        <div class="landing-section-header" style="margin-bottom: 1.25rem;">
             <div style="font-size: 0.75rem; font-weight: 700; color: #A3E635; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 4px;">
                 Core Platform Capabilities
             </div>
@@ -977,7 +1176,7 @@ def render_landing_page():
     with f1:
         st.markdown(
             """
-            <div style="background:#151515; border:1px solid #292929; border-radius:8px; padding:1.25rem 1.15rem; min-height:190px; display:flex; flex-direction:column; justify-content:flex-start; border-top:3px solid #A3E635;">
+            <div class="landing-feature-card landing-f1">
                 <div style="display:inline-flex; align-items:center; justify-content:center; width:36px; height:36px; border-radius:6px; background:#1E1E1E; margin-bottom:0.85rem;">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#A3E635" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M2 18h20"/>
@@ -999,7 +1198,7 @@ def render_landing_page():
     with f2:
         st.markdown(
             """
-            <div style="background:#151515; border:1px solid #292929; border-radius:8px; padding:1.25rem 1.15rem; min-height:190px; display:flex; flex-direction:column; justify-content:flex-start; border-top:3px solid #A3E635;">
+            <div class="landing-feature-card landing-f2">
                 <div style="display:inline-flex; align-items:center; justify-content:center; width:36px; height:36px; border-radius:6px; background:#1E1E1E; margin-bottom:0.85rem;">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#A3E635" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M4 4h4l4 4 4-4h4v16H4z"/>
@@ -1020,7 +1219,7 @@ def render_landing_page():
     with f3:
         st.markdown(
             """
-            <div style="background:#151515; border:1px solid #292929; border-radius:8px; padding:1.25rem 1.15rem; min-height:190px; display:flex; flex-direction:column; justify-content:flex-start; border-top:3px solid #A3E635;">
+            <div class="landing-feature-card landing-f3">
                 <div style="display:inline-flex; align-items:center; justify-content:center; width:36px; height:36px; border-radius:6px; background:#1E1E1E; margin-bottom:0.85rem;">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#A3E635" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/>
@@ -1042,7 +1241,7 @@ def render_landing_page():
     with f4:
         st.markdown(
             """
-            <div style="background:#151515; border:1px solid #292929; border-radius:8px; padding:1.25rem 1.15rem; min-height:190px; display:flex; flex-direction:column; justify-content:flex-start; border-top:3px solid #A3E635;">
+            <div class="landing-feature-card landing-f4">
                 <div style="display:inline-flex; align-items:center; justify-content:center; width:36px; height:36px; border-radius:6px; background:#1E1E1E; margin-bottom:0.85rem;">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#A3E635" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <polygon points="23 7 16 12 23 17 23 7"/>
