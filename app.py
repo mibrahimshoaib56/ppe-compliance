@@ -598,6 +598,12 @@ def inject_custom_css(theme: str):
                     transform: none !important;
                     opacity: 1 !important;
                 }
+                .sv-ai-scanner-beam {
+                    display: none !important;
+                }
+                .sv-scanner-live-dot {
+                    animation: none !important;
+                }
             }
 
             /* --- Phase 13: Dashboard and Inspection Animation Keyframes --- */
@@ -660,6 +666,168 @@ def inject_custom_css(theme: str):
             .results-delay-2 { animation-delay: 0.12s; }
             .results-delay-3 { animation-delay: 0.20s; }
             .results-delay-4 { animation-delay: 0.28s; }
+
+            /* --- Phase 14: Signature AI Scanning and Loading System --- */
+            @keyframes signatureLaserScan {
+                0% {
+                    top: 0%;
+                    opacity: 0;
+                }
+                12% {
+                    opacity: 1;
+                }
+                88% {
+                    opacity: 1;
+                }
+                100% {
+                    top: 98%;
+                    opacity: 0;
+                }
+            }
+
+            @keyframes pulseGlow {
+                0%, 100% {
+                    opacity: 1;
+                    filter: drop-shadow(0 0 6px var(--accent-primary));
+                }
+                50% {
+                    opacity: 0.45;
+                    filter: drop-shadow(0 0 1px var(--accent-primary));
+                }
+            }
+
+            /* Custom Neon Lime Streamlit Spinner & Progress Bar */
+            div[data-testid="stSpinner"] > div {
+                border-top-color: var(--accent-primary) !important;
+                border-right-color: transparent !important;
+            }
+            div[data-testid="stSpinner"] p,
+            div[data-testid="stSpinner"] span {
+                color: var(--text-primary) !important;
+                font-weight: 500;
+            }
+            div[data-testid="stProgress"] > div > div > div > div {
+                background: linear-gradient(90deg, var(--accent-primary) 0%, #D9F99D 100%) !important;
+                box-shadow: 0 0 10px rgba(163, 230, 53, 0.4) !important;
+                border-radius: 3px !important;
+            }
+            div[data-testid="stProgress"] > div > div {
+                background-color: #1F1F1F !important;
+                border: 1px solid var(--border-color) !important;
+                border-radius: 4px !important;
+            }
+
+            /* Signature Image AI Scanner Container */
+            .sv-ai-scanner-container {
+                position: relative;
+                overflow: hidden;
+                border-radius: 6px;
+                background-color: #000000;
+                border: 1px solid var(--border-color);
+                margin: 10px 0;
+            }
+
+            .sv-ai-scanner-overlay {
+                position: relative;
+                width: 100%;
+                overflow: hidden;
+            }
+
+            .sv-ai-scanner-beam {
+                position: absolute;
+                left: 0;
+                right: 0;
+                height: 2px;
+                z-index: 25;
+                pointer-events: none;
+                background: linear-gradient(90deg, transparent 0%, var(--accent-primary) 20%, #FFFFFF 50%, var(--accent-primary) 80%, transparent 100%);
+                box-shadow: 0 0 14px 2px rgba(163, 230, 53, 0.8), 0 0 4px rgba(163, 230, 53, 0.95);
+                animation: signatureLaserScan 2.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+            }
+
+            /* HUD Viewfinder Corner Brackets */
+            .sv-corner-tl {
+                position: absolute;
+                top: 8px;
+                left: 8px;
+                width: 16px;
+                height: 16px;
+                border-top: 2px solid var(--accent-primary);
+                border-left: 2px solid var(--accent-primary);
+                z-index: 20;
+                pointer-events: none;
+            }
+            .sv-corner-tr {
+                position: absolute;
+                top: 8px;
+                right: 8px;
+                width: 16px;
+                height: 16px;
+                border-top: 2px solid var(--accent-primary);
+                border-right: 2px solid var(--accent-primary);
+                z-index: 20;
+                pointer-events: none;
+            }
+            .sv-corner-bl {
+                position: absolute;
+                bottom: 8px;
+                left: 8px;
+                width: 16px;
+                height: 16px;
+                border-bottom: 2px solid var(--accent-primary);
+                border-left: 2px solid var(--accent-primary);
+                z-index: 20;
+                pointer-events: none;
+            }
+            .sv-corner-br {
+                position: absolute;
+                bottom: 8px;
+                right: 8px;
+                width: 16px;
+                height: 16px;
+                border-bottom: 2px solid var(--accent-primary);
+                border-right: 2px solid var(--accent-primary);
+                z-index: 20;
+                pointer-events: none;
+            }
+
+            .sv-scanner-status-bar {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: 8px 12px;
+                background: #111111;
+                border-top: 1px solid var(--border-color);
+                font-family: monospace;
+                font-size: 11px;
+                color: #94A3B8;
+            }
+            .sv-scanner-status-text {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                font-weight: 700;
+                color: var(--accent-primary);
+                letter-spacing: 0.8px;
+                text-transform: uppercase;
+            }
+            .sv-scanner-live-dot {
+                width: 7px;
+                height: 7px;
+                border-radius: 50%;
+                background-color: var(--accent-primary);
+                animation: pulseGlow 1.2s ease-in-out infinite;
+            }
+
+            /* Video Processing Status Card */
+            .sv-video-processing-card {
+                background: #151515;
+                border: 1px solid var(--border-color);
+                border-left: 4px solid var(--accent-primary);
+                border-radius: 4px;
+                padding: 14px 18px;
+                margin: 12px 0;
+            }
         </style>
         """
     else:
@@ -1033,6 +1201,12 @@ def inject_custom_css(theme: str):
                 [data-testid="stSidebar"] [data-testid="stRadio"] [role="radiogroup"] label {
                     transform: none !important;
                     opacity: 1 !important;
+                }
+                .sv-ai-scanner-beam {
+                    display: none !important;
+                }
+                .sv-scanner-live-dot {
+                    animation: none !important;
                 }
             }
 
@@ -2052,7 +2226,37 @@ def render_new_inspection(model: Any):
 
         st.markdown("<div class='inspection-action-wrapper'>", unsafe_allow_html=True)
         if st.button(btn_label, key="new_insp_run_btn", type="primary", use_container_width=True, disabled=run_disabled):
-            with st.spinner("Executing YOLOv8 inference & spatial compliance logic on CPU..."):
+            scan_placeholder = st.empty()
+            with scan_placeholder.container():
+                st.markdown(
+                    """
+                    <div class='sv-ai-scanner-container'>
+                        <div class='sv-corner-tl'></div>
+                        <div class='sv-corner-tr'></div>
+                        <div class='sv-corner-bl'></div>
+                        <div class='sv-corner-br'></div>
+                        <div class='sv-ai-scanner-overlay'>
+                            <div class='sv-ai-scanner-beam'></div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+                st.image(input_image, caption=f"Analyzing Target: {source_label}", use_container_width=True)
+                st.markdown(
+                    """
+                        </div>
+                        <div class='sv-scanner-status-bar'>
+                            <div class='sv-scanner-status-text'>
+                                <span class='sv-scanner-live-dot'></span>
+                                <span>ANALYZING PPE COMPLIANCE</span>
+                            </div>
+                            <div>YOLOv8 NEURAL INFERENCE · CPU MODE</div>
+                        </div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+
+            try:
                 detections = run_detection(
                     image=input_image,
                     model=model,
@@ -2104,7 +2308,10 @@ def render_new_inspection(model: Any):
                 st.session_state.active_inspection = inspection_record
                 save_inspection_to_history(inspection_record)
                 st.success(f"Inspection `{inspection_id}` completed successfully.")
-                navigate_to("Inspection Results")
+            finally:
+                scan_placeholder.empty()
+
+            navigate_to("Inspection Results")
         st.markdown("</div>", unsafe_allow_html=True)
 
 
@@ -4002,6 +4209,29 @@ def execute_cctv_pipeline(
 
     cap.set(cv2.CAP_PROP_POS_FRAMES, start_frame_idx)
 
+    video_hud_placeholder = st.empty()
+    video_hud_placeholder.markdown(
+        f"""
+        <div class='sv-video-processing-card'>
+            <div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;'>
+                <div style='display: flex; align-items: center; gap: 8px;'>
+                    <span class='sv-scanner-live-dot'></span>
+                    <span style='font-size: 12px; font-weight: 700; color: var(--accent-primary); letter-spacing: 0.8px;'>
+                        PROCESSING VIDEO · SEQUENTIAL PPE SURVEILLANCE
+                    </span>
+                </div>
+                <span style='font-family: monospace; font-size: 11px; color: #94A3B8;'>
+                    {safe_fps:.1f} FPS · STRIDE 1:{PROCESS_EVERY_N}
+                </span>
+            </div>
+            <div style='font-size: 12px; color: #F1F5F9;'>
+                Surveillance Source: <code>{video_display_name}</code>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
     progress_bar = st.progress(0, text="Initializing CCTV surveillance analysis on CPU...")
     status_text = st.empty()
 
@@ -4088,12 +4318,16 @@ def execute_cctv_pipeline(
             pct = int(((step_idx + 1) / max_frames) * 100)
             progress_bar.progress(
                 pct,
-                text=f"Analyzing CCTV Video: Frame {step_idx + 1}/{max_frames} (t={timestamp_sec:.1f}s)...",
+                text=f"PROCESSING VIDEO — Frame {step_idx + 1}/{max_frames} (t={timestamp_sec:.1f}s) | Progress: {pct}%",
             )
-            status_text.caption(
-                f"Progress: {pct}% | Analyzed: {len(analyzed_records)} frames | Buffer: {len(annotated_frames_rgb)} rendered"
+            status_text.markdown(
+                f"<div style='font-family: monospace; font-size: 11px; color: #94A3B8; margin-top: 4px;'>"
+                f"Progress: <strong>{pct}%</strong> · Frame Buffer: {len(annotated_frames_rgb)}/{max_frames} · Analyzed Frames: {len(analyzed_records)} · Active Time: {timestamp_sec:.1f}s"
+                f"</div>",
+                unsafe_allow_html=True,
             )
 
+        video_hud_placeholder.empty()
         progress_bar.empty()
         status_text.empty()
 
