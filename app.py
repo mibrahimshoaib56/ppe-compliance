@@ -1077,7 +1077,7 @@ def render_inspection_results(active_inspection: Optional[Dict[str, Any]]):
                 {
                     "Class": d["class_name"],
                     "Confidence": f"{int(d.get('confidence', 1.0) * 100)}%",
-                    "BBox [x1, y1, x2, y2]": [round(float(c), 1) for c in d["bbox"]],
+                    "BBox [x1, y1, x2, y2]": [round(float(c), 1) for c in (d.get("box") or d.get("bbox") or [])],
                 }
                 for d in all_dets
             ]
@@ -1755,7 +1755,7 @@ def execute_cctv_pipeline(
         total_frames=total_frames,
         fps=raw_fps,
         start_seconds=start_seconds,
-        max_duration_seconds=MAX_VIDEO_SECONDS,
+        max_seconds=MAX_VIDEO_SECONDS,
     )
 
     if total_frames > max_frames:
