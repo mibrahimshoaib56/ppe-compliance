@@ -828,6 +828,22 @@ def inject_custom_css(theme: str):
                 padding: 14px 18px;
                 margin: 12px 0;
             }
+
+            /* Responsive Layout Rules */
+            @media (max-width: 768px) {
+                .top-nav {
+                    flex-direction: column;
+                    align-items: flex-start;
+                    gap: 10px;
+                    padding: 10px 12px;
+                }
+                .metric-card-value {
+                    font-size: 20px !important;
+                }
+                .metric-card {
+                    padding: 10px 10px;
+                }
+            }
         </style>
         """
     else:
@@ -1266,6 +1282,179 @@ def inject_custom_css(theme: str):
             .results-delay-2 { animation-delay: 0.12s; }
             .results-delay-3 { animation-delay: 0.20s; }
             .results-delay-4 { animation-delay: 0.28s; }
+
+            /* --- Phase 14: Signature AI Scanning and Loading System (Light) --- */
+            @keyframes signatureLaserScan {
+                0% {
+                    top: 0%;
+                    opacity: 0;
+                }
+                12% {
+                    opacity: 1;
+                }
+                88% {
+                    opacity: 1;
+                }
+                100% {
+                    top: 98%;
+                    opacity: 0;
+                }
+            }
+
+            @keyframes pulseGlow {
+                0%, 100% {
+                    opacity: 1;
+                    filter: drop-shadow(0 0 6px var(--accent-primary));
+                }
+                50% {
+                    opacity: 0.45;
+                    filter: drop-shadow(0 0 1px var(--accent-primary));
+                }
+            }
+
+            div[data-testid="stSpinner"] > div {
+                border-top-color: var(--accent-primary) !important;
+                border-right-color: transparent !important;
+            }
+            div[data-testid="stSpinner"] p,
+            div[data-testid="stSpinner"] span {
+                color: var(--text-primary) !important;
+                font-weight: 500;
+            }
+            div[data-testid="stProgress"] > div > div > div > div {
+                background: linear-gradient(90deg, var(--accent-primary) 0%, #38BDF8 100%) !important;
+                box-shadow: 0 0 10px rgba(2, 132, 199, 0.4) !important;
+                border-radius: 3px !important;
+            }
+            div[data-testid="stProgress"] > div > div {
+                background-color: #E2E8F0 !important;
+                border: 1px solid var(--border-color) !important;
+                border-radius: 4px !important;
+            }
+
+            .sv-ai-scanner-container {
+                position: relative;
+                overflow: hidden;
+                border-radius: 6px;
+                background-color: #0F172A;
+                border: 1px solid var(--border-color);
+                margin: 10px 0;
+            }
+
+            .sv-ai-scanner-overlay {
+                position: relative;
+                width: 100%;
+                overflow: hidden;
+            }
+
+            .sv-ai-scanner-beam {
+                position: absolute;
+                left: 0;
+                right: 0;
+                height: 2px;
+                z-index: 25;
+                pointer-events: none;
+                background: linear-gradient(90deg, transparent 0%, var(--accent-primary) 20%, #FFFFFF 50%, var(--accent-primary) 80%, transparent 100%);
+                box-shadow: 0 0 14px 2px rgba(2, 132, 199, 0.8), 0 0 4px rgba(2, 132, 199, 0.95);
+                animation: signatureLaserScan 2.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+            }
+
+            .sv-corner-tl {
+                position: absolute;
+                top: 8px;
+                left: 8px;
+                width: 16px;
+                height: 16px;
+                border-top: 2px solid var(--accent-primary);
+                border-left: 2px solid var(--accent-primary);
+                z-index: 20;
+                pointer-events: none;
+            }
+            .sv-corner-tr {
+                position: absolute;
+                top: 8px;
+                right: 8px;
+                width: 16px;
+                height: 16px;
+                border-top: 2px solid var(--accent-primary);
+                border-right: 2px solid var(--accent-primary);
+                z-index: 20;
+                pointer-events: none;
+            }
+            .sv-corner-bl {
+                position: absolute;
+                bottom: 8px;
+                left: 8px;
+                width: 16px;
+                height: 16px;
+                border-bottom: 2px solid var(--accent-primary);
+                border-left: 2px solid var(--accent-primary);
+                z-index: 20;
+                pointer-events: none;
+            }
+            .sv-corner-br {
+                position: absolute;
+                bottom: 8px;
+                right: 8px;
+                width: 16px;
+                height: 16px;
+                border-bottom: 2px solid var(--accent-primary);
+                border-right: 2px solid var(--accent-primary);
+                z-index: 20;
+                pointer-events: none;
+            }
+
+            .sv-scanner-status-bar {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: 8px 12px;
+                background: #1E293B;
+                border-top: 1px solid var(--border-color);
+                font-family: monospace;
+                font-size: 11px;
+                color: #CBD5E1;
+            }
+            .sv-scanner-status-text {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                font-weight: 700;
+                color: var(--accent-primary);
+                letter-spacing: 0.8px;
+                text-transform: uppercase;
+            }
+            .sv-scanner-live-dot {
+                width: 7px;
+                height: 7px;
+                border-radius: 50%;
+                background-color: var(--accent-primary);
+                animation: pulseGlow 1.2s ease-in-out infinite;
+            }
+
+            .sv-video-processing-card {
+                background: var(--surface-card);
+                border: 1px solid var(--border-color);
+                border-left: 4px solid var(--accent-primary);
+                border-radius: 4px;
+                padding: 14px 18px;
+                margin: 12px 0;
+            }
+
+            @media (max-width: 768px) {
+                .top-nav {
+                    flex-direction: column;
+                    align-items: flex-start;
+                    gap: 10px;
+                    padding: 10px 12px;
+                }
+                .metric-card-value {
+                    font-size: 20px !important;
+                }
+                .metric-card {
+                    padding: 10px 10px;
+                }
+            }
         </style>
         """
     st.markdown(css, unsafe_allow_html=True)
