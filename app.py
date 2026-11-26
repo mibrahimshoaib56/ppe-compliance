@@ -850,16 +850,16 @@ def inject_custom_css(theme: str):
         css = """
         <style>
             /* -------------------------------------------------------------
-               GLOBAL DESIGN SYSTEM TOKENS - LIGHT INDUSTRIAL
+               GLOBAL DESIGN SYSTEM TOKENS - LIGHT INDUSTRIAL (PHASE 16)
                ------------------------------------------------------------- */
             :root {
-                --bg-main: #F8FAFC;
-                --bg-sidebar: #F1F5F9;
+                --bg-main: #F4F6F8;
+                --bg-sidebar: #E9EEF2;
                 --surface-card: #FFFFFF;
-                --surface-elevated: #F8FAFC;
-                --border-color: #E2E8F0;
-                --accent-primary: #0284C7;
-                --text-primary: #0F172A;
+                --surface-elevated: #F4F6F8;
+                --border-color: #DCE3E9;
+                --accent-primary: #65A30D;
+                --text-primary: #17212B;
                 --text-secondary: #64748B;
 
                 --color-safe: #16A34A;
@@ -902,7 +902,7 @@ def inject_custom_css(theme: str):
                 cursor: pointer;
             }
             [data-testid="stSidebar"] [data-testid="stRadio"] [role="radiogroup"] label:hover {
-                background-color: #E2E8F0;
+                background-color: #DEE4E9;
                 transform: translateX(2px);
             }
             [data-testid="stSidebar"] [data-testid="stRadio"] [role="radiogroup"] label p {
@@ -915,13 +915,13 @@ def inject_custom_css(theme: str):
                 color: var(--text-primary) !important;
             }
             [data-testid="stSidebar"] [data-testid="stRadio"] [role="radiogroup"] label:has(input:checked) {
-                background-color: #E0F2FE !important;
-                border: 1px solid #BAE6FD !important;
+                background-color: #DCECC2 !important;
+                border: 1px solid #C8DFA6 !important;
                 border-left: 3px solid var(--accent-primary) !important;
                 transform: translateX(0);
             }
             [data-testid="stSidebar"] [data-testid="stRadio"] [role="radiogroup"] label:has(input:checked) p {
-                color: var(--accent-primary) !important;
+                color: #365314 !important;
                 font-weight: 600 !important;
             }
 
@@ -934,7 +934,7 @@ def inject_custom_css(theme: str):
                 display: flex;
                 align-items: center;
                 justify-content: space-between;
-                box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
                 transition: border-color 0.2s ease;
             }
             .brand-title {
@@ -953,9 +953,9 @@ def inject_custom_css(theme: str):
                 letter-spacing: 0.3px;
             }
             .model-pill-ready {
-                background-color: rgba(22, 163, 74, 0.1);
+                background-color: rgba(22, 163, 74, 0.12);
                 color: var(--color-safe);
-                border: 1px solid rgba(22, 163, 74, 0.25);
+                border: 1px solid rgba(22, 163, 74, 0.3);
                 padding: 4px 10px;
                 border-radius: 4px;
                 font-size: 11px;
@@ -964,9 +964,9 @@ def inject_custom_css(theme: str):
                 transition: background-color 0.2s ease, border-color 0.2s ease;
             }
             .model-pill-warn {
-                background-color: rgba(217, 119, 6, 0.1);
+                background-color: rgba(217, 119, 6, 0.12);
                 color: var(--color-warning);
-                border: 1px solid rgba(217, 119, 6, 0.25);
+                border: 1px solid rgba(217, 119, 6, 0.3);
                 padding: 4px 10px;
                 border-radius: 4px;
                 font-size: 11px;
@@ -978,9 +978,9 @@ def inject_custom_css(theme: str):
             .metric-card {
                 background: var(--surface-card);
                 border: 1px solid var(--border-color);
-                border-radius: 4px;
+                border-radius: 6px;
                 padding: 12px 14px;
-                box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
                 transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
                             border-color 0.2s ease,
                             box-shadow 0.2s ease;
@@ -988,7 +988,7 @@ def inject_custom_css(theme: str):
             .metric-card:hover {
                 transform: translateY(-2px);
                 border-color: #CBD5E1;
-                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
             }
             .metric-card-title {
                 color: var(--text-secondary);
@@ -1008,16 +1008,16 @@ def inject_custom_css(theme: str):
             .sv-panel {
                 background-color: var(--surface-card);
                 border: 1px solid var(--border-color);
-                border-radius: 4px;
+                border-radius: 6px;
                 padding: 16px;
                 margin-bottom: 14px;
-                box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
                 transition: border-color 0.2s ease;
             }
             .sv-surface-elevated {
                 background-color: var(--surface-elevated);
                 border: 1px solid var(--border-color);
-                border-radius: 4px;
+                border-radius: 6px;
                 padding: 12px;
                 margin-bottom: 12px;
                 transition: border-color 0.2s ease;
@@ -1076,15 +1076,15 @@ def inject_custom_css(theme: str):
             }
             .stTabs [data-baseweb="tab"]:hover {
                 color: var(--text-primary);
-                background-color: #F1F5F9;
-                border-color: #E2E8F0;
+                background-color: #E9EEF2;
+                border-color: var(--border-color);
             }
             .stTabs [aria-selected="true"] {
-                background-color: #E0F2FE !important;
-                color: var(--accent-primary) !important;
-                border: 1px solid #BAE6FD !important;
+                background-color: #DCECC2 !important;
+                color: #365314 !important;
+                border: 1px solid #C8DFA6 !important;
                 border-bottom: 2px solid var(--accent-primary) !important;
-                box-shadow: 0 2px 6px rgba(2, 132, 199, 0.12);
+                box-shadow: 0 2px 6px rgba(101, 163, 13, 0.15);
             }
 
             .stButton > button {
@@ -1105,15 +1105,15 @@ def inject_custom_css(theme: str):
                 padding: 6px 16px;
             }
             .stButton > button[kind="primary"]:hover {
-                background-color: #0369A1;
-                border-color: #0284C7;
+                background-color: #4D7C0F;
+                border-color: #3F6212;
                 color: #FFFFFF;
                 transform: translateY(-1.5px);
-                box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35);
+                box-shadow: 0 4px 14px rgba(101, 163, 13, 0.35);
             }
             .stButton > button[kind="primary"]:active {
                 transform: translateY(0px) scale(0.99);
-                box-shadow: 0 2px 6px rgba(2, 132, 199, 0.2);
+                box-shadow: 0 2px 6px rgba(101, 163, 13, 0.2);
                 filter: brightness(0.94);
             }
             .stButton > button:not([kind="primary"]) {
@@ -1128,7 +1128,7 @@ def inject_custom_css(theme: str):
             .stButton > button:not([kind="primary"]):hover {
                 border-color: var(--accent-primary);
                 color: var(--accent-primary);
-                background-color: var(--surface-elevated);
+                background-color: #F8FAFC;
                 transform: translateY(-1px);
             }
             .stButton > button:not([kind="primary"]):active {
@@ -1152,17 +1152,18 @@ def inject_custom_css(theme: str):
             }
             [data-baseweb="input"]:focus-within {
                 border-color: var(--accent-primary) !important;
-                box-shadow: 0 0 0 1px rgba(2, 132, 199, 0.35) !important;
+                box-shadow: 0 0 0 1px rgba(101, 163, 13, 0.35) !important;
             }
             [data-baseweb="select"] > div {
                 background-color: var(--surface-card) !important;
                 border: 1px solid var(--border-color) !important;
                 border-radius: 4px !important;
+                color: var(--text-primary) !important;
                 transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
             }
             [data-baseweb="select"] > div:focus-within {
                 border-color: var(--accent-primary) !important;
-                box-shadow: 0 0 0 1px rgba(2, 132, 199, 0.35) !important;
+                box-shadow: 0 0 0 1px rgba(101, 163, 13, 0.35) !important;
             }
             [data-testid="stFileUploader"] {
                 border: 1px dashed var(--border-color);
@@ -1173,7 +1174,7 @@ def inject_custom_css(theme: str):
             }
             [data-testid="stFileUploader"]:hover {
                 border-color: var(--accent-primary);
-                background-color: var(--surface-elevated);
+                background-color: #F8FAFC;
             }
             [data-testid="stExpander"] {
                 background-color: var(--surface-card) !important;
@@ -1266,12 +1267,12 @@ def inject_custom_css(theme: str):
 
             .inspection-action-wrapper button[kind="primary"] {
                 border-color: var(--accent-primary) !important;
-                box-shadow: 0 4px 14px rgba(2, 132, 199, 0.3) !important;
+                box-shadow: 0 4px 14px rgba(101, 163, 13, 0.3) !important;
                 transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
             }
             .inspection-action-wrapper button[kind="primary"]:hover:not(:disabled) {
                 transform: translateY(-2px) !important;
-                box-shadow: 0 6px 20px rgba(2, 132, 199, 0.45) !important;
+                box-shadow: 0 6px 20px rgba(101, 163, 13, 0.45) !important;
             }
 
             .results-entrance {
@@ -1322,8 +1323,8 @@ def inject_custom_css(theme: str):
                 font-weight: 500;
             }
             div[data-testid="stProgress"] > div > div > div > div {
-                background: linear-gradient(90deg, var(--accent-primary) 0%, #38BDF8 100%) !important;
-                box-shadow: 0 0 10px rgba(2, 132, 199, 0.4) !important;
+                background: linear-gradient(90deg, var(--accent-primary) 0%, #84CC16 100%) !important;
+                box-shadow: 0 0 10px rgba(101, 163, 13, 0.4) !important;
                 border-radius: 3px !important;
             }
             div[data-testid="stProgress"] > div > div {
@@ -1355,7 +1356,7 @@ def inject_custom_css(theme: str):
                 z-index: 25;
                 pointer-events: none;
                 background: linear-gradient(90deg, transparent 0%, var(--accent-primary) 20%, #FFFFFF 50%, var(--accent-primary) 80%, transparent 100%);
-                box-shadow: 0 0 14px 2px rgba(2, 132, 199, 0.8), 0 0 4px rgba(2, 132, 199, 0.95);
+                box-shadow: 0 0 14px 2px rgba(101, 163, 13, 0.8), 0 0 4px rgba(101, 163, 13, 0.95);
                 animation: signatureLaserScan 2.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
             }
 
@@ -1513,215 +1514,230 @@ def render_top_navbar(current_page: str, is_model_verified: bool):
 # ============================================================================
 def render_landing_page():
     """Render the standalone modern industrial welcome and landing portal for Safety Vision."""
+    is_dark = st.session_state.theme == "Dark Theme"
+    lp_bg = "#000000" if is_dark else "#F4F6F8"
+    lp_card = "#151515" if is_dark else "#FFFFFF"
+    lp_border = "#292929" if is_dark else "#DCE3E9"
+    lp_accent = "#A3E635" if is_dark else "#65A30D"
+    lp_accent_rgb = "163, 230, 53" if is_dark else "101, 163, 13"
+    lp_text = "#F1F5F9" if is_dark else "#17212B"
+    lp_text_muted = "#94A3B8" if is_dark else "#64748B"
+    lp_icon_bg = "#1E1E1E" if is_dark else "#F4F6F8"
+    lp_brand_bg = "#151515" if is_dark else "#FFFFFF"
+    lp_scan_mid = "#F7FEE7" if is_dark else "#ECFCCB"
+
     # Hide sidebar and collapse handle completely on the landing page & inject smooth landing animations
     st.markdown(
-        """
+        f"""
         <style>
             [data-testid="stSidebar"],
             [data-testid="stSidebarCollapsedControl"],
-            button[data-testid="stSidebarCollapseButton"] {
+            button[data-testid="stSidebarCollapseButton"] {{
                 display: none !important;
-            }
-            .main .block-container {
+            }}
+            .stApp {{
+                background-color: {lp_bg} !important;
+            }}
+            .main .block-container {{
                 max-width: 1200px;
                 padding-top: 1.5rem;
                 padding-bottom: 3.5rem;
-            }
+            }}
 
             /* --- Phase 11: Landing Page Animation Keyframes --- */
-            @keyframes landingFadeIn {
-                from {
+            @keyframes landingFadeIn {{
+                from {{
                     opacity: 0;
-                }
-                to {
+                }}
+                to {{
                     opacity: 1;
-                }
-            }
+                }}
+            }}
 
-            @keyframes landingFadeUp {
-                from {
+            @keyframes landingFadeUp {{
+                from {{
                     opacity: 0;
                     transform: translateY(14px);
-                }
-                to {
+                }}
+                to {{
                     opacity: 1;
                     transform: translateY(0);
-                }
-            }
+                }}
+            }}
 
-            @keyframes landingScanline {
-                0% {
+            @keyframes landingScanline {{
+                0% {{
                     top: 0%;
                     opacity: 0;
-                }
-                12% {
+                }}
+                12% {{
                     opacity: 0.95;
-                }
-                88% {
+                }}
+                88% {{
                     opacity: 0.95;
-                }
-                100% {
+                }}
+                100% {{
                     top: 98%;
                     opacity: 0;
-                }
-            }
+                }}
+            }}
 
-            @keyframes landingSlowZoom {
-                0% {
+            @keyframes landingSlowZoom {{
+                0% {{
                     transform: scale(1.0);
-                }
-                100% {
+                }}
+                100% {{
                     transform: scale(1.035);
-                }
-            }
+                }}
+            }}
 
             /* Staggered Hero Entrance */
-            .landing-brand {
+            .landing-brand {{
                 opacity: 0;
                 animation: landingFadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
                 animation-delay: 0.05s;
-            }
+            }}
 
-            .landing-badge {
+            .landing-badge {{
                 opacity: 0;
                 animation: landingFadeUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
                 animation-delay: 0.15s;
-            }
+            }}
 
-            .landing-title {
+            .landing-title {{
                 opacity: 0;
                 animation: landingFadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
                 animation-delay: 0.25s;
-            }
+            }}
 
-            .landing-desc {
+            .landing-desc {{
                 opacity: 0;
                 animation: landingFadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
                 animation-delay: 0.38s;
-            }
+            }}
 
-            .landing-enter-container {
+            .landing-enter-container {{
                 opacity: 0;
                 animation: landingFadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
                 animation-delay: 0.50s;
-            }
+            }}
 
-            .landing-specs {
+            .landing-specs {{
                 opacity: 0;
                 animation: landingFadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
                 animation-delay: 0.62s;
-            }
+            }}
 
-            .landing-section-header {
+            .landing-section-header {{
                 opacity: 0;
                 animation: landingFadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
                 animation-delay: 0.65s;
-            }
+            }}
 
             /* Worksite Visual Card & Scanner */
-            .landing-visual-card {
+            .landing-visual-card {{
                 opacity: 0;
                 animation: landingFadeUp 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
                 animation-delay: 0.30s;
                 position: relative;
                 overflow: hidden;
                 border-radius: 8px;
-                background: #151515;
-                border: 1px solid #292929;
-            }
+                background: {lp_card};
+                border: 1px solid {lp_border};
+            }}
 
-            .landing-visual-media {
+            .landing-visual-media {{
                 position: relative;
                 overflow: hidden;
                 border-radius: 4px;
-            }
+            }}
 
-            .landing-visual-media [data-testid="stImage"] img {
+            .landing-visual-media [data-testid="stImage"] img {{
                 animation: landingSlowZoom 14s ease-in-out infinite alternate;
                 transform-origin: center center;
                 display: block;
                 width: 100%;
                 will-change: transform;
-            }
+            }}
 
-            .landing-scanline {
+            .landing-scanline {{
                 position: absolute;
                 left: 0;
                 right: 0;
                 height: 2px;
                 z-index: 10;
                 pointer-events: none;
-                background: linear-gradient(90deg, transparent 0%, #A3E635 25%, #F7FEE7 50%, #A3E635 75%, transparent 100%);
-                box-shadow: 0 0 12px 2px rgba(163, 230, 53, 0.75), 0 0 4px rgba(163, 230, 53, 0.9);
+                background: linear-gradient(90deg, transparent 0%, {lp_accent} 25%, {lp_scan_mid} 50%, {lp_accent} 75%, transparent 100%);
+                box-shadow: 0 0 12px 2px rgba({lp_accent_rgb}, 0.75), 0 0 4px rgba({lp_accent_rgb}, 0.9);
                 animation: landingScanline 4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-            }
+            }}
 
             /* ENTER SAFETY SYSTEM Button Interaction */
             .landing-enter-container button,
             button[data-testid="stBaseButton-primary"],
-            div[data-testid="stButton"] button[kind="primary"] {
+            div[data-testid="stButton"] button[kind="primary"] {{
                 transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
                             box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1),
                             background-color 0.2s ease,
                             filter 0.15s ease !important;
                 will-change: transform, box-shadow;
-            }
+            }}
             .landing-enter-container button:hover,
             button[data-testid="stBaseButton-primary"]:hover,
-            div[data-testid="stButton"] button[kind="primary"]:hover {
+            div[data-testid="stButton"] button[kind="primary"]:hover {{
                 transform: translateY(-2px) !important;
-                box-shadow: 0 6px 20px rgba(163, 230, 53, 0.4), 0 0 0 1px rgba(163, 230, 53, 0.6) !important;
-            }
+                box-shadow: 0 6px 20px rgba({lp_accent_rgb}, 0.4), 0 0 0 1px rgba({lp_accent_rgb}, 0.6) !important;
+            }}
             .landing-enter-container button:active,
             button[data-testid="stBaseButton-primary"]:active,
-            div[data-testid="stButton"] button[kind="primary"]:active {
+            div[data-testid="stButton"] button[kind="primary"]:active {{
                 transform: translateY(0px) scale(0.99) !important;
-                box-shadow: 0 2px 8px rgba(163, 230, 53, 0.3) !important;
+                box-shadow: 0 2px 8px rgba({lp_accent_rgb}, 0.3) !important;
                 filter: brightness(0.92);
-            }
+            }}
 
             /* Staggered Feature Cards */
-            .landing-feature-card {
+            .landing-feature-card {{
                 opacity: 0;
                 animation: landingFadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
                 transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), 
                             border-color 0.25s ease, 
                             box-shadow 0.25s ease;
-                background: #151515;
-                border: 1px solid #292929;
+                background: {lp_card};
+                border: 1px solid {lp_border};
                 border-radius: 8px;
                 padding: 1.25rem 1.15rem;
                 min-height: 190px;
                 display: flex;
                 flex-direction: column;
                 justify-content: flex-start;
-                border-top: 3px solid #A3E635 !important;
-            }
-            .landing-feature-card:hover {
+                border-top: 3px solid {lp_accent} !important;
+            }}
+            .landing-feature-card:hover {{
                 transform: translateY(-4px);
-                border-color: rgba(163, 230, 53, 0.45) !important;
-                box-shadow: 0 10px 24px -4px rgba(0, 0, 0, 0.6), 0 0 14px rgba(163, 230, 53, 0.12) !important;
-            }
-            .landing-f1 { animation-delay: 0.70s; }
-            .landing-f2 { animation-delay: 0.80s; }
-            .landing-f3 { animation-delay: 0.90s; }
-            .landing-f4 { animation-delay: 1.00s; }
+                border-color: rgba({lp_accent_rgb}, 0.45) !important;
+                box-shadow: 0 10px 24px -4px rgba(0, 0, 0, 0.15), 0 0 14px rgba({lp_accent_rgb}, 0.12) !important;
+            }}
+            .landing-f1 {{ animation-delay: 0.70s; }}
+            .landing-f2 {{ animation-delay: 0.80s; }}
+            .landing-f3 {{ animation-delay: 0.90s; }}
+            .landing-f4 {{ animation-delay: 1.00s; }}
 
             /* Accessibility: Respect prefers-reduced-motion */
-            @media (prefers-reduced-motion: reduce) {
-                *, ::before, ::after {
+            @media (prefers-reduced-motion: reduce) {{
+                *, ::before, ::after {{
                     animation-duration: 0.01ms !important;
                     animation-iteration-count: 1 !important;
                     transition-duration: 0.01ms !important;
                     scroll-behavior: auto !important;
-                }
-                .landing-visual-media [data-testid="stImage"] img {
+                }}
+                .landing-visual-media [data-testid="stImage"] img {{
                     animation: none !important;
-                }
-                .landing-scanline {
+                }}
+                .landing-scanline {{
                     display: none !important;
-                }
-            }
+                }}
+            }}
         </style>
         """,
         unsafe_allow_html=True,
@@ -1731,18 +1747,18 @@ def render_landing_page():
     h_brand, h_actions = st.columns([8, 2])
     with h_brand:
         st.markdown(
-            """
+            f"""
             <div class="landing-brand" style="display:flex; align-items:center; gap:12px;">
-                <div style="width:40px; height:40px; border-radius:6px; background:#151515; border:1px solid #292929; display:flex; align-items:center; justify-content:center;">
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#A3E635" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <div style="width:40px; height:40px; border-radius:6px; background:{lp_brand_bg}; border:1px solid {lp_border}; display:flex; align-items:center; justify-content:center;">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="{lp_accent}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
                     </svg>
                 </div>
                 <div>
-                    <div style="font-size:1.15rem; font-weight:800; letter-spacing:0.04em; color:#F1F5F9; line-height:1.2;">
+                    <div style="font-size:1.15rem; font-weight:800; letter-spacing:0.04em; color:{lp_text}; line-height:1.2;">
                         SAFETY VISION
                     </div>
-                    <div style="font-size:0.7rem; font-weight:700; color:#A3E635; letter-spacing:0.1em; text-transform:uppercase;">
+                    <div style="font-size:0.7rem; font-weight:700; color:{lp_accent}; letter-spacing:0.1em; text-transform:uppercase;">
                         AI Surveillance Platform
                     </div>
                 </div>
@@ -1764,16 +1780,16 @@ def render_landing_page():
 
     with c_hero_text:
         st.markdown(
-            """
+            f"""
             <div style="padding-right: 1.5rem;">
-                <div class="landing-badge" style="display:inline-flex; align-items:center; gap:8px; background:rgba(163, 230, 53, 0.12); border:1px solid rgba(163, 230, 53, 0.35); border-radius:4px; padding:4px 12px; margin-bottom:1.25rem;">
-                    <span style="display:inline-block; width:6px; height:6px; border-radius:50%; background:#A3E635;"></span>
-                    <span style="font-size:0.75rem; font-weight:700; color:#A3E635; letter-spacing:0.08em; text-transform:uppercase;">AI-POWERED CONSTRUCTION SAFETY</span>
+                <div class="landing-badge" style="display:inline-flex; align-items:center; gap:8px; background:rgba({lp_accent_rgb}, 0.12); border:1px solid rgba({lp_accent_rgb}, 0.35); border-radius:4px; padding:4px 12px; margin-bottom:1.25rem;">
+                    <span style="display:inline-block; width:6px; height:6px; border-radius:50%; background:{lp_accent};"></span>
+                    <span style="font-size:0.75rem; font-weight:700; color:{lp_accent}; letter-spacing:0.08em; text-transform:uppercase;">AI-POWERED CONSTRUCTION SAFETY</span>
                 </div>
-                <h1 class="landing-title" style="font-size: 2.9rem; font-weight: 800; color: #F1F5F9; letter-spacing: -0.03em; line-height: 1.12; margin: 0 0 1.25rem 0;">
+                <h1 class="landing-title" style="font-size: 2.9rem; font-weight: 800; color: {lp_text}; letter-spacing: -0.03em; line-height: 1.12; margin: 0 0 1.25rem 0;">
                     BUILDING SAFER WORKSITES WITH AI
                 </h1>
-                <p class="landing-desc" style="font-size: 1.05rem; color: #94A3B8; line-height: 1.65; margin: 0 0 2rem 0;">
+                <p class="landing-desc" style="font-size: 1.05rem; color: {lp_text_muted}; line-height: 1.65; margin: 0 0 2rem 0;">
                     SAFETY VISION delivers automated computer vision intelligence to detect missing hardhats and high-visibility safety vests across hazardous industrial worksites in real time, preventing occupational hazards and ensuring regulatory site compliance.
                 </p>
             </div>
@@ -1792,14 +1808,14 @@ def render_landing_page():
         st.markdown("</div>", unsafe_allow_html=True)
 
         st.markdown(
-            """
-            <div class="landing-specs" style="display:flex; flex-wrap:wrap; align-items:center; gap:20px; margin-top:2rem; padding-top:1.25rem; border-top:1px solid #292929; font-size:0.8rem; color:#94A3B8;">
+            f"""
+            <div class="landing-specs" style="display:flex; flex-wrap:wrap; align-items:center; gap:20px; margin-top:2rem; padding-top:1.25rem; border-top:1px solid {lp_border}; font-size:0.8rem; color:{lp_text_muted};">
                 <div style="display:flex; align-items:center; gap:6px;">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#A3E635" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="{lp_accent}" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
                     <span>OSHA 1926.100 & ANSI 107 Compliant</span>
                 </div>
                 <div style="display:flex; align-items:center; gap:6px;">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#A3E635" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="{lp_accent}" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
                     <span>YOLOv8 Real-Time Inference</span>
                 </div>
             </div>
@@ -1817,11 +1833,11 @@ def render_landing_page():
         if os.path.exists(img_source):
             im = Image.open(img_source)
             st.markdown(
-                """
+                f"""
                 <div class="landing-visual-card" style="padding:10px 10px 8px 10px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; padding:2px 4px 8px 4px; border-bottom:1px solid #292929; margin-bottom:8px;">
-                        <span style="font-size:0.72rem; font-weight:700; color:#A3E635; letter-spacing:0.06em;">● LIVE WORKSITE FEED</span>
-                        <span style="font-size:0.7rem; color:#94A3B8; font-family:monospace;">CAM-04 · 1080P</span>
+                    <div style="display:flex; justify-content:space-between; align-items:center; padding:2px 4px 8px 4px; border-bottom:1px solid {lp_border}; margin-bottom:8px;">
+                        <span style="font-size:0.72rem; font-weight:700; color:{lp_accent}; letter-spacing:0.06em;">● LIVE WORKSITE FEED</span>
+                        <span style="font-size:0.7rem; color:{lp_text_muted}; font-family:monospace;">CAM-04 · 1080P</span>
                     </div>
                     <div class="landing-visual-media">
                         <div class="landing-scanline"></div>
@@ -1835,16 +1851,16 @@ def render_landing_page():
             )
             st.markdown("</div></div>", unsafe_allow_html=True)
 
-    st.markdown("<div style='margin-top: 3.5rem; margin-bottom: 1.5rem; border-top: 1px solid #292929;'></div>", unsafe_allow_html=True)
+    st.markdown(f"<div style='margin-top: 3.5rem; margin-bottom: 1.5rem; border-top: 1px solid {lp_border};'></div>", unsafe_allow_html=True)
 
     # Feature Highlights (4 Columns)
     st.markdown(
-        """
+        f"""
         <div class="landing-section-header" style="margin-bottom: 1.25rem;">
-            <div style="font-size: 0.75rem; font-weight: 700; color: #A3E635; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 4px;">
+            <div style="font-size: 0.75rem; font-weight: 700; color: {lp_accent}; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 4px;">
                 Core Platform Capabilities
             </div>
-            <h3 style="font-size: 1.45rem; font-weight: 700; color: #F1F5F9; margin: 0;">
+            <h3 style="font-size: 1.45rem; font-weight: 700; color: {lp_text}; margin: 0;">
                 Engineered for High-Hazard Industrial Worksites
             </h3>
         </div>
@@ -1856,19 +1872,19 @@ def render_landing_page():
 
     with f1:
         st.markdown(
-            """
+            f"""
             <div class="landing-feature-card landing-f1">
-                <div style="display:inline-flex; align-items:center; justify-content:center; width:36px; height:36px; border-radius:6px; background:#1E1E1E; margin-bottom:0.85rem;">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#A3E635" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <div style="display:inline-flex; align-items:center; justify-content:center; width:36px; height:36px; border-radius:6px; background:{lp_icon_bg}; margin-bottom:0.85rem;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="{lp_accent}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M2 18h20"/>
                         <path d="M5 18a7 7 0 0 1 14 0"/>
                         <path d="M10 7a2 2 0 1 0 4 0"/>
                     </svg>
                 </div>
-                <div style="font-size:0.85rem; font-weight:700; color:#F1F5F9; letter-spacing:0.04em; margin-bottom:0.4rem;">
+                <div style="font-size:0.85rem; font-weight:700; color:{lp_text}; letter-spacing:0.04em; margin-bottom:0.4rem;">
                     HARDHAT DETECTION
                 </div>
-                <div style="font-size:0.8rem; color:#94A3B8; line-height:1.45;">
+                <div style="font-size:0.8rem; color:{lp_text_muted}; line-height:1.45;">
                     Automated verification of cranial head protection within the top 35% anatomical body zone.
                 </div>
             </div>
@@ -1878,18 +1894,18 @@ def render_landing_page():
 
     with f2:
         st.markdown(
-            """
+            f"""
             <div class="landing-feature-card landing-f2">
-                <div style="display:inline-flex; align-items:center; justify-content:center; width:36px; height:36px; border-radius:6px; background:#1E1E1E; margin-bottom:0.85rem;">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#A3E635" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <div style="display:inline-flex; align-items:center; justify-content:center; width:36px; height:36px; border-radius:6px; background:{lp_icon_bg}; margin-bottom:0.85rem;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="{lp_accent}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M4 4h4l4 4 4-4h4v16H4z"/>
                         <line x1="12" y1="8" x2="12" y2="20"/>
                     </svg>
                 </div>
-                <div style="font-size:0.85rem; font-weight:700; color:#F1F5F9; letter-spacing:0.04em; margin-bottom:0.4rem;">
+                <div style="font-size:0.85rem; font-weight:700; color:{lp_text}; letter-spacing:0.04em; margin-bottom:0.4rem;">
                     SAFETY VEST DETECTION
                 </div>
-                <div style="font-size:0.8rem; color:#94A3B8; line-height:1.45;">
+                <div style="font-size:0.8rem; color:{lp_text_muted}; line-height:1.45;">
                     High-visibility apparel monitoring within the 15%–75% torso region with spatial overlap metrics.
                 </div>
             </div>
@@ -1899,19 +1915,19 @@ def render_landing_page():
 
     with f3:
         st.markdown(
-            """
+            f"""
             <div class="landing-feature-card landing-f3">
-                <div style="display:inline-flex; align-items:center; justify-content:center; width:36px; height:36px; border-radius:6px; background:#1E1E1E; margin-bottom:0.85rem;">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#A3E635" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <div style="display:inline-flex; align-items:center; justify-content:center; width:36px; height:36px; border-radius:6px; background:{lp_icon_bg}; margin-bottom:0.85rem;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="{lp_accent}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/>
                         <circle cx="9" cy="9" r="2"/>
                         <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
                     </svg>
                 </div>
-                <div style="font-size:0.85rem; font-weight:700; color:#F1F5F9; letter-spacing:0.04em; margin-bottom:0.4rem;">
+                <div style="font-size:0.85rem; font-weight:700; color:{lp_text}; letter-spacing:0.04em; margin-bottom:0.4rem;">
                     IMAGE INSPECTION
                 </div>
-                <div style="font-size:0.8rem; color:#94A3B8; line-height:1.45;">
+                <div style="font-size:0.8rem; color:{lp_text_muted}; line-height:1.45;">
                     Rapid static imagery analysis with bounding box attribution, worker rosters, and exportable reports.
                 </div>
             </div>
@@ -1921,18 +1937,18 @@ def render_landing_page():
 
     with f4:
         st.markdown(
-            """
+            f"""
             <div class="landing-feature-card landing-f4">
-                <div style="display:inline-flex; align-items:center; justify-content:center; width:36px; height:36px; border-radius:6px; background:#1E1E1E; margin-bottom:0.85rem;">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#A3E635" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <div style="display:inline-flex; align-items:center; justify-content:center; width:36px; height:36px; border-radius:6px; background:{lp_icon_bg}; margin-bottom:0.85rem;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="{lp_accent}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <polygon points="23 7 16 12 23 17 23 7"/>
                         <rect width="14" height="14" x="1" y="5" rx="2" ry="2"/>
                     </svg>
                 </div>
-                <div style="font-size:0.85rem; font-weight:700; color:#F1F5F9; letter-spacing:0.04em; margin-bottom:0.4rem;">
+                <div style="font-size:0.85rem; font-weight:700; color:{lp_text}; letter-spacing:0.04em; margin-bottom:0.4rem;">
                     VIDEO MONITORING
                 </div>
-                <div style="font-size:0.8rem; color:#94A3B8; line-height:1.45;">
+                <div style="font-size:0.8rem; color:{lp_text_muted}; line-height:1.45;">
                     Sequential video surveillance playback, rolling median anti-flicker filters, and temporal trend tracking.
                 </div>
             </div>
@@ -1969,8 +1985,8 @@ def render_dashboard(active_inspection: Optional[Dict[str, Any]], history: List[
             """
             <div class='sv-panel' style='text-align: center; padding: 48px 24px; margin-top: 10px;'>
                 <div style='font-size: 13px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--accent-primary); font-weight: 600; margin-bottom: 8px;'>[ SURVEILLANCE STANDBY ]</div>
-                <h3 style='margin: 12px 0 6px 0; color: #F1F5F9;'>No Site Inspections Recorded Yet</h3>
-                <p style='color: #94A3B8; max-width: 540px; margin: 0 auto 24px auto; font-size: 13px; line-height: 1.6;'>
+                <h3 style='margin: 12px 0 6px 0; color: var(--text-primary);'>No Site Inspections Recorded Yet</h3>
+                <p style='color: var(--text-secondary); max-width: 540px; margin: 0 auto 24px auto; font-size: 13px; line-height: 1.6;'>
                     No active surveillance data or completed site inspections are available. Initiate an automated safety audit by uploading job site imagery or streaming CCTV footage.
                 </p>
             </div>
@@ -2103,12 +2119,13 @@ def render_dashboard(active_inspection: Optional[Dict[str, Any]], history: List[
                 "Category": ["Compliant", "Violations", "Needs Review"],
                 "Count": [comp_w, viol_w, review_w],
             })
+            axis_color = "#94A3B8" if st.session_state.theme == "Dark Theme" else "#64748B"
             bar_chart = (
                 alt.Chart(chart_df)
                 .mark_bar(cornerRadiusTopLeft=4, cornerRadiusTopRight=4)
                 .encode(
-                    x=alt.X("Category:N", title=None, axis=alt.Axis(labelAngle=0, labelColor="#94A3B8")),
-                    y=alt.Y("Count:Q", title="Workers", axis=alt.Axis(tickMinStep=1, labelColor="#94A3B8", titleColor="#94A3B8")),
+                    x=alt.X("Category:N", title=None, axis=alt.Axis(labelAngle=0, labelColor=axis_color)),
+                    y=alt.Y("Count:Q", title="Workers", axis=alt.Axis(tickMinStep=1, labelColor=axis_color, titleColor=axis_color)),
                     color=alt.Color(
                         "Category:N",
                         scale=alt.Scale(
@@ -2148,10 +2165,10 @@ def render_dashboard(active_inspection: Optional[Dict[str, Any]], history: List[
                         </span>
                         <span class='{status_badge_class}'>{status_label}</span>
                     </div>
-                    <div style='color: #F1F5F9; font-size: 13px; line-height: 1.5; font-weight: 500;'>
+                    <div style='color: var(--text-primary); font-size: 13px; line-height: 1.5; font-weight: 500;'>
                         {advisory_msg}
                     </div>
-                    <div style='margin-top: 10px; font-size: 11px; color: #94A3B8;'>
+                    <div style='margin-top: 10px; font-size: 11px; color: var(--text-secondary);'>
                         Active Scan: <code>{active_label}</code>
                     </div>
                 </div>
@@ -2344,7 +2361,7 @@ def render_new_inspection(model: Any):
                 """
                 <div class='sv-panel' style='text-align: center; padding: 48px 20px; border: 1px dashed var(--border-color); margin-top: 6px;'>
                     <div style='color: var(--accent-primary); font-size: 12px; text-transform: uppercase; letter-spacing: 1.2px; font-weight: 600; margin-bottom: 8px;'>[ NO MEDIA SELECTED ]</div>
-                    <div style='color: #94A3B8; font-size: 13px; max-width: 360px; margin: 0 auto; line-height: 1.5;'>
+                    <div style='color: var(--text-secondary); font-size: 13px; max-width: 360px; margin: 0 auto; line-height: 1.5;'>
                         Select a verified benchmark image from the dropdown or upload an on-site photo above to preview and analyze.
                     </div>
                 </div>
@@ -2359,7 +2376,7 @@ def render_new_inspection(model: Any):
         # 1. PPE Requirements Card
         st.markdown(
             """
-            <div style='font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: #94A3B8; font-weight: 600; margin-bottom: 6px;'>
+            <div style='font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-secondary); font-weight: 600; margin-bottom: 6px;'>
                 Mandatory PPE Requirements
             </div>
             """,
@@ -2385,8 +2402,8 @@ def render_new_inspection(model: Any):
 
         st.markdown(
             f"""
-            <div class='sv-panel' style='padding: 10px 14px; margin: 8px 0 16px 0; font-size: 12px; line-height: 1.5; color: #94A3B8;'>
-                Enforcing: <strong style='color: #F1F5F9;'>{gear_choice}</strong><br>
+            <div class='sv-panel' style='padding: 10px 14px; margin: 8px 0 16px 0; font-size: 12px; line-height: 1.5; color: var(--text-secondary);'>
+                Enforcing: <strong style='color: var(--text-primary);'>{gear_choice}</strong><br>
                 <span>Personnel missing any enforced equipment will be flagged as safety violations.</span>
             </div>
             """,
@@ -2519,8 +2536,8 @@ def render_inspection_results(active_inspection: Optional[Dict[str, Any]]):
             """
             <div class='sv-panel' style='text-align: center; padding: 48px 24px; margin-top: 10px;'>
                 <div style='font-size: 13px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--accent-primary); font-weight: 600; margin-bottom: 8px;'>[ NO ACTIVE INSPECTION ]</div>
-                <h3 style='margin: 12px 0 6px 0; color: #F1F5F9;'>No Inspection Results Available</h3>
-                <p style='color: #94A3B8; max-width: 520px; margin: 0 auto 24px auto; font-size: 13px; line-height: 1.6;'>
+                <h3 style='margin: 12px 0 6px 0; color: var(--text-primary);'>No Inspection Results Available</h3>
+                <p style='color: var(--text-secondary); max-width: 520px; margin: 0 auto 24px auto; font-size: 13px; line-height: 1.6;'>
                     No active inspection data is currently loaded in the analysis workspace. Run a new site inspection or load a previous audit from the inspection history.
                 </p>
             </div>
@@ -2563,7 +2580,7 @@ def render_inspection_results(active_inspection: Optional[Dict[str, Any]]):
                     <strong>Timestamp:</strong> <code>{active_inspection['timestamp']}</code>
                 </div>
                 <div>
-                    <span style='font-size: 11px; text-transform: uppercase; color: #94A3B8; font-weight: 600; margin-right: 8px;'>Site Evaluation:</span>
+                    <span style='font-size: 11px; text-transform: uppercase; color: var(--text-secondary); font-weight: 600; margin-right: 8px;'>Site Evaluation:</span>
                     <span class='{status_badge_class}' style='font-size: 12px; padding: 4px 10px;'>{status_label}</span>
                 </div>
             </div>
@@ -2638,7 +2655,7 @@ def render_inspection_results(active_inspection: Optional[Dict[str, Any]]):
             <div class='results-entrance results-delay-3'>
                 <div style='background: {bg_adv}; border: 1px solid var(--border-color); border-left: 4px solid {status_color}; border-radius: 4px; padding: 10px 14px; margin-bottom: 12px; font-size: 13px;'>
                     <strong style='color: {status_color}; text-transform: uppercase;'>Site Directive:</strong>
-                    <span style='color: #F1F5F9; margin-left: 6px;'>{advisory_msg}</span>
+                    <span style='color: var(--text-primary); margin-left: 6px;'>{advisory_msg}</span>
                 </div>
             </div>
             """,
@@ -2653,7 +2670,7 @@ def render_inspection_results(active_inspection: Optional[Dict[str, Any]]):
     st.markdown(
         """
         <div style='display:flex; flex-wrap:wrap; gap:16px; align-items:center; background:var(--bg-sidebar); border:1px solid var(--border-color); border-radius:4px; padding:6px 14px; margin-bottom:10px; font-size:12px;'>
-            <span style='color:#94A3B8; font-weight:600; text-transform:uppercase;'>Detection Legend:</span>
+            <span style='color:var(--text-secondary); font-weight:600; text-transform:uppercase;'>Detection Legend:</span>
             <span><span style='color:#22C55E; font-weight:bold;'>&#9679;</span> Compliant Worker (Hardhat + Vest)</span>
             <span><span style='color:#EF4444; font-weight:bold;'>&#9679;</span> PPE Violation (Missing Gear)</span>
             <span><span style='color:#F59E0B; font-weight:bold;'>&#9679;</span> Needs Review / Ambiguous</span>
@@ -2782,7 +2799,7 @@ def render_inspection_results(active_inspection: Optional[Dict[str, Any]]):
                             <strong>Worker #{selected_worker['worker_id']}</strong>
                             <span class='{stat_badge_class}'>{w_status.upper()}</span>
                         </div>
-                        <div style='font-size:12px; color:#94A3B8; line-height:1.6;'>
+                        <div style='font-size:12px; color:var(--text-secondary); line-height:1.6;'>
                             <strong>Confidence:</strong> {int(selected_worker.get('confidence', 1.0) * 100)}%<br>
                             <strong>Head Zone:</strong> <span style='color:{h_color}; font-weight:600;'>{h_stat.capitalize()}</span><br>
                             <strong>Torso Zone:</strong> <span style='color:{v_color}; font-weight:600;'>{v_stat.capitalize()}</span>
@@ -2835,8 +2852,8 @@ def render_worker_audits(active_inspection: Optional[Dict[str, Any]]):
             """
             <div class='sv-panel' style='text-align: center; padding: 48px 24px; margin-top: 10px;'>
                 <div style='font-size: 13px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--accent-primary); font-weight: 600; margin-bottom: 8px;'>[ NO ACTIVE AUDIT DATA ]</div>
-                <h3 style='margin: 12px 0 6px 0; color: #F1F5F9;'>No Worker Audit Records Available</h3>
-                <p style='color: #94A3B8; max-width: 520px; margin: 0 auto 24px auto; font-size: 13px; line-height: 1.6;'>
+                <h3 style='margin: 12px 0 6px 0; color: var(--text-primary);'>No Worker Audit Records Available</h3>
+                <p style='color: var(--text-secondary); max-width: 520px; margin: 0 auto 24px auto; font-size: 13px; line-height: 1.6;'>
                     Worker audit records are generated following automated site inspection. Initiate an inspection or load historical data to inspect worker-level spatial evidence.
                 </p>
             </div>
@@ -2863,7 +2880,7 @@ def render_worker_audits(active_inspection: Optional[Dict[str, Any]]):
                 <strong>Timestamp:</strong> <code>{active_inspection['timestamp']}</code>
             </div>
             <div>
-                <span style='font-size: 11px; text-transform: uppercase; color: #94A3B8; font-weight: 600; margin-right: 8px;'>Total Workers:</span>
+                <span style='font-size: 11px; text-transform: uppercase; color: var(--text-secondary); font-weight: 600; margin-right: 8px;'>Total Workers:</span>
                 <span class='badge-safe' style='font-size: 12px; padding: 3px 8px;'>{len(workers)} DETECTED</span>
             </div>
         </div>
@@ -2996,15 +3013,15 @@ def render_worker_audits(active_inspection: Optional[Dict[str, Any]]):
             f"""
             <div class='sv-panel' style='padding: 16px; margin-bottom: 12px;'>
                 <div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;'>
-                    <span style='font-size: 16px; font-weight: 700; color: #F1F5F9;'>Worker #{selected_worker['worker_id']} Profile</span>
+                    <span style='font-size: 16px; font-weight: 700; color: var(--text-primary);'>Worker #{selected_worker['worker_id']} Profile</span>
                     <span class='{stat_badge_class}' style='font-size: 12px; padding: 3px 10px;'>{w_status.upper()}</span>
                 </div>
-                <div style='color: #94A3B8; font-size: 13px; line-height: 1.7;'>
-                    <strong>Person Detection Confidence:</strong> <span style='color: #F1F5F9;'>{int(selected_worker.get('confidence', 1.0) * 100)}%</span><br>
+                <div style='color: var(--text-secondary); font-size: 13px; line-height: 1.7;'>
+                    <strong>Person Detection Confidence:</strong> <span style='color: var(--text-primary);'>{int(selected_worker.get('confidence', 1.0) * 100)}%</span><br>
                     <strong>Head Protection (Hardhat):</strong> <span style='color: {h_color}; font-weight: 600;'>{h_stat.capitalize()}</span><br>
                     <strong>Torso Protection (Safety Vest):</strong> <span style='color: {v_color}; font-weight: 600;'>{v_stat.capitalize()}</span><br>
-                    <div style='margin-top: 8px; padding: 8px 10px; background: rgba(38, 52, 66, 0.4); border-radius: 4px; border-left: 3px solid {h_color if h_stat != "present" else v_color};'>
-                        <span style='color: #F1F5F9;'>{reason_text}</span>
+                    <div style='margin-top: 8px; padding: 8px 10px; background: var(--surface-elevated); border: 1px solid var(--border-color); border-radius: 4px; border-left: 3px solid {h_color if h_stat != "present" else v_color};'>
+                        <span style='color: var(--text-primary);'>{reason_text}</span>
                     </div>
                 </div>
             </div>
@@ -3014,7 +3031,7 @@ def render_worker_audits(active_inspection: Optional[Dict[str, Any]]):
 
         assigned_gear = selected_worker.get("assigned_gear", [])
         if assigned_gear:
-            st.markdown("<strong style='font-size: 13px; color: #F1F5F9;'>Assigned PPE Evidence Items:</strong>", unsafe_allow_html=True)
+            st.markdown("<strong style='font-size: 13px; color: var(--text-primary);'>Assigned PPE Evidence Items:</strong>", unsafe_allow_html=True)
             gear_rows = [
                 {
                     "Detected Item": g["class_name"],
@@ -3050,8 +3067,8 @@ def render_inspection_history(history: List[Dict[str, Any]], model: Any):
         """
         <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 1.25rem;">
             <div>
-                <h2 style="margin:0 0 4px 0; font-size:1.5rem; font-weight:700; color:#F1F5F9; letter-spacing:-0.01em;">Site Inspection History</h2>
-                <div style="font-size:0.875rem; color:#94A3B8;">Review, track, and audit historical safety inspections across monitored site assets.</div>
+                <h2 style="margin:0 0 4px 0; font-size:1.5rem; font-weight:700; color:var(--text-primary); letter-spacing:-0.01em;">Site Inspection History</h2>
+                <div style="font-size:0.875rem; color:var(--text-secondary);">Review, track, and audit historical safety inspections across monitored site assets.</div>
             </div>
         </div>
         """,
@@ -3063,7 +3080,7 @@ def render_inspection_history(history: List[Dict[str, Any]], model: Any):
             """
             <div style="background:var(--surface-card); border:1px solid var(--border-color); border-radius:8px; padding:2.75rem 1.5rem; text-align:center; margin-top:0.5rem;">
                 <div style="display:inline-flex; align-items:center; justify-content:center; width:48px; height:48px; border-radius:8px; background:var(--surface-elevated); margin-bottom:1rem;">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                         <polyline points="14 2 14 8 20 8"></polyline>
                         <line x1="16" y1="13" x2="8" y2="13"></line>
@@ -3071,8 +3088,8 @@ def render_inspection_history(history: List[Dict[str, Any]], model: Any):
                         <polyline points="10 9 9 9 8 9"></polyline>
                     </svg>
                 </div>
-                <div style="font-size:1.05rem; font-weight:600; color:#F1F5F9; margin-bottom:0.35rem;">No Historical Inspections Found</div>
-                <div style="font-size:0.875rem; color:#94A3B8; max-width:440px; margin:0 auto 1.5rem auto;">
+                <div style="font-size:1.05rem; font-weight:600; color:var(--text-primary); margin-bottom:0.35rem;">No Historical Inspections Found</div>
+                <div style="font-size:0.875rem; color:var(--text-secondary); max-width:440px; margin:0 auto 1.5rem auto;">
                     Completed site inspections, compliance statistics, and spatial evidence records will be cataloged here.
                 </div>
             </div>
@@ -3103,9 +3120,9 @@ def render_inspection_history(history: List[Dict[str, Any]], model: Any):
         st.markdown(
             f"""
             <div style="background:var(--surface-card); border:1px solid var(--border-color); border-radius:8px; padding:0.9rem 1rem; border-top:3px solid var(--accent-primary);">
-                <div style="font-size:0.75rem; font-weight:600; color:#94A3B8; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.25rem;">Total Inspections</div>
-                <div style="font-size:1.6rem; font-weight:700; color:#F1F5F9; line-height:1.2;">{total_inspections}</div>
-                <div style="font-size:0.75rem; color:#94A3B8; margin-top:0.25rem;">Logged audit events</div>
+                <div style="font-size:0.75rem; font-weight:600; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.25rem;">Total Inspections</div>
+                <div style="font-size:1.6rem; font-weight:700; color:var(--text-primary); line-height:1.2;">{total_inspections}</div>
+                <div style="font-size:0.75rem; color:var(--text-secondary); margin-top:0.25rem;">Logged audit events</div>
             </div>
             """,
             unsafe_allow_html=True,
@@ -3114,9 +3131,9 @@ def render_inspection_history(history: List[Dict[str, Any]], model: Any):
         st.markdown(
             f"""
             <div style="background:var(--surface-card); border:1px solid var(--border-color); border-radius:8px; padding:0.9rem 1rem; border-top:3px solid var(--accent-primary);">
-                <div style="font-size:0.75rem; font-weight:600; color:#94A3B8; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.25rem;">Workers Audited</div>
-                <div style="font-size:1.6rem; font-weight:700; color:#F1F5F9; line-height:1.2;">{total_workers_audited}</div>
-                <div style="font-size:0.75rem; color:#94A3B8; margin-top:0.25rem;">Cumulative detections</div>
+                <div style="font-size:0.75rem; font-weight:600; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.25rem;">Workers Audited</div>
+                <div style="font-size:1.6rem; font-weight:700; color:var(--text-primary); line-height:1.2;">{total_workers_audited}</div>
+                <div style="font-size:0.75rem; color:var(--text-secondary); margin-top:0.25rem;">Cumulative detections</div>
             </div>
             """,
             unsafe_allow_html=True,
@@ -3125,9 +3142,9 @@ def render_inspection_history(history: List[Dict[str, Any]], model: Any):
         st.markdown(
             f"""
             <div style="background:var(--surface-card); border:1px solid var(--border-color); border-radius:8px; padding:0.9rem 1rem; border-top:3px solid {avg_color};">
-                <div style="font-size:0.75rem; font-weight:600; color:#94A3B8; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.25rem;">Avg Compliance</div>
+                <div style="font-size:0.75rem; font-weight:600; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.25rem;">Avg Compliance</div>
                 <div style="font-size:1.6rem; font-weight:700; color:{avg_color}; line-height:1.2;">{avg_compliance}%</div>
-                <div style="font-size:0.75rem; color:#94A3B8; margin-top:0.25rem;">Site-wide performance</div>
+                <div style="font-size:0.75rem; color:var(--text-secondary); margin-top:0.25rem;">Site-wide performance</div>
             </div>
             """,
             unsafe_allow_html=True,
@@ -3136,9 +3153,9 @@ def render_inspection_history(history: List[Dict[str, Any]], model: Any):
         st.markdown(
             f"""
             <div style="background:var(--surface-card); border:1px solid var(--border-color); border-radius:8px; padding:0.9rem 1rem; border-top:3px solid {viol_color};">
-                <div style="font-size:0.75rem; font-weight:600; color:#94A3B8; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.25rem;">Total Violations</div>
+                <div style="font-size:0.75rem; font-weight:600; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.25rem;">Total Violations</div>
                 <div style="font-size:1.6rem; font-weight:700; color:{viol_color}; line-height:1.2;">{total_violations}</div>
-                <div style="font-size:0.75rem; color:#94A3B8; margin-top:0.25rem;">Flagged PPE breaches</div>
+                <div style="font-size:0.75rem; color:var(--text-secondary); margin-top:0.25rem;">Flagged PPE breaches</div>
             </div>
             """,
             unsafe_allow_html=True,
@@ -3201,8 +3218,8 @@ def render_inspection_history(history: List[Dict[str, Any]], model: Any):
 
     st.markdown(
         f"""
-        <div style="display:flex; justify-content:space-between; align-items:center; margin:0.75rem 0 0.5rem 0; padding-bottom:0.4rem; border-bottom:1px solid #263442;">
-            <div style="font-size:0.8rem; font-weight:600; color:#94A3B8; text-transform:uppercase; letter-spacing:0.05em;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin:0.75rem 0 0.5rem 0; padding-bottom:0.4rem; border-bottom:1px solid var(--border-color);">
+            <div style="font-size:0.8rem; font-weight:600; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.05em;">
                 Showing {len(filtered)} of {len(history)} Inspection Records
             </div>
         </div>
@@ -3214,8 +3231,8 @@ def render_inspection_history(history: List[Dict[str, Any]], model: Any):
         st.markdown(
             """
             <div style="background:var(--surface-card); border:1px solid var(--border-color); border-radius:8px; padding:2rem 1.5rem; text-align:center; margin-top:0.5rem;">
-                <div style="font-size:0.95rem; font-weight:600; color:#F1F5F9; margin-bottom:0.25rem;">No Matching Records Found</div>
-                <div style="font-size:0.85rem; color:#94A3B8;">Adjust or clear your search query and filters to display historical inspections.</div>
+                <div style="font-size:0.95rem; font-weight:600; color:var(--text-primary); margin-bottom:0.25rem;">No Matching Records Found</div>
+                <div style="font-size:0.85rem; color:var(--text-secondary);">Adjust or clear your search query and filters to display historical inspections.</div>
             </div>
             """,
             unsafe_allow_html=True,
@@ -3260,10 +3277,10 @@ def render_inspection_history(history: List[Dict[str, Any]], model: Any):
                             <span style="font-family:monospace; font-size:0.95rem; font-weight:700; color:var(--accent-primary);">{item_id}</span>
                             <span style="background:{badge_bg}; border:1px solid {badge_border}; color:{badge_color}; font-size:0.7rem; font-weight:700; padding:2px 7px; border-radius:4px; letter-spacing:0.04em;">{status_label}</span>
                         </div>
-                        <div style="font-size:0.8rem; color:#94A3B8;">
-                            Source: <code style="color:#CBD5E1; background:var(--bg-main); padding:1px 5px; border-radius:3px; border:1px solid var(--border-color);">{img_name}</code>
+                        <div style="font-size:0.8rem; color:var(--text-secondary);">
+                            Source: <code style="color:var(--text-primary); background:var(--bg-main); padding:1px 5px; border-radius:3px; border:1px solid var(--border-color);">{img_name}</code>
                         </div>
-                        <div style="font-size:0.75rem; color:#64748B;">
+                        <div style="font-size:0.75rem; color:var(--text-secondary);">
                             Logged: {timestamp}
                         </div>
                     </div>
@@ -3276,14 +3293,14 @@ def render_inspection_history(history: List[Dict[str, Any]], model: Any):
                 st.markdown(
                     f"""
                     <div style="display:flex; flex-direction:column; gap:3px;">
-                        <div style="font-size:0.8rem; color:#94A3B8;">
+                        <div style="font-size:0.8rem; color:var(--text-secondary);">
                             Compliance Rate: <strong style="color:{rate_color}; font-size:0.95rem;">{comp_rate}%</strong>
                         </div>
-                        <div style="font-size:0.8rem; color:#94A3B8;">
-                            Personnel: <strong style="color:#F1F5F9;">{compliant_n}/{total_w}</strong> compliant
+                        <div style="font-size:0.8rem; color:var(--text-secondary);">
+                            Personnel: <strong style="color:var(--text-primary);">{compliant_n}/{total_w}</strong> compliant
                         </div>
-                        <div style="font-size:0.75rem; color:#94A3B8;">
-                            Violations: <strong style="color:{'#EF4444' if viol_n > 0 else '#94A3B8'};">{viol_n}</strong> detected
+                        <div style="font-size:0.75rem; color:var(--text-secondary);">
+                            Violations: <strong style="color:{'#EF4444' if viol_n > 0 else 'var(--text-secondary)'};">{viol_n}</strong> detected
                         </div>
                     </div>
                     """,
@@ -3973,43 +3990,49 @@ def render_settings(model: Any, is_model_verified: bool):
             unsafe_allow_html=True,
         )
 
+        p_is_dark = st.session_state.theme == "Dark Theme"
+        p_surf_hex = "#151515" if p_is_dark else "#FFFFFF"
+        p_acc_hex = "#A3E635" if p_is_dark else "#65A30D"
+        p_safe_hex = "#22C55E" if p_is_dark else "#16A34A"
+        p_viol_hex = "#EF4444" if p_is_dark else "#DC2626"
+
         p1, p2, p3, p4 = st.columns(4)
         with p1:
             st.markdown(
-                """
+                f"""
                 <div style="background:var(--surface-card); border:1px solid var(--border-color); border-radius:6px; padding:0.6rem 0.8rem;">
-                    <div style="font-size:0.7rem; font-weight:700; color:#94A3B8;">PANEL SURFACE</div>
-                    <div style="font-family:monospace; font-size:0.85rem; color:#F1F5F9;">#151515</div>
+                    <div style="font-size:0.7rem; font-weight:700; color:var(--text-secondary);">PANEL SURFACE</div>
+                    <div style="font-family:monospace; font-size:0.85rem; color:var(--text-primary);">{p_surf_hex}</div>
                 </div>
                 """,
                 unsafe_allow_html=True,
             )
         with p2:
             st.markdown(
-                """
+                f"""
                 <div style="background:var(--surface-card); border:1px solid var(--accent-primary); border-radius:6px; padding:0.6rem 0.8rem;">
                     <div style="font-size:0.7rem; font-weight:700; color:var(--accent-primary);">ACCENT PRIMARY</div>
-                    <div style="font-family:monospace; font-size:0.85rem; color:var(--accent-primary);">#A3E635</div>
+                    <div style="font-family:monospace; font-size:0.85rem; color:var(--accent-primary);">{p_acc_hex}</div>
                 </div>
                 """,
                 unsafe_allow_html=True,
             )
         with p3:
             st.markdown(
-                """
-                <div style="background:var(--surface-card); border:1px solid #22C55E; border-radius:6px; padding:0.6rem 0.8rem;">
-                    <div style="font-size:0.7rem; font-weight:700; color:#22C55E;">SAFE / COMPLIANT</div>
-                    <div style="font-family:monospace; font-size:0.85rem; color:#22C55E;">#22C55E</div>
+                f"""
+                <div style="background:var(--surface-card); border:1px solid {p_safe_hex}; border-radius:6px; padding:0.6rem 0.8rem;">
+                    <div style="font-size:0.7rem; font-weight:700; color:{p_safe_hex};">SAFE / COMPLIANT</div>
+                    <div style="font-family:monospace; font-size:0.85rem; color:{p_safe_hex};">{p_safe_hex}</div>
                 </div>
                 """,
                 unsafe_allow_html=True,
             )
         with p4:
             st.markdown(
-                """
-                <div style="background:var(--surface-card); border:1px solid #EF4444; border-radius:6px; padding:0.6rem 0.8rem;">
-                    <div style="font-size:0.7rem; font-weight:700; color:#EF4444;">VIOLATION / UNSAFE</div>
-                    <div style="font-family:monospace; font-size:0.85rem; color:#EF4444;">#EF4444</div>
+                f"""
+                <div style="background:var(--surface-card); border:1px solid {p_viol_hex}; border-radius:6px; padding:0.6rem 0.8rem;">
+                    <div style="font-size:0.7rem; font-weight:700; color:{p_viol_hex};">VIOLATION / UNSAFE</div>
+                    <div style="font-family:monospace; font-size:0.85rem; color:{p_viol_hex};">{p_viol_hex}</div>
                 </div>
                 """,
                 unsafe_allow_html=True,
@@ -4103,7 +4126,7 @@ def render_video_inspection(model: Any):
             <div class='sv-panel' style='padding: 10px 16px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center;'>
                 <div>
                     <strong style='color: var(--accent-primary);'>Surveillance Cache:</strong>
-                    <span style='color: #F1F5F9; margin-left: 6px;'>Completed video inspection results are available for review.</span>
+                    <span style='color: var(--text-primary); margin-left: 6px;'>Completed video inspection results are available for review.</span>
                 </div>
             </div>
             """,
@@ -4144,7 +4167,7 @@ def render_video_inspection(model: Any):
                     f"""
                     <div class='sv-surface-elevated' style='padding: 10px 14px; margin-top: 10px; font-size: 12px; line-height: 1.6;'>
                         <div><strong>Selected Video:</strong> <code>{uploaded_video.name}</code></div>
-                        <div style='color: #94A3B8;'><strong>File Size:</strong> <code>{file_mb} MB</code> &nbsp;|&nbsp; <strong>Processing Limit:</strong> First {MAX_VIDEO_SECONDS}s (Width &le; {MAX_FRAME_WIDTH}px)</div>
+                        <div style='color: var(--text-secondary);'><strong>File Size:</strong> <code>{file_mb} MB</code> &nbsp;|&nbsp; <strong>Processing Limit:</strong> First {MAX_VIDEO_SECONDS}s (Width &le; {MAX_FRAME_WIDTH}px)</div>
                     </div>
                     """,
                     unsafe_allow_html=True,
@@ -4154,7 +4177,7 @@ def render_video_inspection(model: Any):
                     f"""
                     <div class='sv-panel' style='text-align: center; padding: 36px 20px; border: 1px dashed var(--border-color); margin-top: 10px;'>
                         <div style='color: var(--accent-primary); font-size: 12px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600; margin-bottom: 6px;'>[ NO VIDEO LOADED ]</div>
-                        <div style='color: #94A3B8; font-size: 13px;'>Drop or select an MP4, AVI, or MOV surveillance video above.</div>
+                        <div style='color: var(--text-secondary); font-size: 13px;'>Drop or select an MP4, AVI, or MOV surveillance video above.</div>
                     </div>
                     """,
                     unsafe_allow_html=True,
@@ -4162,7 +4185,7 @@ def render_video_inspection(model: Any):
         else:
             st.markdown(
                 """
-                <div class='sv-panel' style='padding: 10px 14px; margin-bottom: 10px; font-size: 12px; color: #94A3B8;'>
+                <div class='sv-panel' style='padding: 10px 14px; margin-bottom: 10px; font-size: 12px; color: var(--text-secondary);'>
                     Notice: Ensure you possess authorization to analyze target footage. Video downloads from streaming sources are subject to platform terms.
                 </div>
                 """,
@@ -4194,7 +4217,7 @@ def render_video_inspection(model: Any):
 
         st.markdown(
             """
-            <div style='font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: #94A3B8; font-weight: 600; margin-bottom: 6px;'>
+            <div style='font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-secondary); font-weight: 600; margin-bottom: 6px;'>
                 Mandatory PPE Rules
             </div>
             """,
@@ -4218,8 +4241,8 @@ def render_video_inspection(model: Any):
 
         st.markdown(
             f"""
-            <div class='sv-panel' style='padding: 10px 14px; margin: 8px 0 16px 0; font-size: 12px; line-height: 1.5; color: #94A3B8;'>
-                Enforcing: <strong style='color: #F1F5F9;'>{gear_choice}</strong><br>
+            <div class='sv-panel' style='padding: 10px 14px; margin: 8px 0 16px 0; font-size: 12px; line-height: 1.5; color: var(--text-secondary);'>
+                Enforcing: <strong style='color: var(--text-primary);'>{gear_choice}</strong><br>
                 <span>Inference stride analyzes every {PROCESS_EVERY_N} frames on CPU.</span>
             </div>
             """,
@@ -4409,11 +4432,11 @@ def execute_cctv_pipeline(
                         PROCESSING VIDEO · SEQUENTIAL PPE SURVEILLANCE
                     </span>
                 </div>
-                <span style='font-family: monospace; font-size: 11px; color: #94A3B8;'>
+                <span style='font-family: monospace; font-size: 11px; color: var(--text-secondary);'>
                     {safe_fps:.1f} FPS · STRIDE 1:{PROCESS_EVERY_N}
                 </span>
             </div>
-            <div style='font-size: 12px; color: #F1F5F9;'>
+            <div style='font-size: 12px; color: var(--text-primary);'>
                 Surveillance Source: <code>{video_display_name}</code>
             </div>
         </div>
@@ -4510,7 +4533,7 @@ def execute_cctv_pipeline(
                 text=f"PROCESSING VIDEO — Frame {step_idx + 1}/{max_frames} (t={timestamp_sec:.1f}s) | Progress: {pct}%",
             )
             status_text.markdown(
-                f"<div style='font-family: monospace; font-size: 11px; color: #94A3B8; margin-top: 4px;'>"
+                f"<div style='font-family: monospace; font-size: 11px; color: var(--text-secondary); margin-top: 4px;'>"
                 f"Progress: <strong>{pct}%</strong> · Frame Buffer: {len(annotated_frames_rgb)}/{max_frames} · Analyzed Frames: {len(analyzed_records)} · Active Time: {timestamp_sec:.1f}s"
                 f"</div>",
                 unsafe_allow_html=True,
@@ -4640,7 +4663,7 @@ def render_video_results_view(video_results: Dict[str, Any]):
     if meta.get("temporal_smoothing"):
         st.markdown(
             f"""
-            <div class='sv-surface-elevated' style='padding: 8px 12px; margin-bottom: 12px; font-size: 12px; color: #94A3B8;'>
+            <div class='sv-surface-elevated' style='padding: 8px 12px; margin-bottom: 12px; font-size: 12px; color: var(--text-secondary);'>
                 <strong style='color: var(--accent-primary);'>Temporal Anti-Flicker Active:</strong>
                 <span>Summary metrics utilize a {TEMPORAL_SMOOTHING_WINDOW}-frame rolling median filter across surrounding frames to stabilize aggregate counts.</span>
             </div>
@@ -4649,7 +4672,7 @@ def render_video_results_view(video_results: Dict[str, Any]):
         )
 
     # 3. KPI Metrics Row (5 Compact Cards)
-    viol_color = "#EF4444" if summary["frames_with_violations"] > 0 else "#94A3B8"
+    viol_color = "#EF4444" if summary["frames_with_violations"] > 0 else "#22C55E"
     rate_display = f"{summary['average_compliance_rate']:.1f}%" if summary["has_worker_frames"] else "N/A"
     rate_color = "#22C55E" if (summary["has_worker_frames"] and summary["average_compliance_rate"] >= 85.0) else ("#F59E0B" if summary["has_worker_frames"] and summary["average_compliance_rate"] >= 60.0 else "#EF4444")
 
@@ -4669,7 +4692,7 @@ def render_video_results_view(video_results: Dict[str, Any]):
     with k3:
         st.markdown(
             f"<div class='metric-card'><div class='metric-card-title'>Frames No Workers</div>"
-            f"<div class='metric-card-value' style='color:#94A3B8;'>{summary['frames_without_workers']}</div></div>",
+            f"<div class='metric-card-value' style='color:var(--text-secondary);'>{summary['frames_without_workers']}</div></div>",
             unsafe_allow_html=True,
         )
     with k4:
@@ -4698,7 +4721,7 @@ def render_video_results_view(video_results: Dict[str, Any]):
         })
     df_chart = pd.DataFrame(chart_rows).set_index("Time (s)")
     if summary["has_worker_frames"]:
-        st.line_chart(df_chart, color=("#A3E635" if st.session_state.theme == "Dark Theme" else "#0284C7"), height=230)
+        st.line_chart(df_chart, color=("#A3E635" if st.session_state.theme == "Dark Theme" else "#65A30D"), height=230)
     else:
         st.info("No personnel detected in the analyzed video frames to plot compliance timeline.")
 
@@ -4721,7 +4744,7 @@ def render_video_results_view(video_results: Dict[str, Any]):
             """
             <div class='sv-panel' style='padding: 12px 16px; border-left: 4px solid #22C55E; color: #22C55E; font-size: 13px;'>
                 <strong>Clean Surveillance Record:</strong>
-                <span style='color: #F1F5F9; margin-left: 6px;'>Zero PPE violations were detected across all analyzed video frames.</span>
+                <span style='color: var(--text-primary); margin-left: 6px;'>Zero PPE violations were detected across all analyzed video frames.</span>
             </div>
             """,
             unsafe_allow_html=True,
@@ -4801,7 +4824,7 @@ def main():
                 </div>
                 <div>
                     <div style='font-size: 15px; font-weight: 700; letter-spacing: 0.5px; color: var(--accent-primary);'>SAFETY VISION</div>
-                    <div style='font-size: 10px; color: #94A3B8; font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px;'>Industrial AI Surveillance</div>
+                    <div style='font-size: 10px; color: var(--text-secondary); font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px;'>Industrial AI Surveillance</div>
                 </div>
             </div>
             """,
@@ -4811,7 +4834,7 @@ def main():
         st.markdown("<hr style='margin: 4px 0 10px 0;'>", unsafe_allow_html=True)
 
         st.markdown(
-            "<span style='font-size: 11px; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;'>"
+            "<span style='font-size: 11px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;'>"
             "Surveillance Mode</span>",
             unsafe_allow_html=True,
         )
@@ -4831,7 +4854,7 @@ def main():
         st.markdown("<hr style='margin: 8px 0 12px 0;'>", unsafe_allow_html=True)
 
         st.markdown(
-            "<span style='font-size: 11px; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;'>"
+            "<span style='font-size: 11px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;'>"
             "Navigation</span>",
             unsafe_allow_html=True,
         )
@@ -4861,7 +4884,7 @@ def main():
         st.markdown("<hr style='margin: 14px 0 12px 0;'>", unsafe_allow_html=True)
 
         st.markdown(
-            "<span style='font-size: 11px; color: #94A3B8; text-transform: uppercase; "
+            "<span style='font-size: 11px; color: var(--text-secondary); text-transform: uppercase; "
             "letter-spacing: 0.5px; font-weight: 600;'>Hardhat Policy</span>",
             unsafe_allow_html=True,
         )
@@ -4881,9 +4904,9 @@ def main():
         st.markdown(
             f"""
             <div class='sv-surface-elevated' style='padding: 10px; font-size: 11px; line-height: 1.5;'>
-                <div style='color: #94A3B8; font-weight: 600; text-transform: uppercase;'>Inference Engine</div>
-                <div style='color: #F1F5F9; font-weight: 500;'>YOLOv8 Nano (CPU Mode)</div>
-                <div style='color: #94A3B8; margin-top: 4px;'>Weights: <code>{os.path.basename(active_model_path)}</code></div>
+                <div style='color: var(--text-secondary); font-weight: 600; text-transform: uppercase;'>Inference Engine</div>
+                <div style='color: var(--text-primary); font-weight: 500;'>YOLOv8 Nano (CPU Mode)</div>
+                <div style='color: var(--text-secondary); margin-top: 4px;'>Weights: <code>{os.path.basename(active_model_path)}</code></div>
                 <div style='margin-top: 4px; color: #22C55E; font-weight: 600;'>● 10 Classes Verified</div>
             </div>
             """,
