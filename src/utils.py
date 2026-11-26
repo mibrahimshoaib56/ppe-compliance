@@ -13,7 +13,7 @@ from PIL import Image
 COLOR_COMPLIANT: Tuple[int, int, int] = (34, 197, 94)      # #22C55E Safe Green      # Vivid Green
 COLOR_VIOLATION: Tuple[int, int, int] = (239, 68, 68)      # #EF4444 Violation Red      # Vivid Red
 COLOR_UNKNOWN: Tuple[int, int, int] = (245, 158, 11)       # #F59E0B Warning Amber       # Amber / Orange
-COLOR_GEAR_POS: Tuple[int, int, int] = (56, 189, 248)      # #38BDF8 Cyan Interaction Accent       # Cyan / Blue
+COLOR_GEAR_POS: Tuple[int, int, int] = (163, 230, 53)      # #A3E635 Neon Lime Interaction Accent  # Neon Lime
 COLOR_GEAR_NEG: Tuple[int, int, int] = (255, 80, 0)        # Orange-Red
 COLOR_CONTEXT: Tuple[int, int, int] = (160, 160, 160)      # Faint Grey
 COLOR_TEXT_WHITE: Tuple[int, int, int] = (255, 255, 255)

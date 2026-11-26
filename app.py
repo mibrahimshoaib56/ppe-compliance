@@ -211,12 +211,12 @@ def inject_custom_css(theme: str):
                GLOBAL DESIGN SYSTEM TOKENS - DARK INDUSTRIAL
                ------------------------------------------------------------- */
             :root {
-                --bg-main: #0B1118;
-                --bg-sidebar: #111B26;
-                --surface-card: #162230;
-                --surface-elevated: #223244;
-                --border-color: #263442;
-                --accent-primary: #38BDF8;
+                --bg-main: #000000;
+                --bg-sidebar: #0D0D0D;
+                --surface-card: #151515;
+                --surface-elevated: #1E1E1E;
+                --border-color: #292929;
+                --accent-primary: #A3E635;
                 --text-primary: #F1F5F9;
                 --text-secondary: #94A3B8;
 
@@ -264,7 +264,7 @@ def inject_custom_css(theme: str):
                 cursor: pointer;
             }
             [data-testid="stSidebar"] [data-testid="stRadio"] [role="radiogroup"] label:hover {
-                background-color: rgba(34, 50, 68, 0.4);
+                background-color: #1A1A1A;
                 border-color: var(--border-color);
             }
             [data-testid="stSidebar"] [data-testid="stRadio"] [role="radiogroup"] label p {
@@ -276,8 +276,8 @@ def inject_custom_css(theme: str):
                 color: var(--text-primary) !important;
             }
             [data-testid="stSidebar"] [data-testid="stRadio"] [role="radiogroup"] label:has(input:checked) {
-                background-color: rgba(56, 189, 248, 0.08) !important;
-                border: 1px solid rgba(56, 189, 248, 0.25) !important;
+                background-color: #1A1A1A !important;
+                border: 1px solid #292929 !important;
                 border-left: 3px solid var(--accent-primary) !important;
             }
             [data-testid="stSidebar"] [data-testid="stRadio"] [role="radiogroup"] label:has(input:checked) p {
@@ -425,7 +425,7 @@ def inject_custom_css(theme: str):
             }
             .stTabs [data-baseweb="tab"]:hover {
                 color: var(--text-primary);
-                background-color: rgba(34, 50, 68, 0.3);
+                background-color: #1A1A1A;
             }
             .stTabs [aria-selected="true"] {
                 background-color: var(--surface-card) !important;
@@ -436,9 +436,9 @@ def inject_custom_css(theme: str):
 
             /* Buttons */
             .stButton > button[kind="primary"] {
-                background-color: #0284C7;
-                color: #FFFFFF;
-                border: 1px solid var(--accent-primary);
+                background-color: #A3E635;
+                color: #000000;
+                border: 1px solid #A3E635;
                 border-radius: 4px;
                 font-weight: 600;
                 font-size: 13px;
@@ -446,8 +446,9 @@ def inject_custom_css(theme: str):
                 transition: all 0.15s ease;
             }
             .stButton > button[kind="primary"]:hover {
-                background-color: #0369A1;
-                border-color: #7DD3FC;
+                background-color: #BEF264;
+                border-color: #D9F99D;
+                color: #000000;
             }
             .stButton > button:not([kind="primary"]) {
                 background-color: var(--surface-card);
@@ -796,7 +797,7 @@ def render_top_navbar(current_page: str, is_model_verified: bool):
         st.markdown(
             f"""
             <div style='display: flex; align-items: center; gap: 8px; padding-top: 4px;'>
-                <svg width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='#38BDF8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' style='vertical-align:middle;margin-right:2px;'>
+                <svg width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='var(--accent-primary)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' style='vertical-align:middle;margin-right:2px;'>
                     <path d='M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z'/>
                 </svg>
                 <span class='brand-title'>SAFETY VISION</span>
@@ -820,7 +821,7 @@ def render_top_navbar(current_page: str, is_model_verified: bool):
             st.session_state.theme = "Light Theme" if current_theme == "Dark Theme" else "Dark Theme"
             st.rerun()
 
-    st.markdown("<hr style='margin: 8px 0 16px 0; border: none; border-top: 1px solid #263442;'>", unsafe_allow_html=True)
+    st.markdown("<hr style='margin: 8px 0 16px 0; border: none; border-top: 1px solid var(--border-color);'>", unsafe_allow_html=True)
 
 
 # ============================================================================
@@ -851,7 +852,7 @@ def render_dashboard(active_inspection: Optional[Dict[str, Any]], history: List[
         st.markdown(
             """
             <div class='sv-panel' style='text-align: center; padding: 48px 24px; margin-top: 10px;'>
-                <div style='font-size: 13px; text-transform: uppercase; letter-spacing: 1.5px; color: #38BDF8; font-weight: 600; margin-bottom: 8px;'>[ SURVEILLANCE STANDBY ]</div>
+                <div style='font-size: 13px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--accent-primary); font-weight: 600; margin-bottom: 8px;'>[ SURVEILLANCE STANDBY ]</div>
                 <h3 style='margin: 12px 0 6px 0; color: #F1F5F9;'>No Site Inspections Recorded Yet</h3>
                 <p style='color: #94A3B8; max-width: 540px; margin: 0 auto 24px auto; font-size: 13px; line-height: 1.6;'>
                     No active surveillance data or completed site inspections are available. Initiate an automated safety audit by uploading job site imagery or streaming CCTV footage.
@@ -986,7 +987,7 @@ def render_dashboard(active_inspection: Optional[Dict[str, Any]], history: List[
 
             st.markdown(
                 f"""
-                <div style='background: {bg_surface}; border: 1px solid #263442; border-left: 4px solid {border_c}; border-radius: 4px; padding: 14px 16px; margin-bottom: 12px;'>
+                <div style='background: {bg_surface}; border: 1px solid var(--border-color); border-left: 4px solid {border_c}; border-radius: 4px; padding: 14px 16px; margin-bottom: 12px;'>
                     <div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;'>
                         <span style='font-size: 11px; font-weight: 700; text-transform: uppercase; color: {border_c}; letter-spacing: 0.5px;'>
                             {status_label} STATUS ADVISORY
@@ -1185,8 +1186,8 @@ def render_new_inspection(model: Any):
         else:
             st.markdown(
                 """
-                <div class='sv-panel' style='text-align: center; padding: 48px 20px; border: 1px dashed #263442; margin-top: 6px;'>
-                    <div style='color: #38BDF8; font-size: 12px; text-transform: uppercase; letter-spacing: 1.2px; font-weight: 600; margin-bottom: 8px;'>[ NO MEDIA SELECTED ]</div>
+                <div class='sv-panel' style='text-align: center; padding: 48px 20px; border: 1px dashed var(--border-color); margin-top: 6px;'>
+                    <div style='color: var(--accent-primary); font-size: 12px; text-transform: uppercase; letter-spacing: 1.2px; font-weight: 600; margin-bottom: 8px;'>[ NO MEDIA SELECTED ]</div>
                     <div style='color: #94A3B8; font-size: 13px; max-width: 360px; margin: 0 auto; line-height: 1.5;'>
                         Select a verified benchmark image from the dropdown or upload an on-site photo above to preview and analyze.
                     </div>
@@ -1326,7 +1327,7 @@ def render_inspection_results(active_inspection: Optional[Dict[str, Any]]):
         st.markdown(
             """
             <div class='sv-panel' style='text-align: center; padding: 48px 24px; margin-top: 10px;'>
-                <div style='font-size: 13px; text-transform: uppercase; letter-spacing: 1.5px; color: #38BDF8; font-weight: 600; margin-bottom: 8px;'>[ NO ACTIVE INSPECTION ]</div>
+                <div style='font-size: 13px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--accent-primary); font-weight: 600; margin-bottom: 8px;'>[ NO ACTIVE INSPECTION ]</div>
                 <h3 style='margin: 12px 0 6px 0; color: #F1F5F9;'>No Inspection Results Available</h3>
                 <p style='color: #94A3B8; max-width: 520px; margin: 0 auto 24px auto; font-size: 13px; line-height: 1.6;'>
                     No active inspection data is currently loaded in the analysis workspace. Run a new site inspection or load a previous audit from the inspection history.
@@ -1439,7 +1440,7 @@ def render_inspection_results(active_inspection: Optional[Dict[str, Any]]):
         bg_adv = "rgba(34, 197, 94, 0.05)" if status == "Safe" else ("rgba(245, 158, 11, 0.05)" if status == "Warning" else "rgba(239, 68, 68, 0.05)")
         st.markdown(
             f"""
-            <div style='background: {bg_adv}; border: 1px solid #263442; border-left: 4px solid {status_color}; border-radius: 4px; padding: 10px 14px; margin-bottom: 12px; font-size: 13px;'>
+            <div style='background: {bg_adv}; border: 1px solid var(--border-color); border-left: 4px solid {status_color}; border-radius: 4px; padding: 10px 14px; margin-bottom: 12px; font-size: 13px;'>
                 <strong style='color: {status_color}; text-transform: uppercase;'>Site Directive:</strong>
                 <span style='color: #F1F5F9; margin-left: 6px;'>{advisory_msg}</span>
             </div>
@@ -1453,12 +1454,12 @@ def render_inspection_results(active_inspection: Optional[Dict[str, Any]]):
     # Legend Bar directly above viewer
     st.markdown(
         """
-        <div style='display:flex; flex-wrap:wrap; gap:16px; align-items:center; background:#111B26; border:1px solid #263442; border-radius:4px; padding:6px 14px; margin-bottom:10px; font-size:12px;'>
+        <div style='display:flex; flex-wrap:wrap; gap:16px; align-items:center; background:var(--bg-sidebar); border:1px solid var(--border-color); border-radius:4px; padding:6px 14px; margin-bottom:10px; font-size:12px;'>
             <span style='color:#94A3B8; font-weight:600; text-transform:uppercase;'>Detection Legend:</span>
             <span><span style='color:#22C55E; font-weight:bold;'>&#9679;</span> Compliant Worker (Hardhat + Vest)</span>
             <span><span style='color:#EF4444; font-weight:bold;'>&#9679;</span> PPE Violation (Missing Gear)</span>
             <span><span style='color:#F59E0B; font-weight:bold;'>&#9679;</span> Needs Review / Ambiguous</span>
-            <span><span style='color:#38BDF8; font-weight:bold;'>&#9679;</span> Detected PPE Gear Box</span>
+            <span><span style='color:var(--accent-primary); font-weight:bold;'>&#9679;</span> Detected PPE Gear Box</span>
         </div>
         """,
         unsafe_allow_html=True,
@@ -1634,7 +1635,7 @@ def render_worker_audits(active_inspection: Optional[Dict[str, Any]]):
         st.markdown(
             """
             <div class='sv-panel' style='text-align: center; padding: 48px 24px; margin-top: 10px;'>
-                <div style='font-size: 13px; text-transform: uppercase; letter-spacing: 1.5px; color: #38BDF8; font-weight: 600; margin-bottom: 8px;'>[ NO ACTIVE AUDIT DATA ]</div>
+                <div style='font-size: 13px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--accent-primary); font-weight: 600; margin-bottom: 8px;'>[ NO ACTIVE AUDIT DATA ]</div>
                 <h3 style='margin: 12px 0 6px 0; color: #F1F5F9;'>No Worker Audit Records Available</h3>
                 <p style='color: #94A3B8; max-width: 520px; margin: 0 auto 24px auto; font-size: 13px; line-height: 1.6;'>
                     Worker audit records are generated following automated site inspection. Initiate an inspection or load historical data to inspect worker-level spatial evidence.
@@ -1861,8 +1862,8 @@ def render_inspection_history(history: List[Dict[str, Any]], model: Any):
     if not history:
         st.markdown(
             """
-            <div style="background:#162230; border:1px solid #263442; border-radius:8px; padding:2.75rem 1.5rem; text-align:center; margin-top:0.5rem;">
-                <div style="display:inline-flex; align-items:center; justify-content:center; width:48px; height:48px; border-radius:8px; background:#223244; margin-bottom:1rem;">
+            <div style="background:var(--surface-card); border:1px solid var(--border-color); border-radius:8px; padding:2.75rem 1.5rem; text-align:center; margin-top:0.5rem;">
+                <div style="display:inline-flex; align-items:center; justify-content:center; width:48px; height:48px; border-radius:8px; background:var(--surface-elevated); margin-bottom:1rem;">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                         <polyline points="14 2 14 8 20 8"></polyline>
@@ -1902,7 +1903,7 @@ def render_inspection_history(history: List[Dict[str, Any]], model: Any):
     with k1:
         st.markdown(
             f"""
-            <div style="background:#162230; border:1px solid #263442; border-radius:8px; padding:0.9rem 1rem; border-top:3px solid #38BDF8;">
+            <div style="background:var(--surface-card); border:1px solid var(--border-color); border-radius:8px; padding:0.9rem 1rem; border-top:3px solid var(--accent-primary);">
                 <div style="font-size:0.75rem; font-weight:600; color:#94A3B8; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.25rem;">Total Inspections</div>
                 <div style="font-size:1.6rem; font-weight:700; color:#F1F5F9; line-height:1.2;">{total_inspections}</div>
                 <div style="font-size:0.75rem; color:#94A3B8; margin-top:0.25rem;">Logged audit events</div>
@@ -1913,7 +1914,7 @@ def render_inspection_history(history: List[Dict[str, Any]], model: Any):
     with k2:
         st.markdown(
             f"""
-            <div style="background:#162230; border:1px solid #263442; border-radius:8px; padding:0.9rem 1rem; border-top:3px solid #38BDF8;">
+            <div style="background:var(--surface-card); border:1px solid var(--border-color); border-radius:8px; padding:0.9rem 1rem; border-top:3px solid var(--accent-primary);">
                 <div style="font-size:0.75rem; font-weight:600; color:#94A3B8; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.25rem;">Workers Audited</div>
                 <div style="font-size:1.6rem; font-weight:700; color:#F1F5F9; line-height:1.2;">{total_workers_audited}</div>
                 <div style="font-size:0.75rem; color:#94A3B8; margin-top:0.25rem;">Cumulative detections</div>
@@ -1924,7 +1925,7 @@ def render_inspection_history(history: List[Dict[str, Any]], model: Any):
     with k3:
         st.markdown(
             f"""
-            <div style="background:#162230; border:1px solid #263442; border-radius:8px; padding:0.9rem 1rem; border-top:3px solid {avg_color};">
+            <div style="background:var(--surface-card); border:1px solid var(--border-color); border-radius:8px; padding:0.9rem 1rem; border-top:3px solid {avg_color};">
                 <div style="font-size:0.75rem; font-weight:600; color:#94A3B8; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.25rem;">Avg Compliance</div>
                 <div style="font-size:1.6rem; font-weight:700; color:{avg_color}; line-height:1.2;">{avg_compliance}%</div>
                 <div style="font-size:0.75rem; color:#94A3B8; margin-top:0.25rem;">Site-wide performance</div>
@@ -1935,7 +1936,7 @@ def render_inspection_history(history: List[Dict[str, Any]], model: Any):
     with k4:
         st.markdown(
             f"""
-            <div style="background:#162230; border:1px solid #263442; border-radius:8px; padding:0.9rem 1rem; border-top:3px solid {viol_color};">
+            <div style="background:var(--surface-card); border:1px solid var(--border-color); border-radius:8px; padding:0.9rem 1rem; border-top:3px solid {viol_color};">
                 <div style="font-size:0.75rem; font-weight:600; color:#94A3B8; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.25rem;">Total Violations</div>
                 <div style="font-size:1.6rem; font-weight:700; color:{viol_color}; line-height:1.2;">{total_violations}</div>
                 <div style="font-size:0.75rem; color:#94A3B8; margin-top:0.25rem;">Flagged PPE breaches</div>
@@ -2013,7 +2014,7 @@ def render_inspection_history(history: List[Dict[str, Any]], model: Any):
     if not filtered:
         st.markdown(
             """
-            <div style="background:#162230; border:1px solid #263442; border-radius:8px; padding:2rem 1.5rem; text-align:center; margin-top:0.5rem;">
+            <div style="background:var(--surface-card); border:1px solid var(--border-color); border-radius:8px; padding:2rem 1.5rem; text-align:center; margin-top:0.5rem;">
                 <div style="font-size:0.95rem; font-weight:600; color:#F1F5F9; margin-bottom:0.25rem;">No Matching Records Found</div>
                 <div style="font-size:0.85rem; color:#94A3B8;">Adjust or clear your search query and filters to display historical inspections.</div>
             </div>
@@ -2057,11 +2058,11 @@ def render_inspection_history(history: List[Dict[str, Any]], model: Any):
                     f"""
                     <div style="display:flex; flex-direction:column; gap:3px;">
                         <div style="display:flex; align-items:center; gap:8px;">
-                            <span style="font-family:monospace; font-size:0.95rem; font-weight:700; color:#38BDF8;">{item_id}</span>
+                            <span style="font-family:monospace; font-size:0.95rem; font-weight:700; color:var(--accent-primary);">{item_id}</span>
                             <span style="background:{badge_bg}; border:1px solid {badge_border}; color:{badge_color}; font-size:0.7rem; font-weight:700; padding:2px 7px; border-radius:4px; letter-spacing:0.04em;">{status_label}</span>
                         </div>
                         <div style="font-size:0.8rem; color:#94A3B8;">
-                            Source: <code style="color:#CBD5E1; background:#0B1118; padding:1px 5px; border-radius:3px; border:1px solid #263442;">{img_name}</code>
+                            Source: <code style="color:#CBD5E1; background:var(--bg-main); padding:1px 5px; border-radius:3px; border:1px solid var(--border-color);">{img_name}</code>
                         </div>
                         <div style="font-size:0.75rem; color:#64748B;">
                             Logged: {timestamp}
@@ -2133,7 +2134,7 @@ def render_inspection_history(history: List[Dict[str, Any]], model: Any):
                     else:
                         st.warning("Original source image file not located on disk. Cannot reconstruct session.")
 
-            st.markdown("<div style='margin: 0.6rem 0; border-top: 1px solid #263442;'></div>", unsafe_allow_html=True)
+            st.markdown("<div style='margin: 0.6rem 0; border-top: 1px solid var(--border-color);'></div>", unsafe_allow_html=True)
 # ============================================================================
 # 11. PAGE 6: REPORTS & EXPORTS
 # ============================================================================
@@ -2421,7 +2422,7 @@ def render_reports_exports(active_inspection: Optional[Dict[str, Any]]):
                 <div>
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
                         <span style="font-size:0.9rem; font-weight:700; color:var(--text-primary);">CSV Audit Report</span>
-                        <span style="font-size:0.68rem; font-weight:700; background:rgba(56, 189, 248, 0.15); border:1px solid rgba(56, 189, 248, 0.35); color:#38BDF8; padding:2px 6px; border-radius:3px;">.CSV</span>
+                        <span style="font-size:0.68rem; font-weight:700; background:rgba(163, 230, 53, 0.15); border:1px solid rgba(163, 230, 53, 0.35); color:var(--accent-primary); padding:2px 6px; border-radius:3px;">.CSV</span>
                     </div>
                     <div style="font-size:0.75rem; color:var(--text-secondary); line-height:1.4;">
                         Official audit spreadsheet with worker-by-worker gear breakdown and compliance metrics.
@@ -2777,9 +2778,9 @@ def render_settings(model: Any, is_model_verified: bool):
         with p1:
             st.markdown(
                 """
-                <div style="background:#162230; border:1px solid #263442; border-radius:6px; padding:0.6rem 0.8rem;">
+                <div style="background:var(--surface-card); border:1px solid var(--border-color); border-radius:6px; padding:0.6rem 0.8rem;">
                     <div style="font-size:0.7rem; font-weight:700; color:#94A3B8;">PANEL SURFACE</div>
-                    <div style="font-family:monospace; font-size:0.85rem; color:#F1F5F9;">#162230</div>
+                    <div style="font-family:monospace; font-size:0.85rem; color:#F1F5F9;">#151515</div>
                 </div>
                 """,
                 unsafe_allow_html=True,
@@ -2787,9 +2788,9 @@ def render_settings(model: Any, is_model_verified: bool):
         with p2:
             st.markdown(
                 """
-                <div style="background:#162230; border:1px solid #38BDF8; border-radius:6px; padding:0.6rem 0.8rem;">
-                    <div style="font-size:0.7rem; font-weight:700; color:#38BDF8;">ACCENT PRIMARY</div>
-                    <div style="font-family:monospace; font-size:0.85rem; color:#38BDF8;">#38BDF8</div>
+                <div style="background:var(--surface-card); border:1px solid var(--accent-primary); border-radius:6px; padding:0.6rem 0.8rem;">
+                    <div style="font-size:0.7rem; font-weight:700; color:var(--accent-primary);">ACCENT PRIMARY</div>
+                    <div style="font-family:monospace; font-size:0.85rem; color:var(--accent-primary);">#A3E635</div>
                 </div>
                 """,
                 unsafe_allow_html=True,
@@ -2797,7 +2798,7 @@ def render_settings(model: Any, is_model_verified: bool):
         with p3:
             st.markdown(
                 """
-                <div style="background:#162230; border:1px solid #22C55E; border-radius:6px; padding:0.6rem 0.8rem;">
+                <div style="background:var(--surface-card); border:1px solid #22C55E; border-radius:6px; padding:0.6rem 0.8rem;">
                     <div style="font-size:0.7rem; font-weight:700; color:#22C55E;">SAFE / COMPLIANT</div>
                     <div style="font-family:monospace; font-size:0.85rem; color:#22C55E;">#22C55E</div>
                 </div>
@@ -2807,7 +2808,7 @@ def render_settings(model: Any, is_model_verified: bool):
         with p4:
             st.markdown(
                 """
-                <div style="background:#162230; border:1px solid #EF4444; border-radius:6px; padding:0.6rem 0.8rem;">
+                <div style="background:var(--surface-card); border:1px solid #EF4444; border-radius:6px; padding:0.6rem 0.8rem;">
                     <div style="font-size:0.7rem; font-weight:700; color:#EF4444;">VIOLATION / UNSAFE</div>
                     <div style="font-family:monospace; font-size:0.85rem; color:#EF4444;">#EF4444</div>
                 </div>
@@ -2902,7 +2903,7 @@ def render_video_inspection(model: Any):
             """
             <div class='sv-panel' style='padding: 10px 16px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center;'>
                 <div>
-                    <strong style='color: #38BDF8;'>Surveillance Cache:</strong>
+                    <strong style='color: var(--accent-primary);'>Surveillance Cache:</strong>
                     <span style='color: #F1F5F9; margin-left: 6px;'>Completed video inspection results are available for review.</span>
                 </div>
             </div>
@@ -2952,8 +2953,8 @@ def render_video_inspection(model: Any):
             else:
                 st.markdown(
                     f"""
-                    <div class='sv-panel' style='text-align: center; padding: 36px 20px; border: 1px dashed #263442; margin-top: 10px;'>
-                        <div style='color: #38BDF8; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600; margin-bottom: 6px;'>[ NO VIDEO LOADED ]</div>
+                    <div class='sv-panel' style='text-align: center; padding: 36px 20px; border: 1px dashed var(--border-color); margin-top: 10px;'>
+                        <div style='color: var(--accent-primary); font-size: 12px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600; margin-bottom: 6px;'>[ NO VIDEO LOADED ]</div>
                         <div style='color: #94A3B8; font-size: 13px;'>Drop or select an MP4, AVI, or MOV surveillance video above.</div>
                     </div>
                     """,
@@ -3414,7 +3415,7 @@ def render_video_results_view(video_results: Dict[str, Any]):
         st.markdown(
             f"""
             <div class='sv-surface-elevated' style='padding: 8px 12px; margin-bottom: 12px; font-size: 12px; color: #94A3B8;'>
-                <strong style='color: #38BDF8;'>Temporal Anti-Flicker Active:</strong>
+                <strong style='color: var(--accent-primary);'>Temporal Anti-Flicker Active:</strong>
                 <span>Summary metrics utilize a {TEMPORAL_SMOOTHING_WINDOW}-frame rolling median filter across surrounding frames to stabilize aggregate counts.</span>
             </div>
             """,
@@ -3436,7 +3437,7 @@ def render_video_results_view(video_results: Dict[str, Any]):
     with k2:
         st.markdown(
             f"<div class='metric-card'><div class='metric-card-title'>Frames With Workers</div>"
-            f"<div class='metric-card-value' style='color:#38BDF8;'>{summary['frames_with_workers']}</div></div>",
+            f"<div class='metric-card-value' style='color:var(--accent-primary);'>{summary['frames_with_workers']}</div></div>",
             unsafe_allow_html=True,
         )
     with k3:
@@ -3471,7 +3472,7 @@ def render_video_results_view(video_results: Dict[str, Any]):
         })
     df_chart = pd.DataFrame(chart_rows).set_index("Time (s)")
     if summary["has_worker_frames"]:
-        st.line_chart(df_chart, color="#0284C7", height=230)
+        st.line_chart(df_chart, color=("#A3E635" if st.session_state.theme == "Dark Theme" else "#0284C7"), height=230)
     else:
         st.info("No personnel detected in the analyzed video frames to plot compliance timeline.")
 
@@ -3557,11 +3558,11 @@ def main():
         st.markdown(
             """
             <div style='display: flex; align-items: center; gap: 10px; padding: 8px 4px 14px 4px;'>
-                <div style='width: 36px; height: 36px; border-radius: 4px; background: #162230; border: 1px solid #263442; display: flex; align-items: center; justify-content: center;'>
-                    <svg width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='#38BDF8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z'/></svg>
+                <div style='width: 36px; height: 36px; border-radius: 4px; background: var(--surface-card); border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: center;'>
+                    <svg width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='var(--accent-primary)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z'/></svg>
                 </div>
                 <div>
-                    <div style='font-size: 15px; font-weight: 700; letter-spacing: 0.5px; color: #38BDF8;'>SAFETY VISION</div>
+                    <div style='font-size: 15px; font-weight: 700; letter-spacing: 0.5px; color: var(--accent-primary);'>SAFETY VISION</div>
                     <div style='font-size: 10px; color: #94A3B8; font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px;'>Industrial AI Surveillance</div>
                 </div>
             </div>
