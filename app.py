@@ -2118,67 +2118,363 @@ def render_inspection_history(history: List[Dict[str, Any]], model: Any):
 # 11. PAGE 6: REPORTS & EXPORTS
 # ============================================================================
 def render_reports_exports(active_inspection: Optional[Dict[str, Any]]):
-    """Render export portal for generating CSV reports and downloading annotated images."""
-    st.markdown("### Regulatory Compliance Reports & Exports")
-    st.caption("Generate official safety inspection logs and export annotated photographic evidence.")
+    """Render export portal for generating compliance audit reports and downloading evidence artifacts."""
+    st.markdown(
+        """
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 1.25rem;">
+            <div>
+                <h2 style="margin:0 0 4px 0; font-size:1.5rem; font-weight:700; color:var(--text-primary); letter-spacing:-0.01em;">Safety Reports & Exports</h2>
+                <div style="font-size:0.875rem; color:var(--text-secondary);">Generate, review and export actionable safety inspection reports and photographic evidence.</div>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
+    history = st.session_state.get("inspection_history", [])
+    store = st.session_state.get("inspections_store", {})
+
+    # If active_inspection is None but store has items, select the most recent one
+    if active_inspection is None and store:
+        active_inspection = next(iter(store.values()))
+
+    # Empty State: No inspection data available at all
     if active_inspection is None:
-        st.warning("No active inspection data available to export. Conduct an inspection first.")
-        if st.button("Go to New Inspection"):
-            navigate_to("New Inspection")
+        st.markdown(
+            """
+            <div style="background:var(--surface-card); border:1px solid var(--border-color); border-radius:8px; padding:2.75rem 1.5rem; text-align:center; margin-top:0.5rem;">
+                <div style="display:inline-flex; align-items:center; justify-content:center; width:48px; height:48px; border-radius:8px; background:var(--surface-elevated); margin-bottom:1rem;">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                        <polyline points="10 9 9 9 8 9"></polyline>
+                    </svg>
+                </div>
+                <div style="font-size:1.05rem; font-weight:600; color:var(--text-primary); margin-bottom:0.35rem;">No Inspection Data Available</div>
+                <div style="font-size:0.875rem; color:var(--text-secondary); max-width:440px; margin:0 auto 1.5rem auto;">
+                    Execute a site safety inspection or select a recorded audit from history to generate compliance reports and download evidence files.
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        col_c, _ = st.columns([3, 7])
+        with col_c:
+            if st.button("Start New Inspection", type="primary", use_container_width=True):
+                navigate_to("New Inspection")
         return
 
+    # Overview KPI Section (using existing history or active inspection metrics)
+    if history:
+        ov_total_inspections = len(history)
+        ov_total_workers = sum(int(h.get("total_workers", 0)) for h in history)
+        ov_avg_compliance = round(sum(float(h.get("compliance_rate", 0.0)) for h in history) / ov_total_inspections, 1)
+        ov_total_violations = sum(int(h.get("violation_count", 0)) for h in history)
+    else:
+        ov_total_inspections = 1
+        ov_total_workers = int(active_inspection.get("summary", {}).get("total_workers", 0))
+        ov_avg_compliance = float(active_inspection.get("summary", {}).get("compliance_rate", 0.0))
+        ov_total_violations = int(active_inspection.get("summary", {}).get("violation_count", 0))
+
+    avg_color = "#22C55E" if ov_avg_compliance >= 90.0 else ("#F59E0B" if ov_avg_compliance >= 75.0 else "#EF4444")
+    viol_color = "#22C55E" if ov_total_violations == 0 else "#EF4444"
+
+    k1, k2, k3, k4 = st.columns(4)
+    with k1:
+        st.markdown(
+            f"""
+            <div style="background:var(--surface-card); border:1px solid var(--border-color); border-radius:8px; padding:0.9rem 1rem; border-top:3px solid var(--accent-primary);">
+                <div style="font-size:0.75rem; font-weight:600; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.25rem;">Total Inspections</div>
+                <div style="font-size:1.6rem; font-weight:700; color:var(--text-primary); line-height:1.2;">{ov_total_inspections}</div>
+                <div style="font-size:0.75rem; color:var(--text-secondary); margin-top:0.25rem;">Logged audit events</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    with k2:
+        st.markdown(
+            f"""
+            <div style="background:var(--surface-card); border:1px solid var(--border-color); border-radius:8px; padding:0.9rem 1rem; border-top:3px solid var(--accent-primary);">
+                <div style="font-size:0.75rem; font-weight:600; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.25rem;">Workers Analyzed</div>
+                <div style="font-size:1.6rem; font-weight:700; color:var(--text-primary); line-height:1.2;">{ov_total_workers}</div>
+                <div style="font-size:0.75rem; color:var(--text-secondary); margin-top:0.25rem;">Cumulative detections</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    with k3:
+        st.markdown(
+            f"""
+            <div style="background:var(--surface-card); border:1px solid var(--border-color); border-radius:8px; padding:0.9rem 1rem; border-top:3px solid {avg_color};">
+                <div style="font-size:0.75rem; font-weight:600; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.25rem;">Avg Compliance</div>
+                <div style="font-size:1.6rem; font-weight:700; color:{avg_color}; line-height:1.2;">{ov_avg_compliance}%</div>
+                <div style="font-size:0.75rem; color:var(--text-secondary); margin-top:0.25rem;">Site-wide rate</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    with k4:
+        st.markdown(
+            f"""
+            <div style="background:var(--surface-card); border:1px solid var(--border-color); border-radius:8px; padding:0.9rem 1rem; border-top:3px solid {viol_color};">
+                <div style="font-size:0.75rem; font-weight:600; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.25rem;">Total Violations</div>
+                <div style="font-size:1.6rem; font-weight:700; color:{viol_color}; line-height:1.2;">{ov_total_violations}</div>
+                <div style="font-size:0.75rem; color:var(--text-secondary); margin-top:0.25rem;">Recorded breaches</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    st.markdown("<div style='margin-bottom:1.25rem;'></div>", unsafe_allow_html=True)
+
+    # Optional Multi-Inspection Selector if multiple sessions are in memory
+    if len(store) > 1:
+        store_keys = list(store.keys())
+        current_key = active_inspection.get("id")
+        default_idx = store_keys.index(current_key) if current_key in store_keys else 0
+        selected_target = st.selectbox(
+            "Target Inspection Record",
+            options=store_keys,
+            index=default_idx,
+            format_func=lambda k: f"{k} — {store[k].get('image_name', 'Image')} ({store[k].get('timestamp', '')})",
+            key="rep_target_selector",
+        )
+        active_inspection = store[selected_target]
+
     summary = active_inspection["summary"]
-    workers = active_inspection["workers"]
+    raw_workers = active_inspection["workers"]
     timestamp_slug = datetime.now().strftime("%Y%m%d_%H%M%S")
 
-    # Overview Card
+    # Report Generation Controls
+    st.markdown(
+        """
+        <div style="font-size:0.8rem; font-weight:700; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.4rem;">
+            Report Generation & Filter Parameters
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    c_scope, c_filter = st.columns(2)
+    with c_scope:
+        report_scope = st.selectbox(
+            "Report Scope",
+            options=[
+                "Full Regulatory Compliance Audit (All Sections)",
+                "Executive Safety Summary Only",
+                "Exception Log: Violations & Breaches Only",
+            ],
+            key="rep_scope_select",
+        )
+    with c_filter:
+        worker_filter = st.selectbox(
+            "Worker Status Filter",
+            options=["All Detected Workers", "Violations Only", "Compliant Workers Only", "Needs Review Only"],
+            key="rep_worker_filter",
+        )
+
+    with st.expander("Advanced Regulatory Metadata & Audit Headers", expanded=False):
+        meta_c1, meta_c2 = st.columns(2)
+        with meta_c1:
+            auditor_id = st.text_input("Auditor / Operator ID", value="SV-INSPECTOR-01", key="rep_auditor_id")
+            facility_id = st.text_input("Site / Facility Location", value="Zone 4 - Construction Bay", key="rep_facility_id")
+        with meta_c2:
+            reg_standard = st.text_input("Regulatory Standard Reference", value="OSHA 1926.100 & ANSI/ISEA 107-2020", key="rep_reg_std")
+            notes = st.text_area("Audit Notes & Compliance Directives", value="Automated spatial PPE audit executed via YOLOv8 computer vision surveillance.", height=68, key="rep_notes")
+
+    # Filter workers based on controls
+    if worker_filter == "Violations Only" or "Violations & Breaches Only" in report_scope:
+        filtered_workers = [w for w in raw_workers if w.get("status") in ("violation", "unsafe", "danger")]
+    elif worker_filter == "Compliant Workers Only":
+        filtered_workers = [w for w in raw_workers if w.get("status") in ("compliant", "safe")]
+    elif worker_filter == "Needs Review Only":
+        filtered_workers = [w for w in raw_workers if w.get("status") in ("unknown", "review", "needs_review")]
+    else:
+        filtered_workers = raw_workers
+
+    # Executive Inspection Summary Card
+    status = str(summary.get("site_status", "Safe")).capitalize()
+    if status in ["Safe", "Compliant"]:
+        badge_bg = "rgba(34, 197, 94, 0.12)"
+        badge_border = "rgba(34, 197, 94, 0.35)"
+        badge_color = "#22C55E"
+        status_label = "SAFE"
+    elif status in ["Warning", "Caution"]:
+        badge_bg = "rgba(245, 158, 11, 0.12)"
+        badge_border = "rgba(245, 158, 11, 0.35)"
+        badge_color = "#F59E0B"
+        status_label = "WARNING"
+    else:
+        badge_bg = "rgba(239, 68, 68, 0.12)"
+        badge_border = "rgba(239, 68, 68, 0.35)"
+        badge_color = "#EF4444"
+        status_label = "VIOLATION"
+
     st.markdown(
         f"""
-        <div class='sv-panel'>
-            <h4 style='margin-top:0;'>Executive Inspection Summary</h4>
-            <span style='color:#94A3B8; font-size:13px;'>
-            &bull; <strong>Inspection ID:</strong> <code>{active_inspection['id']}</code><br>
-            &bull; <strong>Source Image:</strong> <code>{active_inspection['image_name']}</code><br>
-            &bull; <strong>Execution Timestamp:</strong> <code>{active_inspection['timestamp']}</code><br>
-            &bull; <strong>Site Safety Grade:</strong> <strong>{summary['site_status'].upper()}</strong> ({summary['compliance_rate']}% Compliance)<br>
-            &bull; <strong>Worker Breakdown:</strong> {summary['total_workers']} Detected | {summary['compliant_count']} Compliant | {summary['violation_count']} Violations | {summary.get('needs_review_count', 0)} Needs Review
-            </span>
+        <div style="background:var(--surface-card); border:1px solid var(--border-color); border-radius:8px; padding:1.2rem 1.35rem; margin-top:0.75rem; margin-bottom:1.25rem;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem; padding-bottom:0.6rem; border-bottom:1px solid var(--border-color);">
+                <div>
+                    <span style="font-size:0.75rem; font-weight:700; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.05em;">Audit Target Record</span>
+                    <div style="font-size:1.15rem; font-weight:700; color:var(--text-primary); margin-top:2px; font-family:monospace;">
+                        {active_inspection['id']}
+                    </div>
+                </div>
+                <div style="background:{badge_bg}; border:1px solid {badge_border}; color:{badge_color}; font-size:0.75rem; font-weight:700; padding:4px 10px; border-radius:4px; letter-spacing:0.04em;">
+                    SITE STATUS: {status_label}
+                </div>
+            </div>
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:12px; font-size:0.85rem; color:var(--text-secondary);">
+                <div><strong style="color:var(--text-primary);">Source Asset:</strong> <code style="color:var(--accent-primary); background:var(--bg-main); padding:1px 5px; border-radius:3px; border:1px solid var(--border-color);">{active_inspection['image_name']}</code></div>
+                <div><strong style="color:var(--text-primary);">Execution Time:</strong> {active_inspection['timestamp']}</div>
+                <div><strong style="color:var(--text-primary);">Compliance Grade:</strong> <span style="color:{badge_color}; font-weight:700;">{summary['compliance_rate']}%</span></div>
+                <div><strong style="color:var(--text-primary);">Personnel Breakdown:</strong> {summary['total_workers']} Detected | {summary['compliant_count']} Compliant | {summary['violation_count']} Violations</div>
+            </div>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
     # Worker Record Table Preview
-    st.markdown("#### Worker Record Table")
-    st.dataframe(pd.DataFrame(format_worker_table(workers)), use_container_width=True)
+    st.markdown(
+        f"""
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.4rem;">
+            <div style="font-size:0.8rem; font-weight:700; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.05em;">
+                Worker Compliance Records ({len(filtered_workers)} of {len(raw_workers)} personnel)
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
-    # Download Buttons
-    st.markdown("---")
-    st.markdown("#### Export Artifacts")
+    if filtered_workers:
+        st.dataframe(pd.DataFrame(format_worker_table(filtered_workers)), use_container_width=True)
+    else:
+        st.markdown(
+            """
+            <div style="background:var(--surface-card); border:1px solid var(--border-color); border-radius:8px; padding:1.5rem; text-align:center; margin-bottom:1rem;">
+                <div style="font-size:0.9rem; font-weight:600; color:var(--text-primary); margin-bottom:0.25rem;">No Workers Match Filter</div>
+                <div style="font-size:0.8rem; color:var(--text-secondary);">There are no worker audit records matching the currently selected status filter.</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
-    csv_data = generate_csv_report(summary, workers, active_inspection["timestamp"])
-    annotated_bytes = active_inspection["annotated_bytes"]
+    # Export Artifacts Section
+    st.markdown(
+        """
+        <div style="font-size:0.8rem; font-weight:700; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.05em; margin-top:1.25rem; margin-bottom:0.6rem;">
+            Export Compliance Artifacts
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
-    col_csv, col_img = st.columns(2)
-    with col_csv:
+    csv_data = generate_csv_report(summary, filtered_workers, active_inspection["timestamp"])
+    annotated_bytes = active_inspection.get("annotated_bytes")
+    if annotated_bytes is None and "annotated_image" in active_inspection:
+        annotated_bytes = encode_image_bytes(active_inspection["annotated_image"])
+
+    json_data = json.dumps(
+        {
+            "inspection_id": active_inspection.get("id"),
+            "timestamp": active_inspection.get("timestamp"),
+            "image_name": active_inspection.get("image_name"),
+            "auditor_id": auditor_id if 'auditor_id' in locals() else "SV-INSPECTOR-01",
+            "facility_id": facility_id if 'facility_id' in locals() else "Zone 4",
+            "regulatory_standard": reg_standard if 'reg_standard' in locals() else "OSHA 1926.100 & ANSI/ISEA 107",
+            "summary": summary,
+            "workers": filtered_workers,
+            "settings": active_inspection.get("settings", {}),
+        },
+        indent=2,
+    )
+
+    exp_c1, exp_c2, exp_c3 = st.columns(3)
+
+    with exp_c1:
+        st.markdown(
+            """
+            <div style="background:var(--surface-card); border:1px solid var(--border-color); border-radius:8px; padding:1rem; min-height:120px; display:flex; flex-direction:column; justify-content:space-between; margin-bottom:8px;">
+                <div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                        <span style="font-size:0.9rem; font-weight:700; color:var(--text-primary);">CSV Audit Report</span>
+                        <span style="font-size:0.68rem; font-weight:700; background:rgba(56, 189, 248, 0.15); border:1px solid rgba(56, 189, 248, 0.35); color:#38BDF8; padding:2px 6px; border-radius:3px;">.CSV</span>
+                    </div>
+                    <div style="font-size:0.75rem; color:var(--text-secondary); line-height:1.4;">
+                        Official audit spreadsheet with worker-by-worker gear breakdown and compliance metrics.
+                    </div>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
         st.download_button(
-            label="Download Inspection CSV Report (.csv)",
+            label="Download Audit Report (.csv)",
             data=csv_data,
             file_name=f"PPE_Safety_Inspection_{timestamp_slug}.csv",
             mime="text/csv",
+            type="primary",
             use_container_width=True,
+            key="btn_download_csv",
         )
-    with col_img:
+
+    with exp_c2:
+        st.markdown(
+            """
+            <div style="background:var(--surface-card); border:1px solid var(--border-color); border-radius:8px; padding:1rem; min-height:120px; display:flex; flex-direction:column; justify-content:space-between; margin-bottom:8px;">
+                <div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                        <span style="font-size:0.9rem; font-weight:700; color:var(--text-primary);">Annotated Evidence</span>
+                        <span style="font-size:0.68rem; font-weight:700; background:rgba(34, 197, 94, 0.15); border:1px solid rgba(34, 197, 94, 0.35); color:#22C55E; padding:2px 6px; border-radius:3px;">.JPG</span>
+                    </div>
+                    <div style="font-size:0.75rem; color:var(--text-secondary); line-height:1.4;">
+                        Photographic proof with localized bounding boxes, anatomical zones, and compliance tags.
+                    </div>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        if annotated_bytes:
+            st.download_button(
+                label="Download Evidence Photo (.jpg)",
+                data=annotated_bytes,
+                file_name=f"Annotated_Evidence_{timestamp_slug}.jpg",
+                mime="image/jpeg",
+                use_container_width=True,
+                key="btn_download_jpg",
+            )
+        else:
+            st.button("Evidence Unavailable", disabled=True, use_container_width=True, key="btn_download_jpg_dis")
+
+    with exp_c3:
+        st.markdown(
+            """
+            <div style="background:var(--surface-card); border:1px solid var(--border-color); border-radius:8px; padding:1rem; min-height:120px; display:flex; flex-direction:column; justify-content:space-between; margin-bottom:8px;">
+                <div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                        <span style="font-size:0.9rem; font-weight:700; color:var(--text-primary);">JSON Audit Record</span>
+                        <span style="font-size:0.68rem; font-weight:700; background:rgba(245, 158, 11, 0.15); border:1px solid rgba(245, 158, 11, 0.35); color:#F59E0B; padding:2px 6px; border-radius:3px;">.JSON</span>
+                    </div>
+                    <div style="font-size:0.75rem; color:var(--text-secondary); line-height:1.4;">
+                        Machine-readable JSON schema containing complete spatial detection telemetry.
+                    </div>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
         st.download_button(
-            label="Download Annotated Evidence Photo (.jpg)",
-            data=annotated_bytes,
-            file_name=f"Annotated_Evidence_{timestamp_slug}.jpg",
-            mime="image/jpeg",
+            label="Download Audit Data (.json)",
+            data=json_data,
+            file_name=f"Safety_Audit_Data_{timestamp_slug}.json",
+            mime="application/json",
             use_container_width=True,
+            key="btn_download_json",
         )
-
-
 # ============================================================================
 # 12. PAGE 7: SETTINGS & MODEL SPECIFICATIONS
 # ============================================================================
