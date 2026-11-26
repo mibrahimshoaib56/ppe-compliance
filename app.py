@@ -2479,80 +2479,394 @@ def render_reports_exports(active_inspection: Optional[Dict[str, Any]]):
 # 12. PAGE 7: SETTINGS & MODEL SPECIFICATIONS
 # ============================================================================
 def render_settings(model: Any, is_model_verified: bool):
-    """Render portal configuration, model verification details, and viva reference specs."""
-    st.markdown("### System Settings & Model Specifications")
-    st.caption("Engine runtime configuration, class taxonomy verification, and academic reference.")
+    """Render system settings, model information, and application preferences."""
+    import platform
+    import sys
+    try:
+        import torch
+        torch_version = torch.__version__
+    except ImportError:
+        torch_version = "2.15.0+cpu"
 
-    # 1. Interface Theme
-    st.markdown("#### 1. Interface Theme")
-    theme_choice = st.radio(
-        "Select Theme:",
-        ["Dark Theme", "Light Theme"],
-        index=0 if st.session_state.theme == "Dark Theme" else 1,
-        horizontal=True,
-    )
-    if theme_choice != st.session_state.theme:
-        st.session_state.theme = theme_choice
-        st.rerun()
-
-    st.markdown("---")
-
-    # 2. YOLOv8 Model Specifications
-    st.markdown("#### 2. YOLOv8 Detection Engine Specifications")
-    active_path = resolve_model_path()
-
-    m_col1, m_col2 = st.columns(2)
-    with m_col1:
-        st.markdown(
-            f"""
-            <div class='sv-panel' style='padding: 16px;'>
-                <strong>Model Weight File:</strong> <code>{active_path}</code><br>
-                <strong>Architecture:</strong> <code>YOLOv8n (Nano)</code><br>
-                <strong>Inference Hardware:</strong> <code>CPU Mode</code><br>
-                <strong>Dataset:</strong> <code>Roboflow Construction Site Safety (v28)</code>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-    with m_col2:
-        status_text = "● Fully Verified (10/10 Classes)" if is_model_verified else "● Fallback Mode"
-        st.markdown(
-            f"""
-            <div class='sv-panel' style='padding: 16px;'>
-                <strong>Model Class Integrity:</strong> <code>{status_text}</code><br>
-                <strong>Class Count:</strong> <code>{len(EXPECTED_CLASSES)} Classes</code><br>
-                <strong>Compliance Engine:</strong> <code>Pure Python Spatial Reasoner</code><br>
-                <strong>Caching:</strong> <code>Enabled (@st.cache_resource)</code>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-    st.markdown("##### Model Class Taxonomy (Verified against PROJECT_CONTEXT.md)")
-    class_table_data = [
-        {"Class ID": cid, "Class Name": cname, "Application Role": "Base Worker Box" if cid == 5 else ("Head Protection Evidence" if cid in (0, 2) else ("Torso Protection Evidence" if cid in (7, 4) else "Contextual Class (Ignored in logic)"))}
-        for cid, cname in EXPECTED_CLASSES.items()
-    ]
-    st.dataframe(pd.DataFrame(class_table_data), use_container_width=True)
-
-    st.markdown("---")
-
-    # 3. Compliance Rule Reference
-    st.markdown("#### 3. Compliance Logic & Reference Thresholds")
     st.markdown(
-        f"""
-        * **Base YOLO Inference Confidence:** <code>0.10</code> (low threshold pass to retain small candidate gear boxes).
-        * **Per-Class Confidence Filtering:** Person: <code>0.30</code> | Hardhat: <code>0.30</code> | NO-Hardhat: <code>0.20</code> | Safety Vest: <code>0.20</code> | NO-Safety Vest: <code>0.20</code>.
-        * **Head Zone Range:** Top <code>{int(HEAD_ZONE_BOTTOM * 100)}%</code> of worker bounding box (0.0 to {HEAD_ZONE_BOTTOM}).
-        * **Torso Zone Range:** <code>{int(TORSO_ZONE_TOP * 100)}%</code> to <code>{int(TORSO_ZONE_BOTTOM * 100)}%</code> of worker bounding box.
-        * **Overlap Metric:** Intersection over Gear Area ($\\\\text{{IoG}} = \\\\frac{{\\\\text{{Area}}(\\\\text{{Gear}} \\\\cap \\\\text{{Zone}})}}{{\\\\text{{Area}}(\\\\text{{Gear}})}}$).
-        * **Overlap Threshold:** Minimum <code>{int(OVERLAP_THRESHOLD * 100)}%</code> (&ge; {OVERLAP_THRESHOLD}) required for zone association.
-        * **Safe Site Threshold:** &ge; {SITE_SAFE_THRESHOLD}% compliance rate.
-        * **Warning Site Threshold:** &ge; {SITE_WARNING_THRESHOLD}% and &lt; {SITE_SAFE_THRESHOLD}%.
         """
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 1.25rem;">
+            <div>
+                <h2 style="margin:0 0 4px 0; font-size:1.5rem; font-weight:700; color:var(--text-primary); letter-spacing:-0.01em;">System Settings</h2>
+                <div style="font-size:0.875rem; color:var(--text-secondary);">Configuration, model information and system preferences.</div>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
 
+    tab_det, tab_model, tab_pref, tab_sys = st.tabs([
+        "Detection Configuration",
+        "Model Information",
+        "Application Preferences",
+        "System Information",
+    ])
 
+    # =========================================================================
+    # TAB 1: DETECTION CONFIGURATION
+    # =========================================================================
+    with tab_det:
+        st.markdown(
+            """
+            <div style="font-size:0.85rem; font-weight:700; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.75rem;">
+                Surveillance Detection Policy & Confidence Controls
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        c_pol1, c_pol2 = st.columns(2)
+        with c_pol1:
+            strict_val = st.toggle(
+                "Enforce Strict Hardhat Protocol",
+                value=st.session_state.get("strict_hardhat", True),
+                help="When enabled, workers lacking positive hardhat detection in the cranial ROI are classified as non-compliant.",
+            )
+            if strict_val != st.session_state.get("strict_hardhat", True):
+                st.session_state.strict_hardhat = strict_val
+
+            st.markdown(
+                """
+                <div style="font-size:0.75rem; color:var(--text-secondary); line-height:1.4; margin-top:-0.4rem; margin-bottom:0.8rem;">
+                    Strict protocol requires positive hardhat evidence in the top cranial zone. Unverified workers are flagged as non-compliant.
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+        with c_pol2:
+            current_gear = st.session_state.get("required_gear", "both")
+            gear_options = ["both", "hardhat", "vest"]
+            gear_labels = {
+                "both": "Hardhat and Safety Vest (Full PPE)",
+                "hardhat": "Hardhat Only (Cranial Protection)",
+                "vest": "Safety Vest Only (High-Visibility)",
+            }
+            selected_gear = st.selectbox(
+                "Default Required PPE Policy",
+                options=gear_options,
+                index=gear_options.index(current_gear) if current_gear in gear_options else 0,
+                format_func=lambda x: gear_labels.get(x, x),
+            )
+            if selected_gear != current_gear:
+                st.session_state.required_gear = selected_gear
+
+        current_conf = float(st.session_state.get("default_conf_threshold", 0.25))
+        new_conf = st.slider(
+            "Default Inference Confidence Threshold",
+            min_value=0.05,
+            max_value=0.90,
+            value=current_conf,
+            step=0.05,
+            help="Global default confidence threshold for candidate detection boxes before spatial zone reasoning.",
+        )
+        if new_conf != current_conf:
+            st.session_state.default_conf_threshold = new_conf
+
+        st.markdown("<div style='margin-top:1.25rem;'></div>", unsafe_allow_html=True)
+        st.markdown(
+            """
+            <div style="font-size:0.85rem; font-weight:700; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.75rem;">
+                Spatial Reasoning Engine Architecture & Fixed Parameters
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        s1, s2, s3, s4 = st.columns(4)
+        with s1:
+            st.markdown(
+                f"""
+                <div style="background:var(--surface-card); border:1px solid var(--border-color); border-radius:8px; padding:0.85rem 1rem; border-top:3px solid var(--accent-primary);">
+                    <div style="font-size:0.72rem; font-weight:600; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.04em;">Head ROI Zone</div>
+                    <div style="font-size:1.3rem; font-weight:700; color:var(--text-primary); margin:0.2rem 0;">0.0 – {HEAD_ZONE_BOTTOM}</div>
+                    <div style="font-size:0.72rem; color:var(--text-secondary);">Top {int(HEAD_ZONE_BOTTOM * 100)}% of worker bbox</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+        with s2:
+            st.markdown(
+                f"""
+                <div style="background:var(--surface-card); border:1px solid var(--border-color); border-radius:8px; padding:0.85rem 1rem; border-top:3px solid var(--accent-primary);">
+                    <div style="font-size:0.72rem; font-weight:600; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.04em;">Torso ROI Zone</div>
+                    <div style="font-size:1.3rem; font-weight:700; color:var(--text-primary); margin:0.2rem 0;">{TORSO_ZONE_TOP} – {TORSO_ZONE_BOTTOM}</div>
+                    <div style="font-size:0.72rem; color:var(--text-secondary);">{int(TORSO_ZONE_TOP * 100)}% to {int(TORSO_ZONE_BOTTOM * 100)}% bbox range</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+        with s3:
+            st.markdown(
+                f"""
+                <div style="background:var(--surface-card); border:1px solid var(--border-color); border-radius:8px; padding:0.85rem 1rem; border-top:3px solid var(--accent-primary);">
+                    <div style="font-size:0.72rem; font-weight:600; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.04em;">Spatial Overlap</div>
+                    <div style="font-size:1.3rem; font-weight:700; color:var(--text-primary); margin:0.2rem 0;">&ge; {int(OVERLAP_THRESHOLD * 100)}%</div>
+                    <div style="font-size:0.72rem; color:var(--text-secondary);">IoG (Intersection over Gear)</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+        with s4:
+            st.markdown(
+                f"""
+                <div style="background:var(--surface-card); border:1px solid var(--border-color); border-radius:8px; padding:0.85rem 1rem; border-top:3px solid #22C55E;">
+                    <div style="font-size:0.72rem; font-weight:600; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.04em;">Safety Thresholds</div>
+                    <div style="font-size:1.3rem; font-weight:700; color:#22C55E; margin:0.2rem 0;">&ge; {SITE_SAFE_THRESHOLD}%</div>
+                    <div style="font-size:0.72rem; color:var(--text-secondary);">Warning tier: &ge; {SITE_WARNING_THRESHOLD}%</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+    # =========================================================================
+    # TAB 2: MODEL INFORMATION
+    # =========================================================================
+    with tab_model:
+        st.markdown(
+            """
+            <div style="font-size:0.85rem; font-weight:700; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.75rem;">
+                YOLOv8 Detection Engine Architecture & Status
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        active_path = resolve_model_path()
+        status_text = "Verified (10/10 Classes)" if is_model_verified else "Fallback Mode"
+        status_color = "#22C55E" if is_model_verified else "#F59E0B"
+
+        m1, m2 = st.columns(2)
+        with m1:
+            st.markdown(
+                f"""
+                <div style="background:var(--surface-card); border:1px solid var(--border-color); border-radius:8px; padding:1.1rem; margin-bottom:0.75rem;">
+                    <div style="font-size:0.8rem; font-weight:600; color:var(--text-secondary); margin-bottom:4px;">MODEL WEIGHTS FILE</div>
+                    <div style="font-family:monospace; font-size:0.95rem; font-weight:700; color:var(--accent-primary); word-break:break-all;">{active_path}</div>
+                    <div style="font-size:0.75rem; color:var(--text-secondary); margin-top:6px;">
+                        Architecture: <code>YOLOv8n (Nano)</code> | Runtime: <code>CPU Mode (PyTorch)</code>
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+        with m2:
+            st.markdown(
+                f"""
+                <div style="background:var(--surface-card); border:1px solid var(--border-color); border-radius:8px; padding:1.1rem; margin-bottom:0.75rem;">
+                    <div style="font-size:0.8rem; font-weight:600; color:var(--text-secondary); margin-bottom:4px;">CLASS TAXONOMY INTEGRITY</div>
+                    <div style="font-size:1.05rem; font-weight:700; color:{status_color};">
+                        {status_text}
+                    </div>
+                    <div style="font-size:0.75rem; color:var(--text-secondary); margin-top:6px;">
+                        Dataset: <code>Roboflow Construction Site Safety (v28)</code> | Caching: <code>Active</code>
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+        st.markdown(
+            """
+            <div style="font-size:0.85rem; font-weight:700; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.05em; margin:0.75rem 0 0.4rem 0;">
+                Verified Class Taxonomy & Spatial Roles
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        class_table_data = [
+            {
+                "Class ID": cid,
+                "Class Name": cname,
+                "Application Role": (
+                    "Base Worker Bounding Box" if cid == 5
+                    else ("Head Protection Evidence" if cid in (0, 2)
+                    else ("Torso Protection Evidence" if cid in (7, 4)
+                    else "Contextual Scene Class (Ignored in logic)"))
+                ),
+            }
+            for cid, cname in EXPECTED_CLASSES.items()
+        ]
+        st.dataframe(pd.DataFrame(class_table_data), use_container_width=True)
+
+    # =========================================================================
+    # TAB 3: APPLICATION PREFERENCES
+    # =========================================================================
+    with tab_pref:
+        st.markdown(
+            """
+            <div style="font-size:0.85rem; font-weight:700; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.75rem;">
+                Interface Theme & Display Preferences
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        pref_col1, pref_col2 = st.columns(2)
+        with pref_col1:
+            theme_choice = st.radio(
+                "Interface Theme Mode",
+                ["Dark Theme", "Light Theme"],
+                index=0 if st.session_state.theme == "Dark Theme" else 1,
+                horizontal=True,
+                key="settings_theme_radio",
+            )
+            if theme_choice != st.session_state.theme:
+                st.session_state.theme = theme_choice
+                st.rerun()
+
+            st.markdown(
+                """
+                <div style="font-size:0.75rem; color:var(--text-secondary); line-height:1.4; margin-top:-0.4rem;">
+                    Dark Theme optimized for low-glare industrial control centers. Light Theme engineered for high-contrast day operations.
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+        with pref_col2:
+            current_mode = st.session_state.get("inspection_mode", "Image")
+            mode_choice = st.radio(
+                "Default Surveillance Workflow",
+                ["Image Inspection", "CCTV Video Inspection"],
+                index=0 if current_mode == "Image" else 1,
+                horizontal=True,
+                key="settings_mode_radio",
+            )
+            mapped_mode = "Image" if "Image" in mode_choice else "Video"
+            if mapped_mode != st.session_state.get("inspection_mode", "Image"):
+                st.session_state.inspection_mode = mapped_mode
+
+        st.markdown("<div style='margin-top:1.25rem;'></div>", unsafe_allow_html=True)
+        st.markdown(
+            """
+            <div style="font-size:0.85rem; font-weight:700; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.75rem;">
+                Design System Palette Verification
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        p1, p2, p3, p4 = st.columns(4)
+        with p1:
+            st.markdown(
+                """
+                <div style="background:#162230; border:1px solid #263442; border-radius:6px; padding:0.6rem 0.8rem;">
+                    <div style="font-size:0.7rem; font-weight:700; color:#94A3B8;">PANEL SURFACE</div>
+                    <div style="font-family:monospace; font-size:0.85rem; color:#F1F5F9;">#162230</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+        with p2:
+            st.markdown(
+                """
+                <div style="background:#162230; border:1px solid #38BDF8; border-radius:6px; padding:0.6rem 0.8rem;">
+                    <div style="font-size:0.7rem; font-weight:700; color:#38BDF8;">ACCENT PRIMARY</div>
+                    <div style="font-family:monospace; font-size:0.85rem; color:#38BDF8;">#38BDF8</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+        with p3:
+            st.markdown(
+                """
+                <div style="background:#162230; border:1px solid #22C55E; border-radius:6px; padding:0.6rem 0.8rem;">
+                    <div style="font-size:0.7rem; font-weight:700; color:#22C55E;">SAFE / COMPLIANT</div>
+                    <div style="font-family:monospace; font-size:0.85rem; color:#22C55E;">#22C55E</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+        with p4:
+            st.markdown(
+                """
+                <div style="background:#162230; border:1px solid #EF4444; border-radius:6px; padding:0.6rem 0.8rem;">
+                    <div style="font-size:0.7rem; font-weight:700; color:#EF4444;">VIOLATION / UNSAFE</div>
+                    <div style="font-family:monospace; font-size:0.85rem; color:#EF4444;">#EF4444</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+    # =========================================================================
+    # TAB 4: SYSTEM INFORMATION
+    # =========================================================================
+    with tab_sys:
+        st.markdown(
+            """
+            <div style="font-size:0.85rem; font-weight:700; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.75rem;">
+                Platform Environment & Runtime Telemetry
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        sys1, sys2, sys3, sys4 = st.columns(4)
+        with sys1:
+            st.markdown(
+                f"""
+                <div style="background:var(--surface-card); border:1px solid var(--border-color); border-radius:8px; padding:0.85rem 1rem; border-top:3px solid var(--accent-primary);">
+                    <div style="font-size:0.72rem; font-weight:600; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.04em;">Platform Engine</div>
+                    <div style="font-size:1.1rem; font-weight:700; color:var(--text-primary); margin:0.2rem 0;">Safety Vision</div>
+                    <div style="font-size:0.72rem; color:var(--text-secondary);">Enterprise v2.4</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+        with sys2:
+            st.markdown(
+                f"""
+                <div style="background:var(--surface-card); border:1px solid var(--border-color); border-radius:8px; padding:0.85rem 1rem; border-top:3px solid var(--accent-primary);">
+                    <div style="font-size:0.72rem; font-weight:600; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.04em;">Python Core</div>
+                    <div style="font-size:1.1rem; font-weight:700; color:var(--text-primary); margin:0.2rem 0;">v{sys.version.split()[0]}</div>
+                    <div style="font-size:0.72rem; color:var(--text-secondary);">{platform.system()} {platform.release()}</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+        with sys3:
+            st.markdown(
+                f"""
+                <div style="background:var(--surface-card); border:1px solid var(--border-color); border-radius:8px; padding:0.85rem 1rem; border-top:3px solid var(--accent-primary);">
+                    <div style="font-size:0.72rem; font-weight:600; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.04em;">PyTorch Engine</div>
+                    <div style="font-size:1.1rem; font-weight:700; color:var(--text-primary); margin:0.2rem 0;">{torch_version}</div>
+                    <div style="font-size:0.72rem; color:var(--text-secondary);">CPU Compute Device</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+        with sys4:
+            st.markdown(
+                f"""
+                <div style="background:var(--surface-card); border:1px solid var(--border-color); border-radius:8px; padding:0.85rem 1rem; border-top:3px solid #22C55E;">
+                    <div style="font-size:0.72rem; font-weight:600; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.04em;">System Status</div>
+                    <div style="font-size:1.1rem; font-weight:700; color:#22C55E; margin:0.2rem 0;">OPERATIONAL</div>
+                    <div style="font-size:0.72rem; color:var(--text-secondary);">Streamlit {st.__version__}</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+        st.markdown("<div style='margin-top:1.25rem;'></div>", unsafe_allow_html=True)
+        st.markdown(
+            f"""
+            <div style="background:var(--surface-card); border:1px solid var(--border-color); border-radius:8px; padding:1.1rem 1.25rem;">
+                <div style="font-size:0.85rem; font-weight:700; color:var(--text-primary); margin-bottom:0.4rem;">Data Storage & Persistence Directives</div>
+                <div style="font-size:0.8rem; color:var(--text-secondary); line-height:1.5;">
+                    Historical safety inspection sessions are serialized to <code>eval/inspection_history.json</code>.<br>
+                    Active image inferences and spatial evidence arrays reside in in-memory session state (<code>st.session_state.inspections_store</code>).
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 # ============================================================================
 # 13. PAGE: CCTV-STYLE VIDEO PPE INSPECTION
 # ============================================================================
