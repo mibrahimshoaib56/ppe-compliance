@@ -120,11 +120,14 @@ def init_session_state():
     if "theme" not in st.session_state:
         st.session_state.theme = "Dark Theme"
 
+    if "in_app" not in st.session_state:
+        st.session_state.in_app = False
+
     if "current_page" not in st.session_state:
-        st.session_state.current_page = "Home"
+        st.session_state.current_page = "Dashboard"
 
     if "nav_radio" not in st.session_state:
-        st.session_state.nav_radio = "Home"
+        st.session_state.nav_radio = "Dashboard"
 
     if "inspection_mode" not in st.session_state:
         st.session_state.inspection_mode = "Image"
@@ -194,14 +197,10 @@ def save_inspection_to_history(inspection_record: Dict[str, Any]):
 
 def navigate_to(page_name: str):
     """Programmatically switch active page and trigger a rerun."""
+    st.session_state.in_app = True
     st.session_state.current_page = page_name
     st.session_state.nav_radio = page_name
     st.rerun()
-
-
-# ============================================================================
-# 4. ENTERPRISE INDUSTRIAL STYLING (Dark & Light Themes)
-# ============================================================================
 def inject_custom_css(theme: str):
     """Inject responsive, enterprise-grade industrial control center CSS for Phase 1."""
     if theme == "Dark Theme":
@@ -791,7 +790,7 @@ def render_top_navbar(current_page: str, is_model_verified: bool):
         else "<span class='model-pill-warn'>● YOLOv8 Fallback</span>"
     )
 
-    col_brand, col_status, col_theme = st.columns([5, 3, 2])
+    col_brand, col_status, col_theme = st.columns([5, 3, 2.5])
 
     with col_brand:
         st.markdown(
@@ -802,7 +801,7 @@ def render_top_navbar(current_page: str, is_model_verified: bool):
                 </svg>
                 <span class='brand-title'>SAFETY VISION</span>
                 <span style='color: #64748B;'>/</span>
-                <span class='page-crumb'>{'WELCOME' if current_page == 'Home' else current_page.upper()}</span>
+                <span class='page-crumb'>{current_page.upper()}</span>
             </div>
             """,
             unsafe_allow_html=True,
@@ -815,40 +814,87 @@ def render_top_navbar(current_page: str, is_model_verified: bool):
         )
 
     with col_theme:
-        current_theme = st.session_state.theme
-        theme_label = "Light Mode" if current_theme == "Dark Theme" else "Dark Mode"
-        if st.button(theme_label, key="top_theme_toggle", use_container_width=True):
-            st.session_state.theme = "Light Theme" if current_theme == "Dark Theme" else "Dark Theme"
-            st.rerun()
+        c_home, c_th = st.columns([1, 1.2])
+        with c_home:
+            if st.button("HOME", key="top_navbar_home_btn", use_container_width=True):
+                st.session_state.in_app = False
+                st.rerun()
+        with c_th:
+            current_theme = st.session_state.theme
+            theme_label = "Light Mode" if current_theme == "Dark Theme" else "Dark Mode"
+            if st.button(theme_label, key="top_theme_toggle", use_container_width=True):
+                st.session_state.theme = "Light Theme" if current_theme == "Dark Theme" else "Dark Theme"
+                st.rerun()
 
     st.markdown("<hr style='margin: 8px 0 16px 0; border: none; border-top: 1px solid var(--border-color);'>", unsafe_allow_html=True)
-
-
 # ============================================================================
 # 5B. PAGE 0: WELCOME & LANDING PAGE (PHASE 10)
 # ============================================================================
 def render_landing_page():
-    """Render the modern industrial welcome and landing portal for Safety Vision."""
-    # Hero Header Badge
+    """Render the standalone modern industrial welcome and landing portal for Safety Vision."""
+    # Hide sidebar and collapse handle completely on the landing page
     st.markdown(
         """
-        <div style="margin-top: 0.25rem; margin-bottom: 1.5rem;">
-            <div style="display:inline-flex; align-items:center; gap:8px; background:rgba(163, 230, 53, 0.12); border:1px solid rgba(163, 230, 53, 0.35); border-radius:4px; padding:4px 12px;">
-                <span style="display:inline-block; width:6px; height:6px; border-radius:50%; background:#A3E635;"></span>
-                <span style="font-size:0.75rem; font-weight:700; color:#A3E635; letter-spacing:0.08em; text-transform:uppercase;">AI-POWERED CONSTRUCTION SAFETY</span>
-            </div>
-        </div>
+        <style>
+            [data-testid="stSidebar"],
+            [data-testid="stSidebarCollapsedControl"],
+            button[data-testid="stSidebarCollapseButton"] {
+                display: none !important;
+            }
+            .main .block-container {
+                max-width: 1200px;
+                padding-top: 1.5rem;
+                padding-bottom: 3.5rem;
+            }
+        </style>
         """,
         unsafe_allow_html=True,
     )
 
+    # Top Brand Bar on Landing Page
+    h_brand, h_actions = st.columns([8, 2])
+    with h_brand:
+        st.markdown(
+            """
+            <div style="display:flex; align-items:center; gap:12px;">
+                <div style="width:40px; height:40px; border-radius:6px; background:#151515; border:1px solid #292929; display:flex; align-items:center; justify-content:center;">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#A3E635" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                    </svg>
+                </div>
+                <div>
+                    <div style="font-size:1.15rem; font-weight:800; letter-spacing:0.04em; color:#F1F5F9; line-height:1.2;">
+                        SAFETY VISION
+                    </div>
+                    <div style="font-size:0.7rem; font-weight:700; color:#A3E635; letter-spacing:0.1em; text-transform:uppercase;">
+                        AI Surveillance Platform
+                    </div>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    with h_actions:
+        current_theme = st.session_state.theme
+        theme_label = "Light Mode" if current_theme == "Dark Theme" else "Dark Mode"
+        if st.button(theme_label, key="landing_theme_toggle", use_container_width=True):
+            st.session_state.theme = "Light Theme" if current_theme == "Dark Theme" else "Dark Theme"
+            st.rerun()
+
+    st.markdown("<div style='margin-top: 2rem;'></div>", unsafe_allow_html=True)
+
+    # Hero Section
     c_hero_text, c_hero_vis = st.columns([7, 5])
 
     with c_hero_text:
         st.markdown(
             """
-            <div style="padding-right: 1rem;">
-                <h1 style="font-size: 2.85rem; font-weight: 800; color: #F1F5F9; letter-spacing: -0.03em; line-height: 1.15; margin: 0 0 1.25rem 0;">
+            <div style="padding-right: 1.5rem;">
+                <div style="display:inline-flex; align-items:center; gap:8px; background:rgba(163, 230, 53, 0.12); border:1px solid rgba(163, 230, 53, 0.35); border-radius:4px; padding:4px 12px; margin-bottom:1.25rem;">
+                    <span style="display:inline-block; width:6px; height:6px; border-radius:50%; background:#A3E635;"></span>
+                    <span style="font-size:0.75rem; font-weight:700; color:#A3E635; letter-spacing:0.08em; text-transform:uppercase;">AI-POWERED CONSTRUCTION SAFETY</span>
+                </div>
+                <h1 style="font-size: 2.9rem; font-weight: 800; color: #F1F5F9; letter-spacing: -0.03em; line-height: 1.12; margin: 0 0 1.25rem 0;">
                     BUILDING SAFER WORKSITES WITH AI
                 </h1>
                 <p style="font-size: 1.05rem; color: #94A3B8; line-height: 1.65; margin: 0 0 2rem 0;">
@@ -859,13 +905,13 @@ def render_landing_page():
             unsafe_allow_html=True,
         )
 
-        c_cta1, c_cta2 = st.columns([5, 5])
-        with c_cta1:
+        col_enter, _ = st.columns([7, 3])
+        with col_enter:
             if st.button("ENTER SAFETY SYSTEM →", type="primary", use_container_width=True, key="landing_btn_enter"):
-                navigate_to("Dashboard")
-        with c_cta2:
-            if st.button("NEW INSPECTION", use_container_width=True, key="landing_btn_new_insp"):
-                navigate_to("New Inspection")
+                st.session_state.in_app = True
+                st.session_state.current_page = "Dashboard"
+                st.session_state.nav_radio = "Dashboard"
+                st.rerun()
 
         st.markdown(
             """
@@ -892,20 +938,24 @@ def render_landing_page():
             im = Image.open(img_source)
             st.markdown(
                 """
-                <div style="background:#151515; border:1px solid #292929; border-radius:8px; padding:8px 8px 4px 8px; margin-bottom:8px;">
+                <div style="background:#151515; border:1px solid #292929; border-radius:8px; padding:10px 10px 6px 10px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; padding:2px 4px 8px 4px; border-bottom:1px solid #292929; margin-bottom:8px;">
+                        <span style="font-size:0.72rem; font-weight:700; color:#A3E635; letter-spacing:0.06em;">● LIVE WORKSITE FEED</span>
+                        <span style="font-size:0.7rem; color:#94A3B8; font-family:monospace;">CAM-04 · 1080P</span>
+                    </div>
                 """,
                 unsafe_allow_html=True,
             )
             st.image(
                 im,
-                caption="Active Worksite Video Feed — PPE Compliance Detection",
+                caption="Worksite Safety Surveillance — PPE Compliance Monitoring Active",
                 use_container_width=True,
             )
             st.markdown("</div>", unsafe_allow_html=True)
 
-    st.markdown("<div style='margin-top: 2.75rem; margin-bottom: 1.5rem; border-top: 1px solid #292929;'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='margin-top: 3.5rem; margin-bottom: 1.5rem; border-top: 1px solid #292929;'></div>", unsafe_allow_html=True)
 
-    # Feature Highlights
+    # Feature Highlights (4 Columns)
     st.markdown(
         """
         <div style="margin-bottom: 1.25rem;">
@@ -1007,8 +1057,6 @@ def render_landing_page():
             """,
             unsafe_allow_html=True,
         )
-
-
 
 # ============================================================================
 # 6. PAGE 1: DASHBOARD
@@ -3740,10 +3788,22 @@ def main():
         st.error(f"Error loading YOLO model from `{active_model_path}`: {e}")
         st.stop()
 
+    # 1. STANDALONE LANDING PAGE EXPERIENCE (No sidebar, no dashboard controls)
+    if not st.session_state.get("in_app", False):
+        render_landing_page()
+        return
+
+    # 2. OPERATIONAL SAFETY DASHBOARD APPLICATION
     with st.sidebar:
+        if st.button("← RETURN TO HOME", key="sidebar_return_home_btn", use_container_width=True):
+            st.session_state.in_app = False
+            st.rerun()
+
+        st.markdown("<hr style='margin: 6px 0 10px 0;'>", unsafe_allow_html=True)
+
         st.markdown(
             """
-            <div style='display: flex; align-items: center; gap: 10px; padding: 8px 4px 14px 4px;'>
+            <div style='display: flex; align-items: center; gap: 10px; padding: 4px 4px 14px 4px;'>
                 <div style='width: 36px; height: 36px; border-radius: 4px; background: var(--surface-card); border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: center;'>
                     <svg width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='var(--accent-primary)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z'/></svg>
                 </div>
@@ -3785,7 +3845,6 @@ def main():
         )
 
         pages = [
-            "Home",
             "Dashboard",
             "New Inspection",
             "Inspection Results",
@@ -3839,15 +3898,13 @@ def main():
             unsafe_allow_html=True,
         )
 
-
-        render_top_navbar(st.session_state.current_page, is_model_verified)
+    # Top Navigation Bar in main workspace
+    render_top_navbar(st.session_state.current_page, is_model_verified)
 
     active_insp = st.session_state.active_inspection
     history_list = st.session_state.inspection_history
 
-    if st.session_state.current_page == "Home":
-        render_landing_page()
-    elif st.session_state.inspection_mode == "Video":
+    if st.session_state.inspection_mode == "Video":
         if st.session_state.current_page == "New Inspection":
             render_video_inspection(model)
         elif st.session_state.current_page == "Inspection Results":
@@ -3883,7 +3940,5 @@ def main():
             render_reports_exports(active_insp)
         elif st.session_state.current_page == "Settings":
             render_settings(model, is_model_verified)
-
-
 if __name__ == "__main__":
     main()
