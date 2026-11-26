@@ -1,4 +1,4 @@
-"""SAFETY VISION: Enterprise AI Surveillance & PPE Compliance Monitoring Platform.
+﻿"""SAFETY VISION: Enterprise AI Surveillance & PPE Compliance Monitoring Platform.
 
 Streamlit web application for construction site safety surveillance, combining
 an Ultralytics YOLOv8 object detector with pure Python spatial compliance rules
@@ -1826,47 +1826,258 @@ def render_worker_audits(active_inspection: Optional[Dict[str, Any]]):
 # ============================================================================
 def render_inspection_history(history: List[Dict[str, Any]], model: Any):
     """Render persistent history of completed site inspections with review actions."""
-    st.markdown("### Site Inspection History")
-    st.caption("Chronological record of completed construction site safety inspections. Select any record to review results.")
+    st.markdown(
+        """
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 1.25rem;">
+            <div>
+                <h2 style="margin:0 0 4px 0; font-size:1.5rem; font-weight:700; color:#F1F5F9; letter-spacing:-0.01em;">Site Inspection History</h2>
+                <div style="font-size:0.875rem; color:#94A3B8;">Review, track, and audit historical safety inspections across monitored site assets.</div>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
     if not history:
-        st.info("No historical inspections recorded yet. Executed inspections will appear here.")
-        if st.button("Start First Inspection"):
-            navigate_to("New Inspection")
+        st.markdown(
+            """
+            <div style="background:#162230; border:1px solid #263442; border-radius:8px; padding:2.75rem 1.5rem; text-align:center; margin-top:0.5rem;">
+                <div style="display:inline-flex; align-items:center; justify-content:center; width:48px; height:48px; border-radius:8px; background:#223244; margin-bottom:1rem;">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                        <polyline points="10 9 9 9 8 9"></polyline>
+                    </svg>
+                </div>
+                <div style="font-size:1.05rem; font-weight:600; color:#F1F5F9; margin-bottom:0.35rem;">No Historical Inspections Found</div>
+                <div style="font-size:0.875rem; color:#94A3B8; max-width:440px; margin:0 auto 1.5rem auto;">
+                    Completed site inspections, compliance statistics, and spatial evidence records will be cataloged here.
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        col_c, _ = st.columns([3, 7])
+        with col_c:
+            if st.button("Start New Inspection", type="primary", use_container_width=True):
+                navigate_to("New Inspection")
         return
 
-    for idx, item in enumerate(history):
-        status = item["site_status"]
-        status_color = "#22C55E" if status == "Safe" else ("#F59E0B" if status == "Warning" else "#EF4444")
-        item_id = item["id"]
+    # Overview KPI Section
+    total_inspections = len(history)
+    total_workers_audited = sum(int(h.get("total_workers", 0)) for h in history)
+    total_violations = sum(int(h.get("violation_count", 0)) for h in history)
+    avg_compliance = (
+        round(sum(float(h.get("compliance_rate", 0.0)) for h in history) / total_inspections, 1)
+        if total_inspections > 0
+        else 0.0
+    )
+
+    avg_color = "#22C55E" if avg_compliance >= 90.0 else ("#F59E0B" if avg_compliance >= 75.0 else "#EF4444")
+    viol_color = "#22C55E" if total_violations == 0 else "#EF4444"
+
+    k1, k2, k3, k4 = st.columns(4)
+    with k1:
+        st.markdown(
+            f"""
+            <div style="background:#162230; border:1px solid #263442; border-radius:8px; padding:0.9rem 1rem; border-top:3px solid #38BDF8;">
+                <div style="font-size:0.75rem; font-weight:600; color:#94A3B8; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.25rem;">Total Inspections</div>
+                <div style="font-size:1.6rem; font-weight:700; color:#F1F5F9; line-height:1.2;">{total_inspections}</div>
+                <div style="font-size:0.75rem; color:#94A3B8; margin-top:0.25rem;">Logged audit events</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    with k2:
+        st.markdown(
+            f"""
+            <div style="background:#162230; border:1px solid #263442; border-radius:8px; padding:0.9rem 1rem; border-top:3px solid #38BDF8;">
+                <div style="font-size:0.75rem; font-weight:600; color:#94A3B8; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.25rem;">Workers Audited</div>
+                <div style="font-size:1.6rem; font-weight:700; color:#F1F5F9; line-height:1.2;">{total_workers_audited}</div>
+                <div style="font-size:0.75rem; color:#94A3B8; margin-top:0.25rem;">Cumulative detections</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    with k3:
+        st.markdown(
+            f"""
+            <div style="background:#162230; border:1px solid #263442; border-radius:8px; padding:0.9rem 1rem; border-top:3px solid {avg_color};">
+                <div style="font-size:0.75rem; font-weight:600; color:#94A3B8; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.25rem;">Avg Compliance</div>
+                <div style="font-size:1.6rem; font-weight:700; color:{avg_color}; line-height:1.2;">{avg_compliance}%</div>
+                <div style="font-size:0.75rem; color:#94A3B8; margin-top:0.25rem;">Site-wide performance</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    with k4:
+        st.markdown(
+            f"""
+            <div style="background:#162230; border:1px solid #263442; border-radius:8px; padding:0.9rem 1rem; border-top:3px solid {viol_color};">
+                <div style="font-size:0.75rem; font-weight:600; color:#94A3B8; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.25rem;">Total Violations</div>
+                <div style="font-size:1.6rem; font-weight:700; color:{viol_color}; line-height:1.2;">{total_violations}</div>
+                <div style="font-size:0.75rem; color:#94A3B8; margin-top:0.25rem;">Flagged PPE breaches</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    st.markdown("<div style='margin-bottom:1.25rem;'></div>", unsafe_allow_html=True)
+
+    # Search, Filter and Sort Controls
+    f_search, f_status, f_sort = st.columns([5, 4, 3])
+    with f_search:
+        search_query = st.text_input(
+            "Search Records",
+            placeholder="Search by ID, filename, or date...",
+            label_visibility="collapsed",
+            key="hist_search_query",
+        ).strip().lower()
+    with f_status:
+        status_filter = st.selectbox(
+            "Status Filter",
+            options=["All Statuses", "Safe Only", "Warning Only", "Violation Only"],
+            label_visibility="collapsed",
+            key="hist_status_filter",
+        )
+    with f_sort:
+        sort_order = st.selectbox(
+            "Sort Order",
+            options=["Newest First", "Oldest First", "Lowest Compliance", "Highest Compliance", "Most Violations"],
+            label_visibility="collapsed",
+            key="hist_sort_order",
+        )
+
+    # Filter records
+    filtered = list(history)
+    if search_query:
+        filtered = [
+            h for h in filtered
+            if search_query in str(h.get("id", "")).lower()
+            or search_query in str(h.get("image_name", "")).lower()
+            or search_query in str(h.get("timestamp", "")).lower()
+        ]
+
+    if status_filter == "Safe Only":
+        filtered = [h for h in filtered if str(h.get("site_status", "")).lower() in ["safe", "compliant"]]
+    elif status_filter == "Warning Only":
+        filtered = [h for h in filtered if str(h.get("site_status", "")).lower() in ["warning", "caution"]]
+    elif status_filter == "Violation Only":
+        filtered = [h for h in filtered if str(h.get("site_status", "")).lower() in ["violation", "unsafe", "critical"]]
+
+    # Sort records
+    if sort_order == "Newest First":
+        pass  # History is already stored newest first
+    elif sort_order == "Oldest First":
+        filtered = list(reversed(filtered))
+    elif sort_order == "Lowest Compliance":
+        filtered = sorted(filtered, key=lambda x: float(x.get("compliance_rate", 0.0)))
+    elif sort_order == "Highest Compliance":
+        filtered = sorted(filtered, key=lambda x: float(x.get("compliance_rate", 0.0)), reverse=True)
+    elif sort_order == "Most Violations":
+        filtered = sorted(filtered, key=lambda x: int(x.get("violation_count", 0)), reverse=True)
+
+    st.markdown(
+        f"""
+        <div style="display:flex; justify-content:space-between; align-items:center; margin:0.75rem 0 0.5rem 0; padding-bottom:0.4rem; border-bottom:1px solid #263442;">
+            <div style="font-size:0.8rem; font-weight:600; color:#94A3B8; text-transform:uppercase; letter-spacing:0.05em;">
+                Showing {len(filtered)} of {len(history)} Inspection Records
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    if not filtered:
+        st.markdown(
+            """
+            <div style="background:#162230; border:1px solid #263442; border-radius:8px; padding:2rem 1.5rem; text-align:center; margin-top:0.5rem;">
+                <div style="font-size:0.95rem; font-weight:600; color:#F1F5F9; margin-bottom:0.25rem;">No Matching Records Found</div>
+                <div style="font-size:0.85rem; color:#94A3B8;">Adjust or clear your search query and filters to display historical inspections.</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        return
+
+    # List of Inspection Records
+    for idx, item in enumerate(filtered):
+        status = str(item.get("site_status", "Safe")).capitalize()
+        if status in ["Safe", "Compliant"]:
+            badge_bg = "rgba(34, 197, 94, 0.12)"
+            badge_border = "rgba(34, 197, 94, 0.35)"
+            badge_color = "#22C55E"
+            status_label = "SAFE"
+        elif status in ["Warning", "Caution"]:
+            badge_bg = "rgba(245, 158, 11, 0.12)"
+            badge_border = "rgba(245, 158, 11, 0.35)"
+            badge_color = "#F59E0B"
+            status_label = "WARNING"
+        else:
+            badge_bg = "rgba(239, 68, 68, 0.12)"
+            badge_border = "rgba(239, 68, 68, 0.35)"
+            badge_color = "#EF4444"
+            status_label = "VIOLATION"
+
+        item_id = item.get("id", f"INSP-{idx}")
+        comp_rate = item.get("compliance_rate", 0.0)
+        compliant_n = item.get("compliant_count", 0)
+        total_w = item.get("total_workers", 0)
+        viol_n = item.get("violation_count", 0)
+        img_name = item.get("image_name", "Unknown Source")
+        timestamp = item.get("timestamp", "Unknown Date")
 
         with st.container():
-            c_info, c_stats, c_btn = st.columns([4, 4, 2])
+            c_meta, c_metrics, c_action = st.columns([5, 4, 3])
 
-            with c_info:
+            with c_meta:
                 st.markdown(
-                    f"<span style='font-size:15px; font-weight:700; color:#38BDF8;'>{item_id}</span><br>"
-                    f"<span style='font-size:12px; color:#94A3B8;'>Date: {item['timestamp']}</span><br>"
-                    f"<span style='font-size:12px; color:#94A3B8;'>Source: <code>{item['image_name']}</code></span>",
+                    f"""
+                    <div style="display:flex; flex-direction:column; gap:3px;">
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <span style="font-family:monospace; font-size:0.95rem; font-weight:700; color:#38BDF8;">{item_id}</span>
+                            <span style="background:{badge_bg}; border:1px solid {badge_border}; color:{badge_color}; font-size:0.7rem; font-weight:700; padding:2px 7px; border-radius:4px; letter-spacing:0.04em;">{status_label}</span>
+                        </div>
+                        <div style="font-size:0.8rem; color:#94A3B8;">
+                            Source: <code style="color:#CBD5E1; background:#0B1118; padding:1px 5px; border-radius:3px; border:1px solid #263442;">{img_name}</code>
+                        </div>
+                        <div style="font-size:0.75rem; color:#64748B;">
+                            Logged: {timestamp}
+                        </div>
+                    </div>
+                    """,
                     unsafe_allow_html=True,
                 )
 
-            with c_stats:
+            with c_metrics:
+                rate_color = "#22C55E" if comp_rate >= 90.0 else ("#F59E0B" if comp_rate >= 75.0 else "#EF4444")
                 st.markdown(
-                    f"<span style='font-size:16px; font-weight:700; color:{status_color};'>{status.upper()}</span><br>"
-                    f"<span style='font-size:12px; color:#94A3B8;'>Compliance Rate: <strong>{item['compliance_rate']}%</strong></span><br>"
-                    f"<span style='font-size:12px; color:#94A3B8;'>Workers: <strong>{item['compliant_count']}/{item['total_workers']} compliant</strong></span>",
+                    f"""
+                    <div style="display:flex; flex-direction:column; gap:3px;">
+                        <div style="font-size:0.8rem; color:#94A3B8;">
+                            Compliance Rate: <strong style="color:{rate_color}; font-size:0.95rem;">{comp_rate}%</strong>
+                        </div>
+                        <div style="font-size:0.8rem; color:#94A3B8;">
+                            Personnel: <strong style="color:#F1F5F9;">{compliant_n}/{total_w}</strong> compliant
+                        </div>
+                        <div style="font-size:0.75rem; color:#94A3B8;">
+                            Violations: <strong style="color:{'#EF4444' if viol_n > 0 else '#94A3B8'};">{viol_n}</strong> detected
+                        </div>
+                    </div>
+                    """,
                     unsafe_allow_html=True,
                 )
 
-            with c_btn:
-                st.markdown("<div style='padding-top:10px;'></div>", unsafe_allow_html=True)
-                if st.button("View Results", key=f"view_hist_{item_id}_{idx}", use_container_width=True):
+            with c_action:
+                st.markdown("<div style='padding-top:6px;'></div>", unsafe_allow_html=True)
+                if st.button("Review Inspection", key=f"view_hist_{item_id}_{idx}", use_container_width=True):
                     if item_id in st.session_state.inspections_store:
                         st.session_state.active_inspection = st.session_state.inspections_store[item_id]
                         navigate_to("Inspection Results")
                     elif item.get("image_path") and os.path.exists(item["image_path"]):
-                        with st.spinner(f"Reloading inspection for {item['image_name']}..."):
+                        with st.spinner(f"Reloading inspection for {img_name}..."):
                             reloaded_img = Image.open(item["image_path"]).convert("RGB")
                             req_mode = item.get("settings", {}).get("required_gear", "both")
                             conf_t = item.get("settings", {}).get("conf_threshold", 0.25)
@@ -1900,11 +2111,9 @@ def render_inspection_history(history: List[Dict[str, Any]], model: Any):
                             st.session_state.active_inspection = reloaded_record
                             navigate_to("Inspection Results")
                     else:
-                        st.info("Full image not cached in memory for this session.")
+                        st.warning("Original source image file not located on disk. Cannot reconstruct session.")
 
-            st.markdown("<hr style='margin: 8px 0 12px 0; border: none; border-top: 1px solid #263442;'>", unsafe_allow_html=True)
-
-
+            st.markdown("<div style='margin: 0.6rem 0; border-top: 1px solid #263442;'></div>", unsafe_allow_html=True)
 # ============================================================================
 # 11. PAGE 6: REPORTS & EXPORTS
 # ============================================================================
