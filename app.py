@@ -1299,13 +1299,28 @@ def render_new_inspection(model: Any):
 # ============================================================================
 def render_inspection_results(active_inspection: Optional[Dict[str, Any]]):
     """Render the AI inspection workstation: summary metrics, high-res viewer, and worker analysis."""
+    # A. Page Header
     st.markdown("### Inspection Results & Spatial Evidence")
     st.caption("AI-annotated site inspection overlays, compliance ratios, and actionable safety advisories.")
 
+    # Empty State Handling
     if active_inspection is None:
-        st.warning("No active inspection available to display. Conduct an inspection first.")
-        if st.button("Go to New Inspection"):
-            navigate_to("New Inspection")
+        st.markdown(
+            """
+            <div class='sv-panel' style='text-align: center; padding: 48px 24px; margin-top: 10px;'>
+                <div style='font-size: 13px; text-transform: uppercase; letter-spacing: 1.5px; color: #38BDF8; font-weight: 600; margin-bottom: 8px;'>[ NO ACTIVE INSPECTION ]</div>
+                <h3 style='margin: 12px 0 6px 0; color: #F1F5F9;'>No Inspection Results Available</h3>
+                <p style='color: #94A3B8; max-width: 520px; margin: 0 auto 24px auto; font-size: 13px; line-height: 1.6;'>
+                    No active inspection data is currently loaded in the analysis workspace. Run a new site inspection or load a previous audit from the inspection history.
+                </p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        c_emp1, c_emp2, c_emp3 = st.columns([1, 2, 1])
+        with c_emp2:
+            if st.button("Start New Site Inspection", key="results_empty_new_btn", type="primary", use_container_width=True):
+                navigate_to("New Inspection")
         return
 
     summary = active_inspection["summary"]
@@ -1313,91 +1328,114 @@ def render_inspection_results(active_inspection: Optional[Dict[str, Any]]):
     image_input = active_inspection["image"]
     annotated_img = active_inspection["annotated_image"]
 
-    # 1. Compact Inspection Summary Header
-    status = summary["site_status"]
-    status_color = "#22C55E" if status == "Safe" else ("#F59E0B" if status == "Warning" else "#EF4444")
-    status_text = status.upper()
+    # 1. Compact Inspection Summary Header & Metadata Bar
+    status = summary.get("site_status", "Safe")
+    if status == "Safe":
+        status_color = "#22C55E"
+        status_badge_class = "badge-safe"
+        status_label = "SAFE"
+    elif status == "Warning":
+        status_color = "#F59E0B"
+        status_badge_class = "badge-warning"
+        status_label = "WARNING"
+    else:
+        status_color = "#EF4444"
+        status_badge_class = "badge-critical"
+        status_label = "CRITICAL"
 
     st.markdown(
         f"""
-        <div class='sv-panel' style='padding: 10px 16px; margin-bottom: 12px; display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center;'>
+        <div class='sv-panel' style='padding: 10px 16px; margin-bottom: 12px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center;'>
             <div>
                 <strong>Inspection ID:</strong> <code>{active_inspection['id']}</code> &nbsp;|&nbsp;
                 <strong>Source:</strong> <code>{active_inspection['image_name']}</code> &nbsp;|&nbsp;
                 <strong>Timestamp:</strong> <code>{active_inspection['timestamp']}</code>
             </div>
             <div>
-                <span style='font-size: 11px; text-transform:uppercase; color:#94A3B8; font-weight:600; margin-right:8px;'>Evaluation Grade:</span>
-                <span class='badge-{"safe" if status=="Safe" else ("warning" if status=="Warning" else "critical")}'>{status_text}</span>
+                <span style='font-size: 11px; text-transform: uppercase; color: #94A3B8; font-weight: 600; margin-right: 8px;'>Site Evaluation:</span>
+                <span class='{status_badge_class}' style='font-size: 12px; padding: 4px 10px;'>{status_label}</span>
             </div>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
-    # 2. Compact Metrics Bar
+    # 2. Compact Inspection Metrics Row (KPIs)
+    total_w = summary.get("total_workers", 0)
+    comp_w = summary.get("compliant_count", 0)
+    viol_w = summary.get("violation_count", 0)
+    review_w = summary.get("needs_review_count", summary.get("unknown_count", 0))
+    rate = summary.get("compliance_rate", 0.0)
+
+    viol_color = "#EF4444" if viol_w > 0 else "#94A3B8"
+    review_color = "#F59E0B" if review_w > 0 else "#94A3B8"
+    rate_color = "#22C55E" if rate >= 85.0 else ("#F59E0B" if rate >= 60.0 else "#EF4444")
+
     r1, r2, r3, r4, r5, r6 = st.columns(6)
     with r1:
         st.markdown(
             f"<div class='metric-card'><div class='metric-card-title'>Total Workers</div>"
-            f"<div class='metric-card-value'>{summary['total_workers']}</div></div>",
+            f"<div class='metric-card-value'>{total_w}</div></div>",
             unsafe_allow_html=True,
         )
     with r2:
         st.markdown(
             f"<div class='metric-card'><div class='metric-card-title'>Compliant</div>"
-            f"<div class='metric-card-value' style='color:#22C55E;'>{summary['compliant_count']}</div></div>",
+            f"<div class='metric-card-value' style='color:#22C55E;'>{comp_w}</div></div>",
             unsafe_allow_html=True,
         )
     with r3:
         st.markdown(
             f"<div class='metric-card'><div class='metric-card-title'>Violations</div>"
-            f"<div class='metric-card-value' style='color:#EF4444;'>{summary['violation_count']}</div></div>",
+            f"<div class='metric-card-value' style='color:{viol_color};'>{viol_w}</div></div>",
             unsafe_allow_html=True,
         )
     with r4:
         st.markdown(
             f"<div class='metric-card'><div class='metric-card-title'>Needs Review</div>"
-            f"<div class='metric-card-value' style='color:#F59E0B;'>{summary.get('needs_review_count', 0)}</div></div>",
+            f"<div class='metric-card-value' style='color:{review_color};'>{review_w}</div></div>",
             unsafe_allow_html=True,
         )
     with r5:
         st.markdown(
             f"<div class='metric-card'><div class='metric-card-title'>Compliance Rate</div>"
-            f"<div class='metric-card-value' style='color:#38BDF8;'>{summary['compliance_rate']}%</div></div>",
+            f"<div class='metric-card-value' style='color:{rate_color};'>{rate:.1f}%</div></div>",
             unsafe_allow_html=True,
         )
     with r6:
         st.markdown(
             f"<div class='metric-card'><div class='metric-card-title'>Site Status</div>"
-            f"<div class='metric-card-value' style='color:{status_color}; font-size:20px; font-weight:700;'>{status_text}</div></div>",
+            f"<div style='margin-top: 4px;'><span class='{status_badge_class}' style='font-size: 13px; padding: 4px 10px;'>{status_label}</span></div></div>",
             unsafe_allow_html=True,
         )
 
-    # Safety Advisory Callout
-    if summary.get("total_workers", 0) == 0:
+    # 3. Compact Contextual Safety Advisory
+    st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
+    if total_w == 0:
         st.warning(
-            "No workers detected in scene. Camera perspective may be overhead or workers are obscured. "
-            "Use eye-level or elevated vantage point."
+            "No personnel detected in the inspection image. Ensure the camera angle captures workers clearly "
+            "from an eye-level or elevated vantage point."
         )
     else:
-        advisory = get_action_recommendation(summary)
-        if status == "Safe":
-            st.success(f"**Site Safety Directive:** {advisory}")
-        elif status == "Warning":
-            st.warning(f"**Site Safety Directive:** {advisory}")
-        else:
-            st.error(f"**Site Safety Directive:** {advisory}")
+        advisory_msg = get_action_recommendation(summary)
+        bg_adv = "rgba(34, 197, 94, 0.05)" if status == "Safe" else ("rgba(245, 158, 11, 0.05)" if status == "Warning" else "rgba(239, 68, 68, 0.05)")
+        st.markdown(
+            f"""
+            <div style='background: {bg_adv}; border: 1px solid #263442; border-left: 4px solid {status_color}; border-radius: 4px; padding: 10px 14px; margin-bottom: 12px; font-size: 13px;'>
+                <strong style='color: {status_color}; text-transform: uppercase;'>Site Directive:</strong>
+                <span style='color: #F1F5F9; margin-left: 6px;'>{advisory_msg}</span>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
-    st.markdown("<div style='margin-top: 14px;'></div>", unsafe_allow_html=True)
-
-    # 3. Main Annotated Media Viewer (Hero Element)
-    st.markdown("#### Primary Inspection Viewer")
+    # 4. Visual Evidence Viewer (Centerpiece)
+    st.markdown("#### Visual Evidence Viewer")
 
     # Legend Bar directly above viewer
     st.markdown(
         """
-        <div style='display:flex; flex-wrap:wrap; gap:16px; align-items:center; background:#111B26; border:1px solid #263442; border-radius:6px; padding:6px 14px; margin-bottom:10px; font-size:12px;'>
+        <div style='display:flex; flex-wrap:wrap; gap:16px; align-items:center; background:#111B26; border:1px solid #263442; border-radius:4px; padding:6px 14px; margin-bottom:10px; font-size:12px;'>
             <span style='color:#94A3B8; font-weight:600; text-transform:uppercase;'>Detection Legend:</span>
             <span><span style='color:#22C55E; font-weight:bold;'>&#9679;</span> Compliant Worker (Hardhat + Vest)</span>
             <span><span style='color:#EF4444; font-weight:bold;'>&#9679;</span> PPE Violation (Missing Gear)</span>
@@ -1449,17 +1487,17 @@ def render_inspection_results(active_inspection: Optional[Dict[str, Any]]):
         else:
             st.info("No raw detection items recorded.")
 
-    # 4. Contextual Worker & Violation Analysis Section
+    # 5. Worker Analysis & Selected Worker Spatial Evidence
     st.markdown("---")
-    st.markdown("#### Worker Compliance Analysis & Spatial Drill-Down")
+    st.markdown("#### Worker Analysis & Spatial Evidence")
 
     if not workers:
         st.info("No workers detected in this scene for individual spatial analysis.")
     else:
-        col_roster, col_drilldown = st.columns([1, 1])
+        col_roster, col_drilldown = st.columns([7, 5])
 
         with col_roster:
-            st.markdown("##### Worker Roster")
+            st.markdown("##### Detected Worker Roster")
 
             filter_choice = st.radio(
                 "Filter Workers by Status:",
@@ -1493,16 +1531,18 @@ def render_inspection_results(active_inspection: Optional[Dict[str, Any]]):
                 "Select Worker to Inspect Body Zones & Assigned PPE:",
                 list(worker_options.keys()),
                 key="results_worker_select",
+                label_visibility="collapsed",
             )
             selected_worker = worker_options[selected_key]
 
+            # Generate ROI Crop with zones
             worker_crop = crop_worker_roi(image_input, selected_worker, padding_pct=0.10, show_zones=True)
 
             sub_crop, sub_info = st.columns([1, 1])
             with sub_crop:
                 st.image(
                     worker_crop,
-                    caption=f"Worker #{selected_worker['worker_id']} ROI (Head 35% / Torso 15-75%)",
+                    caption=f"Worker #{selected_worker['worker_id']} ROI (Head / Torso Zones)",
                     use_container_width=True,
                 )
 
@@ -1510,17 +1550,23 @@ def render_inspection_results(active_inspection: Optional[Dict[str, Any]]):
                 w_status = selected_worker["status"]
                 stat_badge_class = "badge-safe" if w_status == "Compliant" else ("badge-warning" if w_status == "Needs Review" else "badge-critical")
 
+                # Head and Torso Status formatting with semantic colors
+                h_stat = selected_worker.get("hardhat_status", "missing")
+                v_stat = selected_worker.get("vest_status", "missing")
+                h_color = "#22C55E" if h_stat == "compliant" else ("#F59E0B" if h_stat == "uncertain" else "#EF4444")
+                v_color = "#22C55E" if v_stat == "compliant" else ("#F59E0B" if v_stat == "uncertain" else "#EF4444")
+
                 st.markdown(
                     f"""
                     <div class='sv-panel' style='padding: 12px; margin-bottom: 8px;'>
-                        <div style='display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;'>
+                        <div style='display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;'>
                             <strong>Worker #{selected_worker['worker_id']}</strong>
                             <span class='{stat_badge_class}'>{w_status.upper()}</span>
                         </div>
                         <div style='font-size:12px; color:#94A3B8; line-height:1.6;'>
-                            <strong>Person Confidence:</strong> {int(selected_worker.get('confidence', 1.0) * 100)}%<br>
-                            <strong>Head Zone:</strong> {selected_worker['hardhat_status'].capitalize()}<br>
-                            <strong>Torso Zone:</strong> {selected_worker['vest_status'].capitalize()}
+                            <strong>Confidence:</strong> {int(selected_worker.get('confidence', 1.0) * 100)}%<br>
+                            <strong>Head Zone:</strong> <span style='color:{h_color}; font-weight:600;'>{h_stat.capitalize()}</span><br>
+                            <strong>Torso Zone:</strong> <span style='color:{v_color}; font-weight:600;'>{v_stat.capitalize()}</span>
                         </div>
                     </div>
                     """,
@@ -1539,19 +1585,19 @@ def render_inspection_results(active_inspection: Optional[Dict[str, Any]]):
                     ]
                     st.dataframe(pd.DataFrame(gear_data), use_container_width=True, height=120)
                 else:
-                    st.caption("No assigned PPE detected within head or torso zones.")
+                    st.caption("No safety gear detected in assigned zones.")
 
-    # 5. Action Toolbar
+    # 6. Action Toolbar
     st.markdown("---")
     c_btn1, c_btn2, c_btn3 = st.columns(3)
     with c_btn1:
-        if st.button("Conduct New Inspection", use_container_width=True):
+        if st.button("Conduct New Inspection", key="results_action_new", use_container_width=True):
             navigate_to("New Inspection")
     with c_btn2:
-        if st.button("Open Worker Audits Inspector", use_container_width=True):
+        if st.button("Worker Audits Inspector", key="results_action_audits", use_container_width=True):
             navigate_to("Worker Audits")
     with c_btn3:
-        if st.button("Export Compliance Report & Logs", use_container_width=True):
+        if st.button("Export Compliance Report", key="results_action_export", use_container_width=True):
             navigate_to("Reports & Exports")
 
 
