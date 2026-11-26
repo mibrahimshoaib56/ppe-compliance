@@ -930,7 +930,9 @@ def render_landing_page():
         )
 
     with c_hero_vis:
-        img_source = "sample_images/ppe2.png"
+        img_source = "sample_images/imagesppe2.jpeg"
+        if not os.path.exists(img_source):
+            img_source = "sample_images/ppe2.png"
         if not os.path.exists(img_source):
             img_source = "sample_images/sample_1.jpg"
 
