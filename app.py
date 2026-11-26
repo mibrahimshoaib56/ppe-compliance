@@ -105,6 +105,16 @@ def get_detector(model_file_path: str):
 # ============================================================================
 # 3. SESSION STATE INITIALIZATION & HISTORY PERSISTENCE
 # ============================================================================
+
+def classify_worker_status(status_str: Any) -> str:
+    """Classify raw worker status string into 'compliant', 'warning', or 'violation'."""
+    s = str(status_str).strip()
+    if s == "Compliant":
+        return "compliant"
+    if s.startswith("Needs review") or s in ("Vest not visible: manual check", "Unknown", "Needs Review"):
+        return "warning"
+    return "violation"
+
 def init_session_state():
     """Initialize session state variables for navigation, theme, and inspections."""
     if "theme" not in st.session_state:
@@ -124,6 +134,12 @@ def init_session_state():
 
     if "strict_hardhat" not in st.session_state:
         st.session_state.strict_hardhat = True
+
+    if "required_gear" not in st.session_state:
+        st.session_state.required_gear = "both"
+
+    if "default_conf_threshold" not in st.session_state:
+        st.session_state.default_conf_threshold = 0.25
 
     if "active_inspection" not in st.session_state:
         st.session_state.active_inspection = None
@@ -1193,10 +1209,12 @@ def render_new_inspection(model: Any):
             unsafe_allow_html=True,
         )
 
+        cur_req = st.session_state.get("required_gear", "both")
+        default_gear_idx = 1 if cur_req == "hardhat_only" else (2 if cur_req == "vest_only" else 0)
         gear_choice = st.radio(
             "Enforced Safety Equipment",
             ["Hardhat + Safety Vest", "Hardhat Only", "Safety Vest Only"],
-            index=0,
+            index=default_gear_idx,
             key="new_insp_gear_choice",
             label_visibility="collapsed",
             help="Select PPE standards enforced for this site inspection.",
@@ -1224,7 +1242,7 @@ def render_new_inspection(model: Any):
                 "Sensitivity Slider (Scales Per-Class Thresholds)",
                 min_value=0.10,
                 max_value=0.90,
-                value=0.25,
+                value=float(st.session_state.get("default_conf_threshold", 0.25)),
                 step=0.05,
                 key="new_insp_conf_slider",
                 help="Scales per-class thresholds (Base: Person 0.30, Hardhat 0.30, NO-Hardhat 0.20, Safety Vest 0.20). Slider at 0.25 represents 1.0x baseline scale.",
@@ -1508,11 +1526,11 @@ def render_inspection_results(active_inspection: Optional[Dict[str, Any]]):
 
             filtered_workers = workers
             if filter_choice == "Violations Only":
-                filtered_workers = [w for w in workers if w["status"] not in ("Compliant", "Needs Review")]
+                filtered_workers = [w for w in workers if classify_worker_status(w.get("status", "")) == "violation"]
             elif filter_choice == "Compliant Only":
-                filtered_workers = [w for w in workers if w["status"] == "Compliant"]
+                filtered_workers = [w for w in workers if classify_worker_status(w.get("status", "")) == "compliant"]
             elif filter_choice == "Needs Review":
-                filtered_workers = [w for w in workers if w["status"] == "Needs Review"]
+                filtered_workers = [w for w in workers if classify_worker_status(w.get("status", "")) == "warning"]
 
             if not filtered_workers:
                 st.info(f"No workers match the '{filter_choice}' filter.")
@@ -1548,13 +1566,14 @@ def render_inspection_results(active_inspection: Optional[Dict[str, Any]]):
 
             with sub_info:
                 w_status = selected_worker["status"]
-                stat_badge_class = "badge-safe" if w_status == "Compliant" else ("badge-warning" if w_status == "Needs Review" else "badge-critical")
+                c_stat = classify_worker_status(w_status)
+                stat_badge_class = "badge-safe" if c_stat == "compliant" else ("badge-warning" if c_stat == "warning" else "badge-critical")
 
                 # Head and Torso Status formatting with semantic colors
                 h_stat = selected_worker.get("hardhat_status", "missing")
                 v_stat = selected_worker.get("vest_status", "missing")
-                h_color = "#22C55E" if h_stat == "compliant" else ("#F59E0B" if h_stat == "uncertain" else "#EF4444")
-                v_color = "#22C55E" if v_stat == "compliant" else ("#F59E0B" if v_stat == "uncertain" else "#EF4444")
+                h_color = "#22C55E" if h_stat == "present" else ("#F59E0B" if h_stat == "unknown" else "#EF4444")
+                v_color = "#22C55E" if v_stat == "present" else ("#F59E0B" if v_stat == "unknown" else "#EF4444")
 
                 st.markdown(
                     f"""
@@ -1716,11 +1735,11 @@ def render_worker_audits(active_inspection: Optional[Dict[str, Any]]):
 
     filtered_workers = workers
     if filter_choice == "Violations Only":
-        filtered_workers = [w for w in workers if w["status"] not in ("Compliant", "Needs Review")]
+        filtered_workers = [w for w in workers if classify_worker_status(w.get("status", "")) == "violation"]
     elif filter_choice == "Compliant Only":
-        filtered_workers = [w for w in workers if w["status"] == "Compliant"]
+        filtered_workers = [w for w in workers if classify_worker_status(w.get("status", "")) == "compliant"]
     elif filter_choice == "Needs Review":
-        filtered_workers = [w for w in workers if w["status"] == "Needs Review"]
+        filtered_workers = [w for w in workers if classify_worker_status(w.get("status", "")) == "warning"]
 
     if not filtered_workers:
         st.info(f"No workers match the '{filter_choice}' filter.")
@@ -1753,12 +1772,13 @@ def render_worker_audits(active_inspection: Optional[Dict[str, Any]]):
 
     with col_details:
         w_status = selected_worker["status"]
-        stat_badge_class = "badge-safe" if w_status == "Compliant" else ("badge-warning" if w_status == "Needs Review" else "badge-critical")
+        c_stat = classify_worker_status(w_status)
+        stat_badge_class = "badge-safe" if c_stat == "compliant" else ("badge-warning" if c_stat == "warning" else "badge-critical")
 
         h_stat = selected_worker.get("hardhat_status", "missing")
         v_stat = selected_worker.get("vest_status", "missing")
-        h_color = "#22C55E" if h_stat == "compliant" else ("#F59E0B" if h_stat == "uncertain" else "#EF4444")
-        v_color = "#22C55E" if v_stat == "compliant" else ("#F59E0B" if v_stat == "uncertain" else "#EF4444")
+        h_color = "#22C55E" if h_stat == "present" else ("#F59E0B" if h_stat == "unknown" else "#EF4444")
+        v_color = "#22C55E" if v_stat == "present" else ("#F59E0B" if v_stat == "unknown" else "#EF4444")
 
         # Explain why worker is in this state
         if w_status == "Compliant":
@@ -1783,7 +1803,7 @@ def render_worker_audits(active_inspection: Optional[Dict[str, Any]]):
                     <strong>Person Detection Confidence:</strong> <span style='color: #F1F5F9;'>{int(selected_worker.get('confidence', 1.0) * 100)}%</span><br>
                     <strong>Head Protection (Hardhat):</strong> <span style='color: {h_color}; font-weight: 600;'>{h_stat.capitalize()}</span><br>
                     <strong>Torso Protection (Safety Vest):</strong> <span style='color: {v_color}; font-weight: 600;'>{v_stat.capitalize()}</span><br>
-                    <div style='margin-top: 8px; padding: 8px 10px; background: rgba(38, 52, 66, 0.4); border-radius: 4px; border-left: 3px solid {h_color if h_stat != "compliant" else v_color};'>
+                    <div style='margin-top: 8px; padding: 8px 10px; background: rgba(38, 52, 66, 0.4); border-radius: 4px; border-left: 3px solid {h_color if h_stat != "present" else v_color};'>
                         <span style='color: #F1F5F9;'>{reason_text}</span>
                     </div>
                 </div>
@@ -2286,11 +2306,11 @@ def render_reports_exports(active_inspection: Optional[Dict[str, Any]]):
 
     # Filter workers based on controls
     if worker_filter == "Violations Only" or "Violations & Breaches Only" in report_scope:
-        filtered_workers = [w for w in raw_workers if w.get("status") in ("violation", "unsafe", "danger")]
+        filtered_workers = [w for w in raw_workers if classify_worker_status(w.get("status", "")) == "violation"]
     elif worker_filter == "Compliant Workers Only":
-        filtered_workers = [w for w in raw_workers if w.get("status") in ("compliant", "safe")]
+        filtered_workers = [w for w in raw_workers if classify_worker_status(w.get("status", "")) == "compliant"]
     elif worker_filter == "Needs Review Only":
-        filtered_workers = [w for w in raw_workers if w.get("status") in ("unknown", "review", "needs_review")]
+        filtered_workers = [w for w in raw_workers if classify_worker_status(w.get("status", "")) == "warning"]
     else:
         filtered_workers = raw_workers
 
@@ -2541,11 +2561,11 @@ def render_settings(model: Any, is_model_verified: bool):
 
         with c_pol2:
             current_gear = st.session_state.get("required_gear", "both")
-            gear_options = ["both", "hardhat", "vest"]
+            gear_options = ["both", "hardhat_only", "vest_only"]
             gear_labels = {
                 "both": "Hardhat and Safety Vest (Full PPE)",
-                "hardhat": "Hardhat Only (Cranial Protection)",
-                "vest": "Safety Vest Only (High-Visibility)",
+                "hardhat_only": "Hardhat Only (Cranial Protection)",
+                "vest_only": "Safety Vest Only (High-Visibility)",
             }
             selected_gear = st.selectbox(
                 "Default Required PPE Policy",
