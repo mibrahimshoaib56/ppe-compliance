@@ -10,10 +10,10 @@ import numpy as np
 from PIL import Image
 
 # Color palette in RGB format
-COLOR_COMPLIANT: Tuple[int, int, int] = (40, 200, 40)      # Vivid Green
-COLOR_VIOLATION: Tuple[int, int, int] = (220, 30, 30)      # Vivid Red
-COLOR_UNKNOWN: Tuple[int, int, int] = (245, 166, 35)       # Amber / Orange
-COLOR_GEAR_POS: Tuple[int, int, int] = (0, 180, 240)       # Cyan / Blue
+COLOR_COMPLIANT: Tuple[int, int, int] = (34, 197, 94)      # #22C55E Safe Green      # Vivid Green
+COLOR_VIOLATION: Tuple[int, int, int] = (239, 68, 68)      # #EF4444 Violation Red      # Vivid Red
+COLOR_UNKNOWN: Tuple[int, int, int] = (245, 158, 11)       # #F59E0B Warning Amber       # Amber / Orange
+COLOR_GEAR_POS: Tuple[int, int, int] = (56, 189, 248)      # #38BDF8 Cyan Interaction Accent       # Cyan / Blue
 COLOR_GEAR_NEG: Tuple[int, int, int] = (255, 80, 0)        # Orange-Red
 COLOR_CONTEXT: Tuple[int, int, int] = (160, 160, 160)      # Faint Grey
 COLOR_TEXT_WHITE: Tuple[int, int, int] = (255, 255, 255)

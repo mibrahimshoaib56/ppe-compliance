@@ -186,30 +186,93 @@ def navigate_to(page_name: str):
 # 4. ENTERPRISE INDUSTRIAL STYLING (Dark & Light Themes)
 # ============================================================================
 def inject_custom_css(theme: str):
-    """Inject responsive, enterprise-grade industrial SaaS CSS."""
+    """Inject responsive, enterprise-grade industrial control center CSS for Phase 1."""
     if theme == "Dark Theme":
         css = """
         <style>
-            /* Base Theme - Dark Graphite & Deep Navy */
-            .stApp {
-                background-color: #0B1118;
-                color: #F1F5F9;
-                font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            /* -------------------------------------------------------------
+               GLOBAL DESIGN SYSTEM TOKENS - DARK INDUSTRIAL
+               ------------------------------------------------------------- */
+            :root {
+                --bg-main: #0B1118;
+                --bg-sidebar: #111B26;
+                --surface-card: #162230;
+                --surface-elevated: #223244;
+                --border-color: #263442;
+                --accent-primary: #38BDF8;
+                --text-primary: #F1F5F9;
+                --text-secondary: #94A3B8;
+
+                --color-safe: #22C55E;
+                --color-violation: #EF4444;
+                --color-warning: #F59E0B;
             }
+
+            /* Base Document & Typography */
+            .stApp {
+                background-color: var(--bg-main);
+                color: var(--text-primary);
+                font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                letter-spacing: -0.01em;
+            }
+
+            /* Transparent Streamlit Header */
+            header[data-testid="stHeader"] {
+                background: transparent !important;
+            }
+
+            /* Sidebar Application Shell */
             [data-testid="stSidebar"] {
-                background-color: #101820;
-                border-right: 1px solid #263442;
+                background-color: var(--bg-sidebar);
+                border-right: 1px solid var(--border-color);
+            }
+            [data-testid="stSidebar"] [data-testid="stVerticalBlock"] {
+                gap: 0.5rem;
             }
             [data-testid="stSidebar"] hr {
-                border-top: 1px solid #263442 !important;
-                margin: 12px 0 !important;
+                border-top: 1px solid var(--border-color) !important;
+                margin: 10px 0 !important;
+            }
+
+            /* Sidebar Radio Navigation & Active State */
+            [data-testid="stSidebar"] [data-testid="stRadio"] [role="radiogroup"] {
+                gap: 4px;
+            }
+            [data-testid="stSidebar"] [data-testid="stRadio"] [role="radiogroup"] label {
+                padding: 7px 12px;
+                border-radius: 4px;
+                border: 1px solid transparent;
+                transition: all 0.15s ease;
+                margin-bottom: 2px;
+                cursor: pointer;
+            }
+            [data-testid="stSidebar"] [data-testid="stRadio"] [role="radiogroup"] label:hover {
+                background-color: rgba(34, 50, 68, 0.4);
+                border-color: var(--border-color);
+            }
+            [data-testid="stSidebar"] [data-testid="stRadio"] [role="radiogroup"] label p {
+                color: var(--text-secondary);
+                font-size: 13px;
+                font-weight: 500;
+            }
+            [data-testid="stSidebar"] [data-testid="stRadio"] [role="radiogroup"] label:hover p {
+                color: var(--text-primary) !important;
+            }
+            [data-testid="stSidebar"] [data-testid="stRadio"] [role="radiogroup"] label:has(input:checked) {
+                background-color: rgba(56, 189, 248, 0.08) !important;
+                border: 1px solid rgba(56, 189, 248, 0.25) !important;
+                border-left: 3px solid var(--accent-primary) !important;
+            }
+            [data-testid="stSidebar"] [data-testid="stRadio"] [role="radiogroup"] label:has(input:checked) p {
+                color: var(--accent-primary) !important;
+                font-weight: 600 !important;
             }
 
             /* Top Navigation Bar */
             .top-nav {
-                background-color: #101820;
-                border: 1px solid #263442;
-                border-radius: 8px;
+                background-color: var(--surface-card);
+                border: 1px solid var(--border-color);
+                border-radius: 4px;
                 padding: 10px 18px;
                 margin-bottom: 20px;
                 display: flex;
@@ -217,35 +280,36 @@ def inject_custom_css(theme: str):
                 justify-content: space-between;
             }
             .brand-title {
-                color: #38BDF8;
+                color: var(--accent-primary);
                 font-weight: 700;
-                font-size: 16px;
+                font-size: 15px;
                 letter-spacing: 0.5px;
                 display: flex;
                 align-items: center;
                 gap: 8px;
             }
             .page-crumb {
-                color: #94A3B8;
+                color: var(--text-secondary);
                 font-size: 13px;
                 font-weight: 500;
+                letter-spacing: 0.3px;
             }
             .model-pill-ready {
-                background-color: rgba(52, 211, 153, 0.1);
-                color: #34D399;
-                border: 1px solid rgba(52, 211, 153, 0.25);
+                background-color: rgba(34, 197, 94, 0.1);
+                color: var(--color-safe);
+                border: 1px solid rgba(34, 197, 94, 0.25);
                 padding: 4px 10px;
-                border-radius: 6px;
+                border-radius: 4px;
                 font-size: 11px;
                 font-weight: 600;
                 letter-spacing: 0.3px;
             }
             .model-pill-warn {
-                background-color: rgba(251, 191, 36, 0.1);
-                color: #FBBF24;
-                border: 1px solid rgba(251, 191, 36, 0.25);
+                background-color: rgba(245, 158, 11, 0.1);
+                color: var(--color-warning);
+                border: 1px solid rgba(245, 158, 11, 0.25);
                 padding: 4px 10px;
-                border-radius: 6px;
+                border-radius: 4px;
                 font-size: 11px;
                 font-weight: 600;
                 letter-spacing: 0.3px;
@@ -253,101 +317,112 @@ def inject_custom_css(theme: str):
 
             /* Metric Cards */
             .metric-card {
-                background: #151F2B;
-                border: 1px solid #263442;
-                border-radius: 8px;
-                padding: 14px 16px;
+                background: var(--surface-card);
+                border: 1px solid var(--border-color);
+                border-radius: 4px;
+                padding: 12px 14px;
                 text-align: left;
                 position: relative;
                 overflow: hidden;
             }
             .metric-card-title {
-                color: #94A3B8;
+                color: var(--text-secondary);
                 font-size: 11px;
                 font-weight: 600;
                 text-transform: uppercase;
                 letter-spacing: 0.5px;
                 margin-bottom: 4px;
-                display: flex;
-                align-items: center;
-                gap: 6px;
             }
             .metric-card-value {
-                color: #F1F5F9;
-                font-size: 26px;
+                color: var(--text-primary);
+                font-size: 24px;
                 font-weight: 700;
                 line-height: 1.2;
             }
 
-            /* Enterprise Surface Panel */
+            /* Surface Panels */
             .sv-panel {
-                background-color: #151F2B;
-                border: 1px solid #263442;
-                border-radius: 8px;
-                padding: 18px;
-                margin-bottom: 16px;
+                background-color: var(--surface-card);
+                border: 1px solid var(--border-color);
+                border-radius: 4px;
+                padding: 16px;
+                margin-bottom: 14px;
+            }
+            .sv-surface-elevated {
+                background-color: var(--surface-elevated);
+                border: 1px solid var(--border-color);
+                border-radius: 4px;
+                padding: 12px;
+                margin-bottom: 12px;
             }
 
-            /* Status Pills */
+            /* Semantic Status Badges */
             .badge-safe {
-                background-color: rgba(52, 211, 153, 0.12);
-                color: #34D399;
-                border: 1px solid rgba(52, 211, 153, 0.3);
+                background-color: rgba(34, 197, 94, 0.12);
+                color: var(--color-safe);
+                border: 1px solid rgba(34, 197, 94, 0.3);
                 padding: 3px 8px;
                 border-radius: 4px;
                 font-weight: 600;
-                font-size: 12px;
+                font-size: 11px;
+                letter-spacing: 0.3px;
+                text-transform: uppercase;
             }
             .badge-warning {
-                background-color: rgba(251, 191, 36, 0.12);
-                color: #FBBF24;
-                border: 1px solid rgba(251, 191, 36, 0.3);
+                background-color: rgba(245, 158, 11, 0.12);
+                color: var(--color-warning);
+                border: 1px solid rgba(245, 158, 11, 0.3);
                 padding: 3px 8px;
                 border-radius: 4px;
                 font-weight: 600;
-                font-size: 12px;
+                font-size: 11px;
+                letter-spacing: 0.3px;
+                text-transform: uppercase;
             }
             .badge-critical {
-                background-color: rgba(248, 113, 113, 0.12);
-                color: #F87171;
-                border: 1px solid rgba(248, 113, 113, 0.3);
+                background-color: rgba(239, 68, 68, 0.12);
+                color: var(--color-violation);
+                border: 1px solid rgba(239, 68, 68, 0.3);
                 padding: 3px 8px;
                 border-radius: 4px;
                 font-weight: 600;
-                font-size: 12px;
+                font-size: 11px;
+                letter-spacing: 0.3px;
+                text-transform: uppercase;
             }
 
-            /* Custom Tab Styling */
+            /* Custom Tab Component */
             .stTabs [data-baseweb="tab-list"] {
-                gap: 6px;
-                border-bottom: 1px solid #263442;
-                padding-bottom: 4px;
+                gap: 4px;
+                border-bottom: 1px solid var(--border-color);
+                padding-bottom: 2px;
             }
             .stTabs [data-baseweb="tab"] {
-                border-radius: 6px;
+                border-radius: 4px;
                 padding: 6px 14px;
                 background-color: transparent;
-                color: #94A3B8;
+                color: var(--text-secondary);
                 font-size: 13px;
                 font-weight: 500;
                 border: 1px solid transparent;
             }
             .stTabs [data-baseweb="tab"]:hover {
-                color: #F1F5F9;
-                background-color: rgba(38, 52, 66, 0.4);
+                color: var(--text-primary);
+                background-color: rgba(34, 50, 68, 0.3);
             }
             .stTabs [aria-selected="true"] {
-                background-color: #1A2634 !important;
-                color: #38BDF8 !important;
-                border: 1px solid #263442 !important;
+                background-color: var(--surface-card) !important;
+                color: var(--accent-primary) !important;
+                border: 1px solid var(--border-color) !important;
+                border-bottom: 2px solid var(--accent-primary) !important;
             }
 
-            /* Streamlit Controls */
+            /* Buttons */
             .stButton > button[kind="primary"] {
                 background-color: #0284C7;
                 color: #FFFFFF;
-                border: 1px solid #38BDF8;
-                border-radius: 6px;
+                border: 1px solid var(--accent-primary);
+                border-radius: 4px;
                 font-weight: 600;
                 font-size: 13px;
                 padding: 6px 16px;
@@ -358,213 +433,329 @@ def inject_custom_css(theme: str):
                 border-color: #7DD3FC;
             }
             .stButton > button:not([kind="primary"]) {
-                background-color: #151F2B;
-                color: #F1F5F9;
-                border: 1px solid #263442;
-                border-radius: 6px;
+                background-color: var(--surface-card);
+                color: var(--text-primary);
+                border: 1px solid var(--border-color);
+                border-radius: 4px;
                 font-weight: 500;
                 font-size: 13px;
+                padding: 6px 14px;
                 transition: all 0.15s ease;
             }
             .stButton > button:not([kind="primary"]):hover {
-                border-color: #38BDF8;
-                color: #38BDF8;
+                border-color: var(--accent-primary);
+                color: var(--accent-primary);
+                background-color: var(--surface-elevated);
+            }
+
+            /* Inputs & Dropdowns */
+            [data-baseweb="input"] {
+                background-color: var(--surface-card) !important;
+                border: 1px solid var(--border-color) !important;
+                border-radius: 4px !important;
+            }
+            [data-baseweb="input"] input {
+                color: var(--text-primary) !important;
+            }
+            [data-baseweb="select"] > div {
+                background-color: var(--surface-card) !important;
+                border: 1px solid var(--border-color) !important;
+                border-radius: 4px !important;
+                color: var(--text-primary) !important;
+            }
+            [data-testid="stFileUploader"] {
+                border: 1px dashed var(--border-color);
+                border-radius: 4px;
+                padding: 10px;
+                background-color: var(--surface-card);
+            }
+            [data-testid="stExpander"] {
+                background-color: var(--surface-card) !important;
+                border: 1px solid var(--border-color) !important;
+                border-radius: 4px !important;
             }
             [data-testid="stDataFrame"] {
-                border: 1px solid #263442;
-                border-radius: 6px;
+                border: 1px solid var(--border-color);
+                border-radius: 4px;
                 overflow: hidden;
+            }
+            div[data-testid="stAlert"] {
+                border-radius: 4px;
+                border: 1px solid var(--border-color);
+                padding: 10px 14px;
             }
         </style>
         """
     else:
         css = """
         <style>
-            /* Base Theme - Light Industrial */
-            .stApp {
-                background-color: #F8FAFC;
-                color: #0F172A;
-                font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            }
-            [data-testid="stSidebar"] {
-                background-color: #FFFFFF;
-                border-right: 1px solid #E2E8F0;
-            }
-            [data-testid="stSidebar"] hr {
-                border-top: 1px solid #E2E8F0 !important;
-                margin: 12px 0 !important;
+            /* -------------------------------------------------------------
+               GLOBAL DESIGN SYSTEM TOKENS - LIGHT INDUSTRIAL
+               ------------------------------------------------------------- */
+            :root {
+                --bg-main: #F8FAFC;
+                --bg-sidebar: #F1F5F9;
+                --surface-card: #FFFFFF;
+                --surface-elevated: #F8FAFC;
+                --border-color: #E2E8F0;
+                --accent-primary: #0284C7;
+                --text-primary: #0F172A;
+                --text-secondary: #64748B;
+
+                --color-safe: #16A34A;
+                --color-violation: #DC2626;
+                --color-warning: #D97706;
             }
 
-            /* Top Navigation Bar */
+            .stApp {
+                background-color: var(--bg-main);
+                color: var(--text-primary);
+                font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                letter-spacing: -0.01em;
+            }
+
+            header[data-testid="stHeader"] {
+                background: transparent !important;
+            }
+
+            [data-testid="stSidebar"] {
+                background-color: var(--bg-sidebar);
+                border-right: 1px solid var(--border-color);
+            }
+            [data-testid="stSidebar"] [data-testid="stVerticalBlock"] {
+                gap: 0.5rem;
+            }
+            [data-testid="stSidebar"] hr {
+                border-top: 1px solid var(--border-color) !important;
+                margin: 10px 0 !important;
+            }
+
+            [data-testid="stSidebar"] [data-testid="stRadio"] [role="radiogroup"] label {
+                padding: 7px 12px;
+                border-radius: 4px;
+                border: 1px solid transparent;
+                transition: all 0.15s ease;
+                margin-bottom: 2px;
+                cursor: pointer;
+            }
+            [data-testid="stSidebar"] [data-testid="stRadio"] [role="radiogroup"] label:hover {
+                background-color: #E2E8F0;
+            }
+            [data-testid="stSidebar"] [data-testid="stRadio"] [role="radiogroup"] label p {
+                color: var(--text-secondary);
+                font-size: 13px;
+                font-weight: 500;
+            }
+            [data-testid="stSidebar"] [data-testid="stRadio"] [role="radiogroup"] label:hover p {
+                color: var(--text-primary) !important;
+            }
+            [data-testid="stSidebar"] [data-testid="stRadio"] [role="radiogroup"] label:has(input:checked) {
+                background-color: #E0F2FE !important;
+                border: 1px solid #BAE6FD !important;
+                border-left: 3px solid var(--accent-primary) !important;
+            }
+            [data-testid="stSidebar"] [data-testid="stRadio"] [role="radiogroup"] label:has(input:checked) p {
+                color: var(--accent-primary) !important;
+                font-weight: 600 !important;
+            }
+
             .top-nav {
-                background-color: #FFFFFF;
-                border: 1px solid #E2E8F0;
-                border-radius: 8px;
+                background-color: var(--surface-card);
+                border: 1px solid var(--border-color);
+                border-radius: 4px;
                 padding: 10px 18px;
                 margin-bottom: 20px;
                 display: flex;
                 align-items: center;
                 justify-content: space-between;
-                box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+                box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
             }
             .brand-title {
-                color: #0284C7;
+                color: var(--accent-primary);
                 font-weight: 700;
-                font-size: 16px;
+                font-size: 15px;
                 letter-spacing: 0.5px;
                 display: flex;
                 align-items: center;
                 gap: 8px;
             }
             .page-crumb {
-                color: #64748B;
+                color: var(--text-secondary);
                 font-size: 13px;
                 font-weight: 500;
+                letter-spacing: 0.3px;
             }
             .model-pill-ready {
-                background-color: rgba(5, 150, 105, 0.1);
-                color: #059669;
-                border: 1px solid rgba(5, 150, 105, 0.25);
+                background-color: rgba(22, 163, 74, 0.1);
+                color: var(--color-safe);
+                border: 1px solid rgba(22, 163, 74, 0.25);
                 padding: 4px 10px;
-                border-radius: 6px;
+                border-radius: 4px;
                 font-size: 11px;
                 font-weight: 600;
                 letter-spacing: 0.3px;
             }
             .model-pill-warn {
                 background-color: rgba(217, 119, 6, 0.1);
-                color: #D97706;
+                color: var(--color-warning);
                 border: 1px solid rgba(217, 119, 6, 0.25);
                 padding: 4px 10px;
-                border-radius: 6px;
+                border-radius: 4px;
                 font-size: 11px;
                 font-weight: 600;
                 letter-spacing: 0.3px;
             }
 
-            /* Metric Cards */
             .metric-card {
-                background: #FFFFFF;
-                border: 1px solid #E2E8F0;
-                border-radius: 8px;
-                padding: 14px 16px;
-                text-align: left;
+                background: var(--surface-card);
+                border: 1px solid var(--border-color);
+                border-radius: 4px;
+                padding: 12px 14px;
                 box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
             }
             .metric-card-title {
-                color: #64748B;
+                color: var(--text-secondary);
                 font-size: 11px;
                 font-weight: 600;
                 text-transform: uppercase;
                 letter-spacing: 0.5px;
                 margin-bottom: 4px;
-                display: flex;
-                align-items: center;
-                gap: 6px;
             }
             .metric-card-value {
-                color: #0F172A;
-                font-size: 26px;
+                color: var(--text-primary);
+                font-size: 24px;
                 font-weight: 700;
                 line-height: 1.2;
             }
 
-            /* Enterprise Surface Panel */
             .sv-panel {
-                background-color: #FFFFFF;
-                border: 1px solid #E2E8F0;
-                border-radius: 8px;
-                padding: 18px;
-                margin-bottom: 16px;
+                background-color: var(--surface-card);
+                border: 1px solid var(--border-color);
+                border-radius: 4px;
+                padding: 16px;
+                margin-bottom: 14px;
                 box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
             }
+            .sv-surface-elevated {
+                background-color: var(--surface-elevated);
+                border: 1px solid var(--border-color);
+                border-radius: 4px;
+                padding: 12px;
+                margin-bottom: 12px;
+            }
 
-            /* Status Pills */
             .badge-safe {
-                background-color: rgba(5, 150, 105, 0.1);
-                color: #059669;
-                border: 1px solid rgba(5, 150, 105, 0.25);
+                background-color: rgba(22, 163, 74, 0.12);
+                color: var(--color-safe);
+                border: 1px solid rgba(22, 163, 74, 0.3);
                 padding: 3px 8px;
                 border-radius: 4px;
                 font-weight: 600;
-                font-size: 12px;
+                font-size: 11px;
+                letter-spacing: 0.3px;
+                text-transform: uppercase;
             }
             .badge-warning {
-                background-color: rgba(217, 119, 6, 0.1);
-                color: #D97706;
-                border: 1px solid rgba(217, 119, 6, 0.25);
+                background-color: rgba(217, 119, 6, 0.12);
+                color: var(--color-warning);
+                border: 1px solid rgba(217, 119, 6, 0.3);
                 padding: 3px 8px;
                 border-radius: 4px;
                 font-weight: 600;
-                font-size: 12px;
+                font-size: 11px;
+                letter-spacing: 0.3px;
+                text-transform: uppercase;
             }
             .badge-critical {
-                background-color: rgba(220, 38, 38, 0.1);
-                color: #DC2626;
-                border: 1px solid rgba(220, 38, 38, 0.25);
+                background-color: rgba(220, 38, 38, 0.12);
+                color: var(--color-violation);
+                border: 1px solid rgba(220, 38, 38, 0.3);
                 padding: 3px 8px;
                 border-radius: 4px;
                 font-weight: 600;
-                font-size: 12px;
+                font-size: 11px;
+                letter-spacing: 0.3px;
+                text-transform: uppercase;
             }
 
-            /* Custom Tab Styling */
             .stTabs [data-baseweb="tab-list"] {
-                gap: 6px;
-                border-bottom: 1px solid #E2E8F0;
-                padding-bottom: 4px;
+                gap: 4px;
+                border-bottom: 1px solid var(--border-color);
+                padding-bottom: 2px;
             }
             .stTabs [data-baseweb="tab"] {
-                border-radius: 6px;
+                border-radius: 4px;
                 padding: 6px 14px;
                 background-color: transparent;
-                color: #64748B;
+                color: var(--text-secondary);
                 font-size: 13px;
                 font-weight: 500;
                 border: 1px solid transparent;
             }
             .stTabs [data-baseweb="tab"]:hover {
-                color: #0F172A;
+                color: var(--text-primary);
                 background-color: #F1F5F9;
             }
             .stTabs [aria-selected="true"] {
                 background-color: #E0F2FE !important;
-                color: #0284C7 !important;
+                color: var(--accent-primary) !important;
                 border: 1px solid #BAE6FD !important;
+                border-bottom: 2px solid var(--accent-primary) !important;
             }
 
-            /* Streamlit Controls */
             .stButton > button[kind="primary"] {
-                background-color: #0284C7;
+                background-color: var(--accent-primary);
                 color: #FFFFFF;
-                border: 1px solid #0284C7;
-                border-radius: 6px;
+                border: 1px solid var(--accent-primary);
+                border-radius: 4px;
                 font-weight: 600;
                 font-size: 13px;
                 padding: 6px 16px;
-                transition: all 0.15s ease;
-            }
-            .stButton > button[kind="primary"]:hover {
-                background-color: #0369A1;
-                border-color: #0369A1;
             }
             .stButton > button:not([kind="primary"]) {
-                background-color: #FFFFFF;
-                color: #0F172A;
-                border: 1px solid #E2E8F0;
-                border-radius: 6px;
+                background-color: var(--surface-card);
+                color: var(--text-primary);
+                border: 1px solid var(--border-color);
+                border-radius: 4px;
                 font-weight: 500;
                 font-size: 13px;
-                transition: all 0.15s ease;
+                padding: 6px 14px;
             }
             .stButton > button:not([kind="primary"]):hover {
-                border-color: #0284C7;
-                color: #0284C7;
+                border-color: var(--accent-primary);
+                color: var(--accent-primary);
+            }
+
+            [data-baseweb="input"] {
+                background-color: var(--surface-card) !important;
+                border: 1px solid var(--border-color) !important;
+                border-radius: 4px !important;
+            }
+            [data-baseweb="select"] > div {
+                background-color: var(--surface-card) !important;
+                border: 1px solid var(--border-color) !important;
+                border-radius: 4px !important;
+            }
+            [data-testid="stFileUploader"] {
+                border: 1px dashed var(--border-color);
+                border-radius: 4px;
+                padding: 10px;
+                background-color: var(--surface-card);
+            }
+            [data-testid="stExpander"] {
+                background-color: var(--surface-card) !important;
+                border: 1px solid var(--border-color) !important;
+                border-radius: 4px !important;
             }
             [data-testid="stDataFrame"] {
-                border: 1px solid #E2E8F0;
-                border-radius: 6px;
+                border: 1px solid var(--border-color);
+                border-radius: 4px;
                 overflow: hidden;
+            }
+            div[data-testid="stAlert"] {
+                border-radius: 4px;
+                border: 1px solid var(--border-color);
+                padding: 10px 14px;
             }
         </style>
         """
@@ -586,29 +777,33 @@ def render_top_navbar(current_page: str, is_model_verified: bool):
 
     with col_brand:
         st.markdown(
-            f"<div style='display: flex; align-items: center; gap: 8px; padding-top: 4px;'>"
-            f"<svg width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='#38BDF8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' style='vertical-align:middle;margin-right:2px;'><path d='M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z'/></svg>"
-            f"<span class='brand-title'>SAFETY VISION</span>"
-            f"<span style='color: #64748B;'>/</span>"
-            f"<span class='page-crumb'>{current_page}</span>"
-            f"</div>",
+            f"""
+            <div style='display: flex; align-items: center; gap: 8px; padding-top: 4px;'>
+                <svg width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='#38BDF8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' style='vertical-align:middle;margin-right:2px;'>
+                    <path d='M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z'/>
+                </svg>
+                <span class='brand-title'>SAFETY VISION</span>
+                <span style='color: #64748B;'>/</span>
+                <span class='page-crumb'>{current_page.upper()}</span>
+            </div>
+            """,
             unsafe_allow_html=True,
         )
 
     with col_status:
         st.markdown(
-            f"<div style='text-align: center; padding-top: 6px;'>{model_status_html}</div>",
+            f"<div style='text-align: center; padding-top: 4px;'>{model_status_html}</div>",
             unsafe_allow_html=True,
         )
 
     with col_theme:
         current_theme = st.session_state.theme
-        theme_icon = "Light" if current_theme == "Dark Theme" else "Dark"
-        if st.button(f"{theme_icon} Mode", key="top_theme_toggle", use_container_width=True):
+        theme_label = "Light Mode" if current_theme == "Dark Theme" else "Dark Mode"
+        if st.button(theme_label, key="top_theme_toggle", use_container_width=True):
             st.session_state.theme = "Light Theme" if current_theme == "Dark Theme" else "Dark Theme"
             st.rerun()
 
-    st.markdown("<hr style='margin: 8px 0 18px 0; border: none; border-top: 1px solid #263442;'>", unsafe_allow_html=True)
+    st.markdown("<hr style='margin: 8px 0 16px 0; border: none; border-top: 1px solid #263442;'>", unsafe_allow_html=True)
 
 
 # ============================================================================
@@ -650,13 +845,13 @@ def render_dashboard(active_inspection: Optional[Dict[str, Any]], history: List[
     status = summary.get("site_status", "Safe")
 
     if status == "Safe":
-        status_color = "#34D399"
+        status_color = "#22C55E"
         status_badge = "SAFE"
     elif status == "Warning":
-        status_color = "#FBBF24"
+        status_color = "#F59E0B"
         status_badge = "WARNING"
     else:
-        status_color = "#F87171"
+        status_color = "#EF4444"
         status_badge = "CRITICAL"
 
     # KPI Metric Cards Row
@@ -670,19 +865,19 @@ def render_dashboard(active_inspection: Optional[Dict[str, Any]], history: List[
     with k2:
         st.markdown(
             f"<div class='metric-card'><div class='metric-card-title'>Compliant</div>"
-            f"<div class='metric-card-value' style='color:#34D399;'>{comp_w}</div></div>",
+            f"<div class='metric-card-value' style='color:#22C55E;'>{comp_w}</div></div>",
             unsafe_allow_html=True,
         )
     with k3:
         st.markdown(
             f"<div class='metric-card'><div class='metric-card-title'>Violations</div>"
-            f"<div class='metric-card-value' style='color:#F87171;'>{viol_w}</div></div>",
+            f"<div class='metric-card-value' style='color:#EF4444;'>{viol_w}</div></div>",
             unsafe_allow_html=True,
         )
     with k4:
         st.markdown(
             f"<div class='metric-card'><div class='metric-card-title'>Needs Review</div>"
-            f"<div class='metric-card-value' style='color:#FBBF24;'>{review_w}</div></div>",
+            f"<div class='metric-card-value' style='color:#F59E0B;'>{review_w}</div></div>",
             unsafe_allow_html=True,
         )
     with k5:
@@ -951,7 +1146,7 @@ def render_inspection_results(active_inspection: Optional[Dict[str, Any]]):
 
     # 1. Compact Inspection Summary Header
     status = summary["site_status"]
-    status_color = "#34D399" if status == "Safe" else ("#FBBF24" if status == "Warning" else "#F87171")
+    status_color = "#22C55E" if status == "Safe" else ("#F59E0B" if status == "Warning" else "#EF4444")
     status_text = status.upper()
 
     st.markdown(
@@ -982,19 +1177,19 @@ def render_inspection_results(active_inspection: Optional[Dict[str, Any]]):
     with r2:
         st.markdown(
             f"<div class='metric-card'><div class='metric-card-title'>Compliant</div>"
-            f"<div class='metric-card-value' style='color:#34D399;'>{summary['compliant_count']}</div></div>",
+            f"<div class='metric-card-value' style='color:#22C55E;'>{summary['compliant_count']}</div></div>",
             unsafe_allow_html=True,
         )
     with r3:
         st.markdown(
             f"<div class='metric-card'><div class='metric-card-title'>Violations</div>"
-            f"<div class='metric-card-value' style='color:#F87171;'>{summary['violation_count']}</div></div>",
+            f"<div class='metric-card-value' style='color:#EF4444;'>{summary['violation_count']}</div></div>",
             unsafe_allow_html=True,
         )
     with r4:
         st.markdown(
             f"<div class='metric-card'><div class='metric-card-title'>Needs Review</div>"
-            f"<div class='metric-card-value' style='color:#FBBF24;'>{summary.get('needs_review_count', 0)}</div></div>",
+            f"<div class='metric-card-value' style='color:#F59E0B;'>{summary.get('needs_review_count', 0)}</div></div>",
             unsafe_allow_html=True,
         )
     with r5:
@@ -1033,11 +1228,11 @@ def render_inspection_results(active_inspection: Optional[Dict[str, Any]]):
     # Legend Bar directly above viewer
     st.markdown(
         """
-        <div style='display:flex; flex-wrap:wrap; gap:16px; align-items:center; background:#101820; border:1px solid #263442; border-radius:6px; padding:6px 14px; margin-bottom:10px; font-size:12px;'>
+        <div style='display:flex; flex-wrap:wrap; gap:16px; align-items:center; background:#111B26; border:1px solid #263442; border-radius:6px; padding:6px 14px; margin-bottom:10px; font-size:12px;'>
             <span style='color:#94A3B8; font-weight:600; text-transform:uppercase;'>Detection Legend:</span>
-            <span><span style='color:#34D399; font-weight:bold;'>&#9679;</span> Compliant Worker (Hardhat + Vest)</span>
-            <span><span style='color:#F87171; font-weight:bold;'>&#9679;</span> PPE Violation (Missing Gear)</span>
-            <span><span style='color:#FBBF24; font-weight:bold;'>&#9679;</span> Needs Review / Ambiguous</span>
+            <span><span style='color:#22C55E; font-weight:bold;'>&#9679;</span> Compliant Worker (Hardhat + Vest)</span>
+            <span><span style='color:#EF4444; font-weight:bold;'>&#9679;</span> PPE Violation (Missing Gear)</span>
+            <span><span style='color:#F59E0B; font-weight:bold;'>&#9679;</span> Needs Review / Ambiguous</span>
             <span><span style='color:#38BDF8; font-weight:bold;'>&#9679;</span> Detected PPE Gear Box</span>
         </div>
         """,
@@ -1253,7 +1448,7 @@ def render_worker_audits(active_inspection: Optional[Dict[str, Any]]):
 
     with col_details:
         w_status = selected_worker["status"]
-        stat_color = "#34D399" if w_status == "Compliant" else ("#F87171" if "Missing" in w_status else "#FBBF24")
+        stat_color = "#22C55E" if w_status == "Compliant" else ("#EF4444" if "Missing" in w_status else "#F59E0B")
 
         st.markdown(
             f"""
@@ -1299,7 +1494,7 @@ def render_inspection_history(history: List[Dict[str, Any]], model: Any):
 
     for idx, item in enumerate(history):
         status = item["site_status"]
-        status_color = "#34D399" if status == "Safe" else ("#FBBF24" if status == "Warning" else "#F87171")
+        status_color = "#22C55E" if status == "Safe" else ("#F59E0B" if status == "Warning" else "#EF4444")
         item_id = item["id"]
 
         with st.container():
@@ -1992,7 +2187,7 @@ def render_video_results_view(video_results: Dict[str, Any]):
             unsafe_allow_html=True,
         )
     with k4:
-        viol_color = "#F87171" if summary["frames_with_violations"] > 0 else "#34D399"
+        viol_color = "#EF4444" if summary["frames_with_violations"] > 0 else "#22C55E"
         st.markdown(
             f"<div class='metric-card'><div class='metric-card-title'>Frames With Violations</div>"
             f"<div class='metric-card-value' style='color:{viol_color};'>{summary['frames_with_violations']}</div></div>",
@@ -2000,7 +2195,7 @@ def render_video_results_view(video_results: Dict[str, Any]):
         )
     with k5:
         rate_display = f"{summary['average_compliance_rate']}%" if summary["has_worker_frames"] else "N/A"
-        rate_color = "#34D399" if (summary["has_worker_frames"] and summary["average_compliance_rate"] >= 85.0) else ("#FBBF24" if summary["has_worker_frames"] and summary["average_compliance_rate"] >= 60.0 else "#F87171")
+        rate_color = "#22C55E" if (summary["has_worker_frames"] and summary["average_compliance_rate"] >= 85.0) else ("#F59E0B" if summary["has_worker_frames"] and summary["average_compliance_rate"] >= 60.0 else "#EF4444")
         st.markdown(
             f"<div class='metric-card'><div class='metric-card-title'>Avg Compliance Rate</div>"
             f"<div class='metric-card-value' style='color:{rate_color};'>{rate_display}</div></div>",
@@ -2088,13 +2283,13 @@ def main():
     with st.sidebar:
         st.markdown(
             """
-            <div style='display: flex; align-items: center; gap: 10px; padding: 6px 4px 14px 4px;'>
-                <div style='width: 34px; height: 34px; border-radius: 8px; background: rgba(56, 189, 248, 0.12); border: 1px solid rgba(56, 189, 248, 0.3); display: flex; align-items: center; justify-content: center;'>
+            <div style='display: flex; align-items: center; gap: 10px; padding: 8px 4px 14px 4px;'>
+                <div style='width: 36px; height: 36px; border-radius: 4px; background: #162230; border: 1px solid #263442; display: flex; align-items: center; justify-content: center;'>
                     <svg width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='#38BDF8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z'/></svg>
                 </div>
                 <div>
                     <div style='font-size: 15px; font-weight: 700; letter-spacing: 0.5px; color: #38BDF8;'>SAFETY VISION</div>
-                    <div style='font-size: 10px; color: #94A3B8; font-weight: 500; text-transform: uppercase; letter-spacing: 0.8px;'>AI Surveillance Platform</div>
+                    <div style='font-size: 10px; color: #94A3B8; font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px;'>Industrial AI Surveillance</div>
                 </div>
             </div>
             """,
@@ -2123,6 +2318,12 @@ def main():
 
         st.markdown("<hr style='margin: 8px 0 12px 0;'>", unsafe_allow_html=True)
 
+        st.markdown(
+            "<span style='font-size: 11px; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;'>"
+            "Navigation</span>",
+            unsafe_allow_html=True,
+        )
+
         pages = [
             "Dashboard",
             "New Inspection",
@@ -2132,20 +2333,10 @@ def main():
             "Reports & Exports",
             "Settings",
         ]
-        page_icons = {
-            "Dashboard": "Dashboard",
-            "New Inspection": "New Inspection",
-            "Inspection Results": "Inspection Results",
-            "Worker Audits": "Worker Audits",
-            "Inspection History": "Inspection History",
-            "Reports & Exports": "Reports & Exports",
-            "Settings": "Settings",
-        }
 
         selected_nav = st.radio(
             "Navigation Menu",
             options=pages,
-            format_func=lambda x: page_icons.get(x, x),
             index=pages.index(st.session_state.nav_radio) if st.session_state.nav_radio in pages else 0,
             label_visibility="collapsed",
         )
@@ -2155,11 +2346,11 @@ def main():
             st.session_state.nav_radio = selected_nav
             st.rerun()
 
-        st.markdown("<hr style='margin: 16px 0 12px 0;'>", unsafe_allow_html=True)
+        st.markdown("<hr style='margin: 14px 0 12px 0;'>", unsafe_allow_html=True)
 
         st.markdown(
-            "<span style='font-size:11px; color:#94A3B8; text-transform:uppercase; "
-            "letter-spacing:0.5px; font-weight:600;'>Hardhat Policy</span>",
+            "<span style='font-size: 11px; color: #94A3B8; text-transform: uppercase; "
+            "letter-spacing: 0.5px; font-weight: 600;'>Hardhat Policy</span>",
             unsafe_allow_html=True,
         )
         st.session_state.strict_hardhat = st.checkbox(
@@ -2167,19 +2358,28 @@ def main():
             value=st.session_state.strict_hardhat,
             help=(
                 "When ON, workers whose head zone has no detectable hardhat box are "
-                "marked as violations \u2014 but only if their person detection is reliable "
-                "(confidence \u2265 0.40, box height \u2265 12\u202f%% of frame, upright posture). "
+                "marked as violations — but only if their person detection is reliable "
+                "(confidence ≥ 0.40, box height ≥ 12 %% of frame, upright posture). "
                 "Unreliable persons are always flagged as Needs Review regardless."
             ),
         )
 
         st.markdown("<hr style='margin: 12px 0 12px 0;'>", unsafe_allow_html=True)
 
-        st.caption(f"**Engine:** YOLOv8 (CPU Mode)\n\n**Weights:** `{os.path.basename(active_model_path)}`")
-        if is_model_verified:
-            st.caption("● 10 Classes Verified")
+        st.markdown(
+            f"""
+            <div class='sv-surface-elevated' style='padding: 10px; font-size: 11px; line-height: 1.5;'>
+                <div style='color: #94A3B8; font-weight: 600; text-transform: uppercase;'>Inference Engine</div>
+                <div style='color: #F1F5F9; font-weight: 500;'>YOLOv8 Nano (CPU Mode)</div>
+                <div style='color: #94A3B8; margin-top: 4px;'>Weights: <code>{os.path.basename(active_model_path)}</code></div>
+                <div style='margin-top: 4px; color: #22C55E; font-weight: 600;'>● 10 Classes Verified</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
-    render_top_navbar(st.session_state.current_page, is_model_verified)
+
+        render_top_navbar(st.session_state.current_page, is_model_verified)
 
     active_insp = st.session_state.active_inspection
     history_list = st.session_state.inspection_history
