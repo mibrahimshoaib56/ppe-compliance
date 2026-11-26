@@ -1087,11 +1087,11 @@ def render_dashboard(active_inspection: Optional[Dict[str, Any]], history: List[
 # ============================================================================
 def render_new_inspection(model: Any):
     """Render the inspection creation and inference workflow page."""
+    # A. Page Header
     st.markdown("### New Safety Inspection")
-    st.caption("Upload a site photograph or select a benchmark test sample for automated YOLOv8 compliance evaluation.")
+    st.caption("Configure job site imagery and compliance parameters for automated YOLOv8 PPE analysis.")
 
-    col_input, col_config = st.columns([3, 2])
-
+    # Find sample images
     sample_files = []
     sample_base = ""
     for s_dir in SAMPLE_DIRS:
@@ -1102,14 +1102,19 @@ def render_new_inspection(model: Any):
                 sample_base = s_dir
                 break
 
-    with col_input:
-        st.markdown("#### 1. Image Source")
+    # 2-Column Structured Workflow Layout
+    col_source, col_config = st.columns([7, 5])
+
+    # Left Column: Image Source Selection & Preview
+    with col_source:
+        st.markdown("#### Image Source & Inspection Preview")
 
         image_mode = st.radio(
             "Source Type",
             ["Benchmark Sample Images", "Upload Custom Photo"],
             horizontal=True,
             label_visibility="collapsed",
+            key="new_insp_source_mode",
         )
 
         input_image = None
@@ -1118,9 +1123,10 @@ def render_new_inspection(model: Any):
 
         if image_mode == "Benchmark Sample Images" and sample_files:
             selected_file = st.selectbox(
-                "Choose Verified Construction Site Sample:",
+                "Select Benchmark Construction Sample:",
                 sample_files,
                 index=0,
+                key="new_insp_sample_select",
             )
             source_label = selected_file
             source_path = os.path.join(sample_base, selected_file)
@@ -1132,9 +1138,10 @@ def render_new_inspection(model: Any):
                 st.error(f"Failed to load sample image: {e}")
         else:
             uploaded_file = st.file_uploader(
-                "Upload Site Photo (JPG, PNG, JPEG)",
+                "Upload Site Photograph (JPG, PNG, JPEG)",
                 type=["jpg", "jpeg", "png"],
-                help="High-resolution site image showing workers with hardhats and safety vests.",
+                help="High-resolution site photograph showing workers, hardhats, and safety vests.",
+                key="new_insp_file_upload",
             )
             if uploaded_file is not None:
                 source_label = uploaded_file.name
@@ -1145,31 +1152,53 @@ def render_new_inspection(model: Any):
                 except Exception as e:
                     st.error(f"Failed to parse uploaded image: {e}")
 
+        # Image Preview Display
+        st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
         if input_image is not None:
-            st.image(input_image, caption=f"Loaded Image: {source_label}", use_container_width=True)
-
-    with col_config:
-        st.markdown("#### 2. Compliance Parameters")
-
-        if input_image is not None:
+            st.image(input_image, caption=f"Inspection Source: {source_label}", use_container_width=True)
+            # Compact Specifications Bar
             st.markdown(
                 f"""
-                <div class='sv-panel' style='padding: 12px 16px; margin-bottom: 14px;'>
-                    <strong>Image Specifications:</strong><br>
-                    <span style='color:#94A3B8; font-size:13px;'>
-                    &bull; Dimensions: <code>{input_image.size[0]} &times; {input_image.size[1]} px</code><br>
-                    &bull; Color Format: <code>{input_image.mode}</code><br>
-                    &bull; Source: <code>{source_label}</code>
-                    </span>
+                <div class='sv-surface-elevated' style='padding: 8px 14px; margin-top: 6px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; font-size: 12px;'>
+                    <div><strong>File:</strong> <code>{source_label}</code></div>
+                    <div><strong>Resolution:</strong> <code>{input_image.size[0]} &times; {input_image.size[1]} px</code> &nbsp;|&nbsp; <strong>Format:</strong> <code>{input_image.mode}</code></div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+        else:
+            st.markdown(
+                """
+                <div class='sv-panel' style='text-align: center; padding: 48px 20px; border: 1px dashed #263442; margin-top: 6px;'>
+                    <div style='color: #38BDF8; font-size: 12px; text-transform: uppercase; letter-spacing: 1.2px; font-weight: 600; margin-bottom: 8px;'>[ NO MEDIA SELECTED ]</div>
+                    <div style='color: #94A3B8; font-size: 13px; max-width: 360px; margin: 0 auto; line-height: 1.5;'>
+                        Select a verified benchmark image from the dropdown or upload an on-site photo above to preview and analyze.
+                    </div>
                 </div>
                 """,
                 unsafe_allow_html=True,
             )
 
+    # Right Column: Compliance Configuration & Inspection Execution
+    with col_config:
+        st.markdown("#### Compliance Configuration")
+
+        # 1. PPE Requirements Card
+        st.markdown(
+            """
+            <div style='font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: #94A3B8; font-weight: 600; margin-bottom: 6px;'>
+                Mandatory PPE Requirements
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
         gear_choice = st.radio(
-            "Mandatory PPE Requirements",
+            "Enforced Safety Equipment",
             ["Hardhat + Safety Vest", "Hardhat Only", "Safety Vest Only"],
             index=0,
+            key="new_insp_gear_choice",
+            label_visibility="collapsed",
             help="Select PPE standards enforced for this site inspection.",
         )
         if gear_choice == "Hardhat Only":
@@ -1179,6 +1208,17 @@ def render_new_inspection(model: Any):
         else:
             required_gear_mode = "both"
 
+        st.markdown(
+            f"""
+            <div class='sv-panel' style='padding: 10px 14px; margin: 8px 0 16px 0; font-size: 12px; line-height: 1.5; color: #94A3B8;'>
+                Enforcing: <strong style='color: #F1F5F9;'>{gear_choice}</strong><br>
+                <span>Personnel missing any enforced equipment will be flagged as safety violations.</span>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        # 2. Advanced Detection Settings (Collapsible)
         with st.expander("Advanced Detection Settings", expanded=False):
             conf_threshold = st.slider(
                 "Sensitivity Slider (Scales Per-Class Thresholds)",
@@ -1186,15 +1226,19 @@ def render_new_inspection(model: Any):
                 max_value=0.90,
                 value=0.25,
                 step=0.05,
+                key="new_insp_conf_slider",
                 help="Scales per-class thresholds (Base: Person 0.30, Hardhat 0.30, NO-Hardhat 0.20, Safety Vest 0.20). Slider at 0.25 represents 1.0x baseline scale.",
             )
-            show_gear_boxes = st.checkbox("Draw Gear Bounding Boxes", value=True)
-            show_zones = st.checkbox("Outline Body Zones (Head 35% / Torso 15–75%)", value=False)
+            show_gear_boxes = st.checkbox("Draw Gear Bounding Boxes", value=True, key="new_insp_gear_boxes_cb")
+            show_zones = st.checkbox("Outline Body Zones (Head 35% / Torso 15-75%)", value=False, key="new_insp_zones_cb")
 
-        st.markdown("<div style='margin-top: 20px;'></div>", unsafe_allow_html=True)
+        st.markdown("<div style='margin-top: 24px;'></div>", unsafe_allow_html=True)
 
+        # 3. Primary Execution Action
         run_disabled = input_image is None
-        if st.button("Run Compliance Check", type="primary", use_container_width=True, disabled=run_disabled):
+        btn_label = "Run Compliance Check" if not run_disabled else "Select an Image to Run Check"
+
+        if st.button(btn_label, key="new_insp_run_btn", type="primary", use_container_width=True, disabled=run_disabled):
             with st.spinner("Executing YOLOv8 inference & spatial compliance logic on CPU..."):
                 detections = run_detection(
                     image=input_image,
