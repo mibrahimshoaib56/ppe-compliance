@@ -2053,53 +2053,82 @@ def render_settings(model: Any, is_model_verified: bool):
 # ============================================================================
 def render_video_inspection(model: Any):
     """Render the CCTV video PPE compliance surveillance interface."""
-    st.markdown("### CCTV Surveillance PPE Inspection")
-    st.caption("Sequential video processing: continuous playback, interval inference, and H.264 video export.")
+    # A. Page Header
+    st.markdown("### Video Safety Inspection")
+    st.caption("Automated sequential video analysis, interval inference stride, and temporal compliance tracking.")
 
     cached_results = st.session_state.get("video_results")
     if cached_results is not None:
-        c_banner, c_bbtn = st.columns([4, 1])
-        with c_banner:
-            st.info("Completed video inspection results are available in Inspection Results.")
-        with c_bbtn:
-            if st.button("View Results", use_container_width=True):
+        st.markdown(
+            """
+            <div class='sv-panel' style='padding: 10px 16px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center;'>
+                <div>
+                    <strong style='color: #38BDF8;'>Surveillance Cache:</strong>
+                    <span style='color: #F1F5F9; margin-left: 6px;'>Completed video inspection results are available for review.</span>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        c_v1, c_v2, c_v3 = st.columns([3, 1, 1])
+        with c_v2:
+            if st.button("View Cached Results", key="vid_view_cached_btn", use_container_width=True):
                 navigate_to("Inspection Results")
 
-    c_upload, c_config = st.columns([3, 2])
+    # 2-Column Workflow Layout
+    col_source, col_config = st.columns([7, 5])
 
-    with c_upload:
-        st.markdown("#### 1. Video Source")
+    with col_source:
+        st.markdown("#### Video Source Selection")
         video_source = st.radio(
             "Source Selection",
-            ["Upload file", "YouTube link"],
+            ["Upload Video File", "YouTube Stream Link"],
             horizontal=True,
             key="cctv_video_source",
+            label_visibility="collapsed",
         )
 
         uploaded_video = None
         youtube_url = ""
 
-        if video_source == "Upload file":
+        if video_source == "Upload Video File":
             uploaded_video = st.file_uploader(
-                "Select Video File (.mp4, .avi, .mov)",
+                "Upload Site Surveillance Video (.mp4, .avi, .mov)",
                 type=["mp4", "avi", "mov"],
                 help=f"Upload site surveillance footage. Processing is capped at the first {MAX_VIDEO_SECONDS}s from start.",
+                key="cctv_file_uploader",
             )
 
             if uploaded_video is not None:
                 file_mb = round(uploaded_video.size / (1024 * 1024), 2)
                 st.markdown(
                     f"""
-                    <div class='sv-panel' style='padding: 12px; margin-top: 8px;'>
-                        <strong>Selected Footage:</strong> <code>{uploaded_video.name}</code><br>
-                        <strong>File Size:</strong> <code>{file_mb} MB</code><br>
-                        <strong>Processing Limit:</strong> First {MAX_VIDEO_SECONDS} seconds | Width &le; {MAX_FRAME_WIDTH}px
+                    <div class='sv-surface-elevated' style='padding: 10px 14px; margin-top: 10px; font-size: 12px; line-height: 1.6;'>
+                        <div><strong>Selected Video:</strong> <code>{uploaded_video.name}</code></div>
+                        <div style='color: #94A3B8;'><strong>File Size:</strong> <code>{file_mb} MB</code> &nbsp;|&nbsp; <strong>Processing Limit:</strong> First {MAX_VIDEO_SECONDS}s (Width &le; {MAX_FRAME_WIDTH}px)</div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+            else:
+                st.markdown(
+                    f"""
+                    <div class='sv-panel' style='text-align: center; padding: 36px 20px; border: 1px dashed #263442; margin-top: 10px;'>
+                        <div style='color: #38BDF8; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600; margin-bottom: 6px;'>[ NO VIDEO LOADED ]</div>
+                        <div style='color: #94A3B8; font-size: 13px;'>Drop or select an MP4, AVI, or MOV surveillance video above.</div>
                     </div>
                     """,
                     unsafe_allow_html=True,
                 )
         else:
-            st.info("Notice: Only use videos you are allowed to analyze. Downloading from YouTube may be restricted by its terms.")
+            st.markdown(
+                """
+                <div class='sv-panel' style='padding: 10px 14px; margin-bottom: 10px; font-size: 12px; color: #94A3B8;'>
+                    Notice: Ensure you possess authorization to analyze target footage. Video downloads from streaming sources are subject to platform terms.
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
             youtube_url = st.text_input(
                 "YouTube Video URL",
                 placeholder="https://www.youtube.com/watch?v=...",
@@ -2111,8 +2140,9 @@ def render_video_inspection(model: Any):
                 f"max download size {MAX_YOUTUBE_MB} MB. Analyzes up to {MAX_VIDEO_SECONDS}s from start time."
             )
 
+        st.markdown("<div style='margin-top: 12px;'></div>", unsafe_allow_html=True)
         start_seconds = st.number_input(
-            "Start at (seconds)",
+            "Start Analysis at Timestamp (seconds)",
             min_value=0.0,
             value=0.0,
             step=1.0,
@@ -2120,13 +2150,24 @@ def render_video_inspection(model: Any):
             key="cctv_start_seconds",
         )
 
-    with c_config:
-        st.markdown("#### 2. Detection & PPE Rules")
+    with col_config:
+        st.markdown("#### Processing Configuration")
+
+        st.markdown(
+            """
+            <div style='font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: #94A3B8; font-weight: 600; margin-bottom: 6px;'>
+                Mandatory PPE Rules
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
         gear_choice = st.radio(
             "Mandatory Site Equipment",
             ["Hardhat + Safety Vest", "Hardhat Only", "Safety Vest Only"],
             index=0,
             key="cctv_gear_choice",
+            label_visibility="collapsed",
             help="Select PPE requirements enforced for this surveillance inspection.",
         )
         if gear_choice == "Hardhat Only":
@@ -2136,54 +2177,68 @@ def render_video_inspection(model: Any):
         else:
             required_gear_mode = "both"
 
-        conf_threshold = st.slider(
-            "Confidence Threshold",
-            min_value=0.10,
-            max_value=0.90,
-            value=0.25,
-            step=0.05,
-            key="cctv_conf_slider",
-            help="Scales per-class thresholds (Base: Person 0.30, Hardhat 0.30, NO-Hardhat 0.20, Safety Vest 0.20).",
-        )
-        show_gear_boxes = st.checkbox("Draw Gear Bounding Boxes", value=True, key="cctv_gear_box_cb")
-        show_zones = st.checkbox("Outline Body Zones (Head / Torso)", value=False, key="cctv_zones_cb")
-        temporal_smoothing = st.checkbox(
-            "Temporal Summary Smoothing",
-            value=True,
-            key="cctv_temporal_smoothing_cb",
-            help=f"Applies a {TEMPORAL_SMOOTHING_WINDOW}-frame rolling filter to smooth aggregate counts and rates across video frames.",
+        st.markdown(
+            f"""
+            <div class='sv-panel' style='padding: 10px 14px; margin: 8px 0 16px 0; font-size: 12px; line-height: 1.5; color: #94A3B8;'>
+                Enforcing: <strong style='color: #F1F5F9;'>{gear_choice}</strong><br>
+                <span>Inference stride analyzes every {PROCESS_EVERY_N} frames on CPU.</span>
+            </div>
+            """,
+            unsafe_allow_html=True,
         )
 
-    st.markdown("<div style='margin-top: 20px;'></div>", unsafe_allow_html=True)
-
-    if video_source == "Upload file":
-        run_disabled = uploaded_video is None
-    else:
-        run_disabled = not bool(youtube_url and youtube_url.strip())
-
-    if st.button("Run CCTV Compliance Inspection", type="primary", use_container_width=True, disabled=run_disabled):
-        if video_source == "Upload file":
-            process_cctv_video_upload(
-                uploaded_video=uploaded_video,
-                model=model,
-                required_gear=required_gear_mode,
-                conf_threshold=conf_threshold,
-                show_gear_boxes=show_gear_boxes,
-                show_zones=show_zones,
-                start_seconds=start_seconds,
-                temporal_smoothing=temporal_smoothing,
+        # Technical Processing Controls (Collapsible)
+        with st.expander("Technical Processing Controls", expanded=False):
+            conf_threshold = st.slider(
+                "Sensitivity Slider (Confidence Threshold)",
+                min_value=0.10,
+                max_value=0.90,
+                value=0.25,
+                step=0.05,
+                key="cctv_conf_slider",
+                help="Scales per-class thresholds (Base: Person 0.30, Hardhat 0.30, NO-Hardhat 0.20, Safety Vest 0.20).",
             )
+            show_gear_boxes = st.checkbox("Draw Gear Bounding Boxes", value=True, key="cctv_gear_box_cb")
+            show_zones = st.checkbox("Outline Body Zones (Head / Torso)", value=False, key="cctv_zones_cb")
+            temporal_smoothing = st.checkbox(
+                "Temporal Summary Smoothing",
+                value=True,
+                key="cctv_temporal_smoothing_cb",
+                help=f"Applies a {TEMPORAL_SMOOTHING_WINDOW}-frame rolling filter to smooth aggregate counts and rates across video frames.",
+            )
+
+        st.markdown("<div style='margin-top: 24px;'></div>", unsafe_allow_html=True)
+
+        if video_source == "Upload Video File":
+            run_disabled = uploaded_video is None
+            btn_label = "Run Video Compliance Check" if not run_disabled else "Select a Video to Run Check"
         else:
-            process_cctv_youtube_link(
-                youtube_url=youtube_url.strip(),
-                model=model,
-                required_gear=required_gear_mode,
-                conf_threshold=conf_threshold,
-                show_gear_boxes=show_gear_boxes,
-                show_zones=show_zones,
-                start_seconds=start_seconds,
-                temporal_smoothing=temporal_smoothing,
-            )
+            run_disabled = not bool(youtube_url and youtube_url.strip())
+            btn_label = "Run Video Compliance Check" if not run_disabled else "Provide YouTube URL to Run Check"
+
+        if st.button(btn_label, key="cctv_run_btn", type="primary", use_container_width=True, disabled=run_disabled):
+            if video_source == "Upload Video File":
+                process_cctv_video_upload(
+                    uploaded_video=uploaded_video,
+                    model=model,
+                    required_gear=required_gear_mode,
+                    conf_threshold=conf_threshold,
+                    show_gear_boxes=show_gear_boxes,
+                    show_zones=show_zones,
+                    start_seconds=start_seconds,
+                    temporal_smoothing=temporal_smoothing,
+                )
+            else:
+                process_cctv_youtube(
+                    youtube_url=youtube_url,
+                    model=model,
+                    required_gear=required_gear_mode,
+                    conf_threshold=conf_threshold,
+                    show_gear_boxes=show_gear_boxes,
+                    show_zones=show_zones,
+                    start_seconds=start_seconds,
+                    temporal_smoothing=temporal_smoothing,
+                )
 
 
 def process_cctv_video_upload(
@@ -2461,6 +2516,10 @@ def execute_cctv_pipeline(
 
 def render_video_results_view(video_results: Dict[str, Any]):
     """Render CCTV video results: video player, metrics, charts, table, and moments gallery."""
+    # A. Page Header
+    st.markdown("### Video Surveillance Results & Temporal Analysis")
+    st.caption("Sequential video inspection playback, temporal compliance trends, and high-risk moments.")
+
     summary = video_results["summary"]
     analyzed = video_results["analyzed_records"]
     meta = video_results["metadata"]
@@ -2474,18 +2533,25 @@ def render_video_results_view(video_results: Dict[str, Any]):
         else ""
     )
 
+    # 1. Compact Metadata Panel
     st.markdown(
         f"""
-        <div class='sv-panel' style='padding: 10px 16px; margin-bottom: 14px;'>
-            <strong>Source Video:</strong> <code>{filename}</code> &nbsp;|&nbsp;
-            <strong>Duration:</strong> <code>{meta['duration_sec']:.1f}s</code> &nbsp;|&nbsp;
-            <strong>Inference Stride:</strong> <code>Every {PROCESS_EVERY_N} frames</code> &nbsp;|&nbsp;
-            <strong>Analyzed Frames:</strong> <code>{summary['frames_analyzed']} frames</code>{smoothing_badge}
+        <div class='sv-panel' style='padding: 10px 16px; margin-bottom: 14px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center;'>
+            <div>
+                <strong>Source:</strong> <code>{filename}</code> &nbsp;|&nbsp;
+                <strong>Duration:</strong> <code>{meta['duration_sec']:.1f}s</code> &nbsp;|&nbsp;
+                <strong>Stride:</strong> <code>Every {PROCESS_EVERY_N} frames</code> &nbsp;|&nbsp;
+                <strong>Analyzed:</strong> <code>{summary['frames_analyzed']} frames</code>{smoothing_badge}
+            </div>
+            <div>
+                <span class='badge-safe' style='font-size: 11px; padding: 3px 8px;'>H.264 ENCODED</span>
+            </div>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
+    # 2. Annotated Video Playback (Centerpiece)
     st.markdown("#### Annotated CCTV Playback")
     if write_error:
         st.error(f"Video file encoding error: {write_error}. Inspection statistics remain available below.")
@@ -2498,17 +2564,28 @@ def render_video_results_view(video_results: Dict[str, Any]):
             file_name=f"annotated_cctv_{filename}.mp4",
             mime="video/mp4",
             use_container_width=True,
+            key="cctv_download_video_btn",
         )
     else:
-        st.info("Video player unavailable, but analytical inspection metrics are presented below.")
+        st.info("Video playback buffer unavailable; temporal metrics and frame analysis are presented below.")
 
-    st.markdown("<div style='margin-top: 16px;'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='margin-top: 14px;'></div>", unsafe_allow_html=True)
 
     if meta.get("temporal_smoothing"):
-        st.info(
-            f"**Temporal Summary Smoothing Active:** Summary metrics are calculated using a {TEMPORAL_SMOOTHING_WINDOW}-frame "
-            "rolling median filter over surrounding frames to smooth aggregate counts and compliance rates across video frames."
+        st.markdown(
+            f"""
+            <div class='sv-surface-elevated' style='padding: 8px 12px; margin-bottom: 12px; font-size: 12px; color: #94A3B8;'>
+                <strong style='color: #38BDF8;'>Temporal Anti-Flicker Active:</strong>
+                <span>Summary metrics utilize a {TEMPORAL_SMOOTHING_WINDOW}-frame rolling median filter across surrounding frames to stabilize aggregate counts.</span>
+            </div>
+            """,
+            unsafe_allow_html=True,
         )
+
+    # 3. KPI Metrics Row (5 Compact Cards)
+    viol_color = "#EF4444" if summary["frames_with_violations"] > 0 else "#94A3B8"
+    rate_display = f"{summary['average_compliance_rate']:.1f}%" if summary["has_worker_frames"] else "N/A"
+    rate_color = "#22C55E" if (summary["has_worker_frames"] and summary["average_compliance_rate"] >= 85.0) else ("#F59E0B" if summary["has_worker_frames"] and summary["average_compliance_rate"] >= 60.0 else "#EF4444")
 
     k1, k2, k3, k4, k5 = st.columns(5)
     with k1:
@@ -2530,23 +2607,21 @@ def render_video_results_view(video_results: Dict[str, Any]):
             unsafe_allow_html=True,
         )
     with k4:
-        viol_color = "#EF4444" if summary["frames_with_violations"] > 0 else "#22C55E"
         st.markdown(
             f"<div class='metric-card'><div class='metric-card-title'>Frames With Violations</div>"
             f"<div class='metric-card-value' style='color:{viol_color};'>{summary['frames_with_violations']}</div></div>",
             unsafe_allow_html=True,
         )
     with k5:
-        rate_display = f"{summary['average_compliance_rate']}%" if summary["has_worker_frames"] else "N/A"
-        rate_color = "#22C55E" if (summary["has_worker_frames"] and summary["average_compliance_rate"] >= 85.0) else ("#F59E0B" if summary["has_worker_frames"] and summary["average_compliance_rate"] >= 60.0 else "#EF4444")
         st.markdown(
             f"<div class='metric-card'><div class='metric-card-title'>Avg Compliance Rate</div>"
             f"<div class='metric-card-value' style='color:{rate_color};'>{rate_display}</div></div>",
             unsafe_allow_html=True,
         )
 
-    st.markdown("<div style='margin-top: 16px;'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='margin-top: 14px;'></div>", unsafe_allow_html=True)
 
+    # 4. Compliance Rate Timeline
     st.markdown("#### Compliance Rate Over Time (By Second)")
     chart_rows = []
     for f in analyzed:
@@ -2559,13 +2634,14 @@ def render_video_results_view(video_results: Dict[str, Any]):
     if summary["has_worker_frames"]:
         st.line_chart(df_chart, color="#0284C7", height=230)
     else:
-        st.info("ℹ️ No workers were detected in the analyzed frames to plot compliance trends.")
+        st.info("No personnel detected in the analyzed video frames to plot compliance timeline.")
 
+    # 5. Top Risk Moments
     st.markdown("---")
     st.markdown("#### Top Risk Moments (High Violations)")
     top_moments = summary.get("top_violation_moments", [])
     if top_moments:
-        st.caption(f"Displaying up to {TOP_VIOLATION_FRAMES_COUNT} moments with the highest count of non-compliant workers:")
+        st.caption(f"Displaying up to {TOP_VIOLATION_FRAMES_COUNT} sampled moments with the highest non-compliance counts:")
         g_cols = st.columns(len(top_moments))
         for col, f in zip(g_cols, top_moments):
             with col:
@@ -2575,8 +2651,17 @@ def render_video_results_view(video_results: Dict[str, Any]):
                     use_container_width=True,
                 )
     else:
-        st.success("Clean Video Surveillance: Zero PPE violations detected across all analyzed frames!")
+        st.markdown(
+            """
+            <div class='sv-panel' style='padding: 12px 16px; border-left: 4px solid #22C55E; color: #22C55E; font-size: 13px;'>
+                <strong>Clean Surveillance Record:</strong>
+                <span style='color: #F1F5F9; margin-left: 6px;'>Zero PPE violations were detected across all analyzed video frames.</span>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
+    # 6. Analyzed Frames Breakdown
     st.markdown("---")
     st.markdown("#### Analyzed Frames Breakdown")
     table_rows = []
@@ -2596,7 +2681,9 @@ def render_video_results_view(video_results: Dict[str, Any]):
     df_table = pd.DataFrame(table_rows)
     st.dataframe(df_table, use_container_width=True)
 
-    c_csv, c_reset = st.columns([2, 1])
+    # 7. Action Toolbar
+    st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
+    c_csv, c_reset = st.columns([3, 1])
     with c_csv:
         csv_content = generate_cctv_csv_report(analyzed, summary, filename)
         st.download_button(
@@ -2605,7 +2692,11 @@ def render_video_results_view(video_results: Dict[str, Any]):
             file_name=f"cctv_inspection_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
             mime="text/csv",
             use_container_width=True,
+            key="cctv_download_csv_btn",
         )
+    with c_reset:
+        if st.button("New Video Inspection", key="cctv_new_inspection_btn", use_container_width=True):
+            navigate_to("New Inspection")
 
 
 # ============================================================================
