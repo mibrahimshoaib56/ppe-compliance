@@ -1,4 +1,4 @@
-﻿"""SAFETY VISION: Enterprise AI Surveillance & PPE Compliance Monitoring Platform.
+"""SAFETY VISION: Enterprise AI Surveillance & PPE Compliance Monitoring Platform.
 
 Streamlit web application for construction site safety surveillance, combining
 an Ultralytics YOLOv8 object detector with pure Python spatial compliance rules
@@ -121,10 +121,10 @@ def init_session_state():
         st.session_state.theme = "Dark Theme"
 
     if "current_page" not in st.session_state:
-        st.session_state.current_page = "Dashboard"
+        st.session_state.current_page = "Home"
 
     if "nav_radio" not in st.session_state:
-        st.session_state.nav_radio = "Dashboard"
+        st.session_state.nav_radio = "Home"
 
     if "inspection_mode" not in st.session_state:
         st.session_state.inspection_mode = "Image"
@@ -802,7 +802,7 @@ def render_top_navbar(current_page: str, is_model_verified: bool):
                 </svg>
                 <span class='brand-title'>SAFETY VISION</span>
                 <span style='color: #64748B;'>/</span>
-                <span class='page-crumb'>{current_page.upper()}</span>
+                <span class='page-crumb'>{'WELCOME' if current_page == 'Home' else current_page.upper()}</span>
             </div>
             """,
             unsafe_allow_html=True,
@@ -822,6 +822,192 @@ def render_top_navbar(current_page: str, is_model_verified: bool):
             st.rerun()
 
     st.markdown("<hr style='margin: 8px 0 16px 0; border: none; border-top: 1px solid var(--border-color);'>", unsafe_allow_html=True)
+
+
+# ============================================================================
+# 5B. PAGE 0: WELCOME & LANDING PAGE (PHASE 10)
+# ============================================================================
+def render_landing_page():
+    """Render the modern industrial welcome and landing portal for Safety Vision."""
+    # Hero Header Badge
+    st.markdown(
+        """
+        <div style="margin-top: 0.25rem; margin-bottom: 1.5rem;">
+            <div style="display:inline-flex; align-items:center; gap:8px; background:rgba(163, 230, 53, 0.12); border:1px solid rgba(163, 230, 53, 0.35); border-radius:4px; padding:4px 12px;">
+                <span style="display:inline-block; width:6px; height:6px; border-radius:50%; background:#A3E635;"></span>
+                <span style="font-size:0.75rem; font-weight:700; color:#A3E635; letter-spacing:0.08em; text-transform:uppercase;">AI-POWERED CONSTRUCTION SAFETY</span>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    c_hero_text, c_hero_vis = st.columns([7, 5])
+
+    with c_hero_text:
+        st.markdown(
+            """
+            <div style="padding-right: 1rem;">
+                <h1 style="font-size: 2.85rem; font-weight: 800; color: #F1F5F9; letter-spacing: -0.03em; line-height: 1.15; margin: 0 0 1.25rem 0;">
+                    BUILDING SAFER WORKSITES WITH AI
+                </h1>
+                <p style="font-size: 1.05rem; color: #94A3B8; line-height: 1.65; margin: 0 0 2rem 0;">
+                    SAFETY VISION delivers automated computer vision intelligence to detect missing hardhats and high-visibility safety vests across hazardous industrial worksites in real time, preventing occupational hazards and ensuring regulatory site compliance.
+                </p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        c_cta1, c_cta2 = st.columns([5, 5])
+        with c_cta1:
+            if st.button("ENTER SAFETY SYSTEM →", type="primary", use_container_width=True, key="landing_btn_enter"):
+                navigate_to("Dashboard")
+        with c_cta2:
+            if st.button("NEW INSPECTION", use_container_width=True, key="landing_btn_new_insp"):
+                navigate_to("New Inspection")
+
+        st.markdown(
+            """
+            <div style="display:flex; flex-wrap:wrap; align-items:center; gap:20px; margin-top:2rem; padding-top:1.25rem; border-top:1px solid #292929; font-size:0.8rem; color:#94A3B8;">
+                <div style="display:flex; align-items:center; gap:6px;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#A3E635" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                    <span>OSHA 1926.100 & ANSI 107 Compliant</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:6px;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#A3E635" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+                    <span>YOLOv8 Real-Time Inference</span>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    with c_hero_vis:
+        img_source = "sample_images/ppe2.png"
+        if not os.path.exists(img_source):
+            img_source = "sample_images/sample_1.jpg"
+
+        if os.path.exists(img_source):
+            im = Image.open(img_source)
+            st.markdown(
+                """
+                <div style="background:#151515; border:1px solid #292929; border-radius:8px; padding:8px 8px 4px 8px; margin-bottom:8px;">
+                """,
+                unsafe_allow_html=True,
+            )
+            st.image(
+                im,
+                caption="Active Worksite Video Feed — PPE Compliance Detection",
+                use_container_width=True,
+            )
+            st.markdown("</div>", unsafe_allow_html=True)
+
+    st.markdown("<div style='margin-top: 2.75rem; margin-bottom: 1.5rem; border-top: 1px solid #292929;'></div>", unsafe_allow_html=True)
+
+    # Feature Highlights
+    st.markdown(
+        """
+        <div style="margin-bottom: 1.25rem;">
+            <div style="font-size: 0.75rem; font-weight: 700; color: #A3E635; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 4px;">
+                Core Platform Capabilities
+            </div>
+            <h3 style="font-size: 1.45rem; font-weight: 700; color: #F1F5F9; margin: 0;">
+                Engineered for High-Hazard Industrial Worksites
+            </h3>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    f1, f2, f3, f4 = st.columns(4)
+
+    with f1:
+        st.markdown(
+            """
+            <div style="background:#151515; border:1px solid #292929; border-radius:8px; padding:1.25rem 1.15rem; min-height:190px; display:flex; flex-direction:column; justify-content:flex-start; border-top:3px solid #A3E635;">
+                <div style="display:inline-flex; align-items:center; justify-content:center; width:36px; height:36px; border-radius:6px; background:#1E1E1E; margin-bottom:0.85rem;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#A3E635" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M2 18h20"/>
+                        <path d="M5 18a7 7 0 0 1 14 0"/>
+                        <path d="M10 7a2 2 0 1 0 4 0"/>
+                    </svg>
+                </div>
+                <div style="font-size:0.85rem; font-weight:700; color:#F1F5F9; letter-spacing:0.04em; margin-bottom:0.4rem;">
+                    HARDHAT DETECTION
+                </div>
+                <div style="font-size:0.8rem; color:#94A3B8; line-height:1.45;">
+                    Automated verification of cranial head protection within the top 35% anatomical body zone.
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    with f2:
+        st.markdown(
+            """
+            <div style="background:#151515; border:1px solid #292929; border-radius:8px; padding:1.25rem 1.15rem; min-height:190px; display:flex; flex-direction:column; justify-content:flex-start; border-top:3px solid #A3E635;">
+                <div style="display:inline-flex; align-items:center; justify-content:center; width:36px; height:36px; border-radius:6px; background:#1E1E1E; margin-bottom:0.85rem;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#A3E635" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M4 4h4l4 4 4-4h4v16H4z"/>
+                        <line x1="12" y1="8" x2="12" y2="20"/>
+                    </svg>
+                </div>
+                <div style="font-size:0.85rem; font-weight:700; color:#F1F5F9; letter-spacing:0.04em; margin-bottom:0.4rem;">
+                    SAFETY VEST DETECTION
+                </div>
+                <div style="font-size:0.8rem; color:#94A3B8; line-height:1.45;">
+                    High-visibility apparel monitoring within the 15%–75% torso region with spatial overlap metrics.
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    with f3:
+        st.markdown(
+            """
+            <div style="background:#151515; border:1px solid #292929; border-radius:8px; padding:1.25rem 1.15rem; min-height:190px; display:flex; flex-direction:column; justify-content:flex-start; border-top:3px solid #A3E635;">
+                <div style="display:inline-flex; align-items:center; justify-content:center; width:36px; height:36px; border-radius:6px; background:#1E1E1E; margin-bottom:0.85rem;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#A3E635" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/>
+                        <circle cx="9" cy="9" r="2"/>
+                        <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
+                    </svg>
+                </div>
+                <div style="font-size:0.85rem; font-weight:700; color:#F1F5F9; letter-spacing:0.04em; margin-bottom:0.4rem;">
+                    IMAGE INSPECTION
+                </div>
+                <div style="font-size:0.8rem; color:#94A3B8; line-height:1.45;">
+                    Rapid static imagery analysis with bounding box attribution, worker rosters, and exportable reports.
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    with f4:
+        st.markdown(
+            """
+            <div style="background:#151515; border:1px solid #292929; border-radius:8px; padding:1.25rem 1.15rem; min-height:190px; display:flex; flex-direction:column; justify-content:flex-start; border-top:3px solid #A3E635;">
+                <div style="display:inline-flex; align-items:center; justify-content:center; width:36px; height:36px; border-radius:6px; background:#1E1E1E; margin-bottom:0.85rem;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#A3E635" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polygon points="23 7 16 12 23 17 23 7"/>
+                        <rect width="14" height="14" x="1" y="5" rx="2" ry="2"/>
+                    </svg>
+                </div>
+                <div style="font-size:0.85rem; font-weight:700; color:#F1F5F9; letter-spacing:0.04em; margin-bottom:0.4rem;">
+                    VIDEO MONITORING
+                </div>
+                <div style="font-size:0.8rem; color:#94A3B8; line-height:1.45;">
+                    Sequential video surveillance playback, rolling median anti-flicker filters, and temporal trend tracking.
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
 
 
 # ============================================================================
@@ -3599,6 +3785,7 @@ def main():
         )
 
         pages = [
+            "Home",
             "Dashboard",
             "New Inspection",
             "Inspection Results",
@@ -3658,7 +3845,9 @@ def main():
     active_insp = st.session_state.active_inspection
     history_list = st.session_state.inspection_history
 
-    if st.session_state.inspection_mode == "Video":
+    if st.session_state.current_page == "Home":
+        render_landing_page()
+    elif st.session_state.inspection_mode == "Video":
         if st.session_state.current_page == "New Inspection":
             render_video_inspection(model)
         elif st.session_state.current_page == "Inspection Results":
