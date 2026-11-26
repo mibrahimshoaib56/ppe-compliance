@@ -258,18 +258,23 @@ def inject_custom_css(theme: str):
                 padding: 7px 12px;
                 border-radius: 4px;
                 border: 1px solid transparent;
-                transition: all 0.15s ease;
+                transition: background-color 0.18s cubic-bezier(0.16, 1, 0.3, 1),
+                            border-color 0.18s cubic-bezier(0.16, 1, 0.3, 1),
+                            transform 0.18s cubic-bezier(0.16, 1, 0.3, 1),
+                            color 0.18s ease;
                 margin-bottom: 2px;
                 cursor: pointer;
             }
             [data-testid="stSidebar"] [data-testid="stRadio"] [role="radiogroup"] label:hover {
                 background-color: #1A1A1A;
                 border-color: var(--border-color);
+                transform: translateX(2px);
             }
             [data-testid="stSidebar"] [data-testid="stRadio"] [role="radiogroup"] label p {
                 color: var(--text-secondary);
                 font-size: 13px;
                 font-weight: 500;
+                transition: color 0.18s ease;
             }
             [data-testid="stSidebar"] [data-testid="stRadio"] [role="radiogroup"] label:hover p {
                 color: var(--text-primary) !important;
@@ -278,6 +283,8 @@ def inject_custom_css(theme: str):
                 background-color: #1A1A1A !important;
                 border: 1px solid #292929 !important;
                 border-left: 3px solid var(--accent-primary) !important;
+                box-shadow: inset 1px 0 0 0 rgba(163, 230, 53, 0.25);
+                transform: translateX(0);
             }
             [data-testid="stSidebar"] [data-testid="stRadio"] [role="radiogroup"] label:has(input:checked) p {
                 color: var(--accent-primary) !important;
@@ -294,6 +301,7 @@ def inject_custom_css(theme: str):
                 display: flex;
                 align-items: center;
                 justify-content: space-between;
+                transition: border-color 0.2s ease;
             }
             .brand-title {
                 color: var(--accent-primary);
@@ -319,6 +327,7 @@ def inject_custom_css(theme: str):
                 font-size: 11px;
                 font-weight: 600;
                 letter-spacing: 0.3px;
+                transition: background-color 0.2s ease, border-color 0.2s ease;
             }
             .model-pill-warn {
                 background-color: rgba(245, 158, 11, 0.1);
@@ -329,9 +338,10 @@ def inject_custom_css(theme: str):
                 font-size: 11px;
                 font-weight: 600;
                 letter-spacing: 0.3px;
+                transition: background-color 0.2s ease, border-color 0.2s ease;
             }
 
-            /* Metric Cards */
+            /* Metric Cards & Subtle Elevation */
             .metric-card {
                 background: var(--surface-card);
                 border: 1px solid var(--border-color);
@@ -340,6 +350,14 @@ def inject_custom_css(theme: str):
                 text-align: left;
                 position: relative;
                 overflow: hidden;
+                transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+                            border-color 0.2s ease,
+                            box-shadow 0.2s ease;
+            }
+            .metric-card:hover {
+                transform: translateY(-2px);
+                border-color: #383838;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
             }
             .metric-card-title {
                 color: var(--text-secondary);
@@ -363,6 +381,7 @@ def inject_custom_css(theme: str):
                 border-radius: 4px;
                 padding: 16px;
                 margin-bottom: 14px;
+                transition: border-color 0.2s ease;
             }
             .sv-surface-elevated {
                 background-color: var(--surface-elevated);
@@ -370,6 +389,7 @@ def inject_custom_css(theme: str):
                 border-radius: 4px;
                 padding: 12px;
                 margin-bottom: 12px;
+                transition: border-color 0.2s ease;
             }
 
             /* Semantic Status Badges */
@@ -421,19 +441,32 @@ def inject_custom_css(theme: str):
                 font-size: 13px;
                 font-weight: 500;
                 border: 1px solid transparent;
+                transition: background-color 0.18s ease,
+                            color 0.18s ease,
+                            border-color 0.18s ease;
             }
             .stTabs [data-baseweb="tab"]:hover {
                 color: var(--text-primary);
                 background-color: #1A1A1A;
+                border-color: #292929;
             }
             .stTabs [aria-selected="true"] {
                 background-color: var(--surface-card) !important;
                 color: var(--accent-primary) !important;
                 border: 1px solid var(--border-color) !important;
                 border-bottom: 2px solid var(--accent-primary) !important;
+                box-shadow: 0 2px 6px rgba(163, 230, 53, 0.12);
             }
 
-            /* Buttons */
+            /* Buttons & Interactions */
+            .stButton > button {
+                transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1),
+                            box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+                            background-color 0.18s ease,
+                            border-color 0.18s ease,
+                            color 0.18s ease !important;
+                will-change: transform, box-shadow;
+            }
             .stButton > button[kind="primary"] {
                 background-color: #A3E635;
                 color: #000000;
@@ -442,12 +475,18 @@ def inject_custom_css(theme: str):
                 font-weight: 600;
                 font-size: 13px;
                 padding: 6px 16px;
-                transition: all 0.15s ease;
             }
             .stButton > button[kind="primary"]:hover {
                 background-color: #BEF264;
                 border-color: #D9F99D;
                 color: #000000;
+                transform: translateY(-1.5px);
+                box-shadow: 0 4px 14px rgba(163, 230, 53, 0.35);
+            }
+            .stButton > button[kind="primary"]:active {
+                transform: translateY(0px) scale(0.99);
+                box-shadow: 0 2px 6px rgba(163, 230, 53, 0.2);
+                filter: brightness(0.94);
             }
             .stButton > button:not([kind="primary"]) {
                 background-color: var(--surface-card);
@@ -457,12 +496,24 @@ def inject_custom_css(theme: str):
                 font-weight: 500;
                 font-size: 13px;
                 padding: 6px 14px;
-                transition: all 0.15s ease;
             }
             .stButton > button:not([kind="primary"]):hover {
                 border-color: var(--accent-primary);
                 color: var(--accent-primary);
                 background-color: var(--surface-elevated);
+                transform: translateY(-1px);
+            }
+            .stButton > button:not([kind="primary"]):active {
+                transform: translateY(0px);
+                filter: brightness(0.95);
+            }
+            .stButton > button:disabled,
+            .stButton > button[disabled] {
+                transform: none !important;
+                box-shadow: none !important;
+                cursor: not-allowed !important;
+                opacity: 0.55 !important;
+                filter: none !important;
             }
 
             /* Inputs & Dropdowns */
@@ -470,6 +521,11 @@ def inject_custom_css(theme: str):
                 background-color: var(--surface-card) !important;
                 border: 1px solid var(--border-color) !important;
                 border-radius: 4px !important;
+                transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
+            }
+            [data-baseweb="input"]:focus-within {
+                border-color: var(--accent-primary) !important;
+                box-shadow: 0 0 0 1px rgba(163, 230, 53, 0.35) !important;
             }
             [data-baseweb="input"] input {
                 color: var(--text-primary) !important;
@@ -479,17 +535,38 @@ def inject_custom_css(theme: str):
                 border: 1px solid var(--border-color) !important;
                 border-radius: 4px !important;
                 color: var(--text-primary) !important;
+                transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
+            }
+            [data-baseweb="select"] > div:focus-within {
+                border-color: var(--accent-primary) !important;
+                box-shadow: 0 0 0 1px rgba(163, 230, 53, 0.35) !important;
             }
             [data-testid="stFileUploader"] {
                 border: 1px dashed var(--border-color);
                 border-radius: 4px;
                 padding: 10px;
                 background-color: var(--surface-card);
+                transition: border-color 0.2s ease, background-color 0.2s ease;
+            }
+            [data-testid="stFileUploader"]:hover {
+                border-color: var(--accent-primary);
+                background-color: var(--surface-elevated);
             }
             [data-testid="stExpander"] {
                 background-color: var(--surface-card) !important;
                 border: 1px solid var(--border-color) !important;
                 border-radius: 4px !important;
+                transition: border-color 0.2s ease;
+            }
+            [data-testid="stExpander"]:hover {
+                border-color: #383838 !important;
+            }
+            [data-testid="stCheckbox"] label,
+            [data-testid="stRadio"] label {
+                transition: color 0.15s ease;
+            }
+            [data-testid="stCheckbox"]:hover label p {
+                color: var(--text-primary) !important;
             }
             [data-testid="stDataFrame"] {
                 border: 1px solid var(--border-color);
@@ -500,6 +577,21 @@ def inject_custom_css(theme: str):
                 border-radius: 4px;
                 border: 1px solid var(--border-color);
                 padding: 10px 14px;
+            }
+
+            /* Reduced Motion Standard */
+            @media (prefers-reduced-motion: reduce) {
+                *, ::before, ::after {
+                    animation-duration: 0.01ms !important;
+                    animation-iteration-count: 1 !important;
+                    transition-duration: 0.01ms !important;
+                    scroll-behavior: auto !important;
+                }
+                .stButton > button,
+                .metric-card,
+                [data-testid="stSidebar"] [data-testid="stRadio"] [role="radiogroup"] label {
+                    transform: none !important;
+                }
             }
         </style>
         """
@@ -551,17 +643,22 @@ def inject_custom_css(theme: str):
                 padding: 7px 12px;
                 border-radius: 4px;
                 border: 1px solid transparent;
-                transition: all 0.15s ease;
+                transition: background-color 0.18s cubic-bezier(0.16, 1, 0.3, 1),
+                            border-color 0.18s cubic-bezier(0.16, 1, 0.3, 1),
+                            transform 0.18s cubic-bezier(0.16, 1, 0.3, 1),
+                            color 0.18s ease;
                 margin-bottom: 2px;
                 cursor: pointer;
             }
             [data-testid="stSidebar"] [data-testid="stRadio"] [role="radiogroup"] label:hover {
                 background-color: #E2E8F0;
+                transform: translateX(2px);
             }
             [data-testid="stSidebar"] [data-testid="stRadio"] [role="radiogroup"] label p {
                 color: var(--text-secondary);
                 font-size: 13px;
                 font-weight: 500;
+                transition: color 0.18s ease;
             }
             [data-testid="stSidebar"] [data-testid="stRadio"] [role="radiogroup"] label:hover p {
                 color: var(--text-primary) !important;
@@ -570,6 +667,7 @@ def inject_custom_css(theme: str):
                 background-color: #E0F2FE !important;
                 border: 1px solid #BAE6FD !important;
                 border-left: 3px solid var(--accent-primary) !important;
+                transform: translateX(0);
             }
             [data-testid="stSidebar"] [data-testid="stRadio"] [role="radiogroup"] label:has(input:checked) p {
                 color: var(--accent-primary) !important;
@@ -586,6 +684,7 @@ def inject_custom_css(theme: str):
                 align-items: center;
                 justify-content: space-between;
                 box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+                transition: border-color 0.2s ease;
             }
             .brand-title {
                 color: var(--accent-primary);
@@ -611,6 +710,7 @@ def inject_custom_css(theme: str):
                 font-size: 11px;
                 font-weight: 600;
                 letter-spacing: 0.3px;
+                transition: background-color 0.2s ease, border-color 0.2s ease;
             }
             .model-pill-warn {
                 background-color: rgba(217, 119, 6, 0.1);
@@ -621,6 +721,7 @@ def inject_custom_css(theme: str):
                 font-size: 11px;
                 font-weight: 600;
                 letter-spacing: 0.3px;
+                transition: background-color 0.2s ease, border-color 0.2s ease;
             }
 
             .metric-card {
@@ -629,6 +730,14 @@ def inject_custom_css(theme: str):
                 border-radius: 4px;
                 padding: 12px 14px;
                 box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+                transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+                            border-color 0.2s ease,
+                            box-shadow 0.2s ease;
+            }
+            .metric-card:hover {
+                transform: translateY(-2px);
+                border-color: #CBD5E1;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
             }
             .metric-card-title {
                 color: var(--text-secondary);
@@ -652,6 +761,7 @@ def inject_custom_css(theme: str):
                 padding: 16px;
                 margin-bottom: 14px;
                 box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+                transition: border-color 0.2s ease;
             }
             .sv-surface-elevated {
                 background-color: var(--surface-elevated);
@@ -659,6 +769,7 @@ def inject_custom_css(theme: str):
                 border-radius: 4px;
                 padding: 12px;
                 margin-bottom: 12px;
+                transition: border-color 0.2s ease;
             }
 
             .badge-safe {
@@ -708,18 +819,31 @@ def inject_custom_css(theme: str):
                 font-size: 13px;
                 font-weight: 500;
                 border: 1px solid transparent;
+                transition: background-color 0.18s ease,
+                            color 0.18s ease,
+                            border-color 0.18s ease;
             }
             .stTabs [data-baseweb="tab"]:hover {
                 color: var(--text-primary);
                 background-color: #F1F5F9;
+                border-color: #E2E8F0;
             }
             .stTabs [aria-selected="true"] {
                 background-color: #E0F2FE !important;
                 color: var(--accent-primary) !important;
                 border: 1px solid #BAE6FD !important;
                 border-bottom: 2px solid var(--accent-primary) !important;
+                box-shadow: 0 2px 6px rgba(2, 132, 199, 0.12);
             }
 
+            .stButton > button {
+                transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1),
+                            box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+                            background-color 0.18s ease,
+                            border-color 0.18s ease,
+                            color 0.18s ease !important;
+                will-change: transform, box-shadow;
+            }
             .stButton > button[kind="primary"] {
                 background-color: var(--accent-primary);
                 color: #FFFFFF;
@@ -728,6 +852,18 @@ def inject_custom_css(theme: str):
                 font-weight: 600;
                 font-size: 13px;
                 padding: 6px 16px;
+            }
+            .stButton > button[kind="primary"]:hover {
+                background-color: #0369A1;
+                border-color: #0284C7;
+                color: #FFFFFF;
+                transform: translateY(-1.5px);
+                box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35);
+            }
+            .stButton > button[kind="primary"]:active {
+                transform: translateY(0px) scale(0.99);
+                box-shadow: 0 2px 6px rgba(2, 132, 199, 0.2);
+                filter: brightness(0.94);
             }
             .stButton > button:not([kind="primary"]) {
                 background-color: var(--surface-card);
@@ -741,31 +877,93 @@ def inject_custom_css(theme: str):
             .stButton > button:not([kind="primary"]):hover {
                 border-color: var(--accent-primary);
                 color: var(--accent-primary);
+                background-color: var(--surface-elevated);
+                transform: translateY(-1px);
+            }
+            .stButton > button:not([kind="primary"]):active {
+                transform: translateY(0px);
+                filter: brightness(0.95);
+            }
+            .stButton > button:disabled,
+            .stButton > button[disabled] {
+                transform: none !important;
+                box-shadow: none !important;
+                cursor: not-allowed !important;
+                opacity: 0.55 !important;
+                filter: none !important;
             }
 
             [data-baseweb="input"] {
                 background-color: var(--surface-card) !important;
                 border: 1px solid var(--border-color) !important;
                 border-radius: 4px !important;
+                transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
+            }
+            [data-baseweb="input"]:focus-within {
+                border-color: var(--accent-primary) !important;
+                box-shadow: 0 0 0 1px rgba(2, 132, 199, 0.35) !important;
             }
             [data-baseweb="select"] > div {
                 background-color: var(--surface-card) !important;
                 border: 1px solid var(--border-color) !important;
                 border-radius: 4px !important;
+                transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
+            }
+            [data-baseweb="select"] > div:focus-within {
+                border-color: var(--accent-primary) !important;
+                box-shadow: 0 0 0 1px rgba(2, 132, 199, 0.35) !important;
             }
             [data-testid="stFileUploader"] {
                 border: 1px dashed var(--border-color);
                 border-radius: 4px;
                 padding: 10px;
                 background-color: var(--surface-card);
+                transition: border-color 0.2s ease, background-color 0.2s ease;
+            }
+            [data-testid="stFileUploader"]:hover {
+                border-color: var(--accent-primary);
+                background-color: var(--surface-elevated);
             }
             [data-testid="stExpander"] {
                 background-color: var(--surface-card) !important;
                 border: 1px solid var(--border-color) !important;
                 border-radius: 4px !important;
+                transition: border-color 0.2s ease;
+            }
+            [data-testid="stExpander"]:hover {
+                border-color: #CBD5E1 !important;
+            }
+            [data-testid="stCheckbox"] label,
+            [data-testid="stRadio"] label {
+                transition: color 0.15s ease;
+            }
+            [data-testid="stCheckbox"]:hover label p {
+                color: var(--text-primary) !important;
             }
             [data-testid="stDataFrame"] {
                 border: 1px solid var(--border-color);
+                border-radius: 4px;
+                overflow: hidden;
+            }
+            div[data-testid="stAlert"] {
+                border-radius: 4px;
+                border: 1px solid var(--border-color);
+                padding: 10px 14px;
+            }
+
+            @media (prefers-reduced-motion: reduce) {
+                *, ::before, ::after {
+                    animation-duration: 0.01ms !important;
+                    animation-iteration-count: 1 !important;
+                    transition-duration: 0.01ms !important;
+                    scroll-behavior: auto !important;
+                }
+                .stButton > button,
+                .metric-card,
+                [data-testid="stSidebar"] [data-testid="stRadio"] [role="radiogroup"] label {
+                    transform: none !important;
+                }
+            }
                 border-radius: 4px;
                 overflow: hidden;
             }
