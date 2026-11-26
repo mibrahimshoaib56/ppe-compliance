@@ -18,6 +18,7 @@ import numpy as np
 import pandas as pd
 from PIL import Image
 import streamlit as st
+import altair as alt
 
 from src.compliance import (
     CLASS_HARDHAT,
@@ -810,27 +811,43 @@ def render_top_navbar(current_page: str, is_model_verified: bool):
 # 6. PAGE 1: DASHBOARD
 # ============================================================================
 def render_dashboard(active_inspection: Optional[Dict[str, Any]], history: List[Dict[str, Any]]):
-    """Render the executive safety dashboard with KPIs, distribution charts, and recent scans."""
-    st.markdown("### Operational Safety Dashboard")
-    st.caption("Active job site overview, PPE compliance rates, and recent surveillance logs.")
+    """Render the executive industrial safety dashboard with KPIs, distribution charts, and recent scans."""
+    # A. Page Header with Compact Action Bar
+    head_left, head_right = st.columns([4, 2])
+    with head_left:
+        st.markdown("### Operational Safety Dashboard")
+        st.caption("Active job site surveillance, automated PPE compliance verification, and risk mitigation tracking.")
+    with head_right:
+        st.markdown("<div style='text-align: right; padding-top: 4px;'>", unsafe_allow_html=True)
+        h_btn1, h_btn2 = st.columns([1, 1])
+        with h_btn1:
+            if active_inspection is not None:
+                if st.button("Active Results", key="dash_view_active", use_container_width=True):
+                    navigate_to("Inspection Results")
+        with h_btn2:
+            if st.button("New Inspection", key="dash_new_insp", type="primary", use_container_width=True):
+                navigate_to("New Inspection")
+        st.markdown("</div>", unsafe_allow_html=True)
 
     has_data = active_inspection is not None or len(history) > 0
 
     if not has_data:
         st.markdown(
             """
-            <div class='sv-panel' style='text-align: center; padding: 48px 24px;'>
-                <div style='font-size: 13px; text-transform: uppercase; letter-spacing: 1px; color: #38BDF8; font-weight: 600; margin-bottom: 8px;'>[ SURVEILLANCE STANDBY ]</div>
-                <h3 style='margin: 12px 0 6px 0;'>No Site Inspections Recorded Yet</h3>
-                <p style='color: #94A3B8; max-width: 500px; margin: 0 auto 20px auto; font-size: 14px;'>
-                    Start by scanning an on-site photo or running a CCTV video feed to evaluate worker hardhat and safety-vest compliance.
+            <div class='sv-panel' style='text-align: center; padding: 48px 24px; margin-top: 10px;'>
+                <div style='font-size: 13px; text-transform: uppercase; letter-spacing: 1.5px; color: #38BDF8; font-weight: 600; margin-bottom: 8px;'>[ SURVEILLANCE STANDBY ]</div>
+                <h3 style='margin: 12px 0 6px 0; color: #F1F5F9;'>No Site Inspections Recorded Yet</h3>
+                <p style='color: #94A3B8; max-width: 540px; margin: 0 auto 24px auto; font-size: 13px; line-height: 1.6;'>
+                    No active surveillance data or completed site inspections are available. Initiate an automated safety audit by uploading job site imagery or streaming CCTV footage.
                 </p>
             </div>
             """,
             unsafe_allow_html=True,
         )
-        if st.button("Conduct First Inspection", type="primary"):
-            navigate_to("New Inspection")
+        c_empty1, c_empty2, c_empty3 = st.columns([1, 2, 1])
+        with c_empty2:
+            if st.button("Start First Site Inspection", key="dash_start_first", type="primary", use_container_width=True):
+                navigate_to("New Inspection")
         return
 
     current = active_inspection if active_inspection is not None else history[0]
@@ -844,17 +861,26 @@ def render_dashboard(active_inspection: Optional[Dict[str, Any]], history: List[
     rate = summary.get("compliance_rate", 0.0)
     status = summary.get("site_status", "Safe")
 
+    # Semantic Status & Color Mapping
     if status == "Safe":
         status_color = "#22C55E"
-        status_badge = "SAFE"
+        status_badge_class = "badge-safe"
+        status_label = "SAFE"
     elif status == "Warning":
         status_color = "#F59E0B"
-        status_badge = "WARNING"
+        status_badge_class = "badge-warning"
+        status_label = "WARNING"
     else:
         status_color = "#EF4444"
-        status_badge = "CRITICAL"
+        status_badge_class = "badge-critical"
+        status_label = "CRITICAL"
 
-    # KPI Metric Cards Row
+    # Semantic Violation Value Styling: non-alarming when 0, vivid red when > 0
+    viol_color = "#EF4444" if viol_w > 0 else "#94A3B8"
+    review_color = "#F59E0B" if review_w > 0 else "#94A3B8"
+    rate_color = "#22C55E" if rate >= 85.0 else ("#F59E0B" if rate >= 60.0 else "#EF4444")
+
+    # B. Safety Overview / KPI Section
     k1, k2, k3, k4, k5, k6 = st.columns(6)
     with k1:
         st.markdown(
@@ -871,90 +897,189 @@ def render_dashboard(active_inspection: Optional[Dict[str, Any]], history: List[
     with k3:
         st.markdown(
             f"<div class='metric-card'><div class='metric-card-title'>Violations</div>"
-            f"<div class='metric-card-value' style='color:#EF4444;'>{viol_w}</div></div>",
+            f"<div class='metric-card-value' style='color:{viol_color};'>{viol_w}</div></div>",
             unsafe_allow_html=True,
         )
     with k4:
         st.markdown(
             f"<div class='metric-card'><div class='metric-card-title'>Needs Review</div>"
-            f"<div class='metric-card-value' style='color:#F59E0B;'>{review_w}</div></div>",
+            f"<div class='metric-card-value' style='color:{review_color};'>{review_w}</div></div>",
             unsafe_allow_html=True,
         )
     with k5:
         st.markdown(
             f"<div class='metric-card'><div class='metric-card-title'>Compliance Rate</div>"
-            f"<div class='metric-card-value' style='color:#38BDF8;'>{rate}%</div></div>",
+            f"<div class='metric-card-value' style='color:{rate_color};'>{rate:.1f}%</div></div>",
             unsafe_allow_html=True,
         )
     with k6:
         st.markdown(
             f"<div class='metric-card'><div class='metric-card-title'>Site Status</div>"
-            f"<div class='metric-card-value' style='color:{status_color}; font-size:20px;'>{status_badge}</div></div>",
+            f"<div style='margin-top: 4px;'><span class='{status_badge_class}' style='font-size: 13px; padding: 4px 10px;'>{status_label}</span></div></div>",
             unsafe_allow_html=True,
         )
 
-    st.markdown("<div style='margin-top:16px;'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='margin-top: 14px;'></div>", unsafe_allow_html=True)
 
-    # Operational Visuals: Compliance Distribution & Active Advisory
-    c_chart, c_alerts = st.columns([3, 2])
+    # C & D. Compliance Visualization and Context-Aware Operational Safety Directive
+    c_chart, c_directive = st.columns([3, 2])
 
     with c_chart:
         st.markdown("#### Worker Compliance Distribution")
-        chart_data = pd.DataFrame({
-            "Status Category": ["Compliant", "Violations", "Needs Review"],
-            "Worker Count": [comp_w, viol_w, review_w],
-        }).set_index("Status Category")
-        st.bar_chart(chart_data, color="#0284C7", height=230)
+        if total_w == 0:
+            st.info("No personnel detected in the active scene to plot compliance distribution.")
+        else:
+            chart_df = pd.DataFrame({
+                "Category": ["Compliant", "Violations", "Needs Review"],
+                "Count": [comp_w, viol_w, review_w],
+            })
+            bar_chart = (
+                alt.Chart(chart_df)
+                .mark_bar(cornerRadiusTopLeft=4, cornerRadiusTopRight=4)
+                .encode(
+                    x=alt.X("Category:N", title=None, axis=alt.Axis(labelAngle=0, labelColor="#94A3B8")),
+                    y=alt.Y("Count:Q", title="Workers", axis=alt.Axis(tickMinStep=1, labelColor="#94A3B8", titleColor="#94A3B8")),
+                    color=alt.Color(
+                        "Category:N",
+                        scale=alt.Scale(
+                            domain=["Compliant", "Violations", "Needs Review"],
+                            range=["#22C55E", "#EF4444", "#F59E0B"],
+                        ),
+                        legend=None,
+                    ),
+                    tooltip=["Category", "Count"],
+                )
+                .properties(height=230)
+                .configure_view(strokeWidth=0)
+            )
+            st.altair_chart(bar_chart, use_container_width=True)
 
-    with c_alerts:
+    with c_directive:
         st.markdown("#### Operational Safety Directive")
+        active_label = current.get("image_name", "Active Scan")
+
         if total_w == 0:
             st.warning(
-                "No workers detected. The image may be from an unsupported perspective (such as overhead) "
-                "or workers are too distant. Try a front or side eye-level angle."
+                "No personnel detected in the active scene. Verify camera perspective, angle, and distance "
+                "to ensure workers fall within the detection field of view."
             )
         else:
             advisory_msg = get_action_recommendation(summary)
-            if status == "Safe":
-                st.success(f"**Site Status: Normal Surveillance**\n\n{advisory_msg}")
-            elif status == "Warning":
-                st.warning(f"**Attention Required:**\n\n{advisory_msg}")
-            else:
-                st.error(f"**Critical Safety Alert:**\n\n{advisory_msg}")
+            border_c = status_color
+            bg_surface = "rgba(34, 197, 94, 0.05)" if status == "Safe" else ("rgba(245, 158, 11, 0.05)" if status == "Warning" else "rgba(239, 68, 68, 0.05)")
 
-        active_label = current.get("image_name", "Live Scan")
-        st.caption(f"Active scan reference: `{active_label}`")
+            st.markdown(
+                f"""
+                <div style='background: {bg_surface}; border: 1px solid #263442; border-left: 4px solid {border_c}; border-radius: 4px; padding: 14px 16px; margin-bottom: 12px;'>
+                    <div style='display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;'>
+                        <span style='font-size: 11px; font-weight: 700; text-transform: uppercase; color: {border_c}; letter-spacing: 0.5px;'>
+                            {status_label} STATUS ADVISORY
+                        </span>
+                        <span class='{status_badge_class}'>{status_label}</span>
+                    </div>
+                    <div style='color: #F1F5F9; font-size: 13px; line-height: 1.5; font-weight: 500;'>
+                        {advisory_msg}
+                    </div>
+                    <div style='margin-top: 10px; font-size: 11px; color: #94A3B8;'>
+                        Active Scan: <code>{active_label}</code>
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
 
-        c_act1, c_act2 = st.columns(2)
-        with c_act1:
-            if st.button("Run New Inspection", use_container_width=True):
-                navigate_to("New Inspection")
-        with c_act2:
-            if active_inspection is not None:
-                if st.button("View Active Results", type="primary", use_container_width=True):
-                    navigate_to("Inspection Results")
+            # Quick Action Links inside advisory
+            c_sub1, c_sub2 = st.columns(2)
+            with c_sub1:
+                if active_inspection is not None:
+                    if st.button("Inspect Active Scene", key="dash_inspect_btn", use_container_width=True):
+                        navigate_to("Inspection Results")
+            with c_sub2:
+                if st.button("Audit Individual Workers", key="dash_audit_btn", use_container_width=True):
+                    navigate_to("Worker Audits")
 
-    # Recent Inspection Table
+    # E. Recent Inspections Section
     st.markdown("---")
     st.markdown("#### Recent Site Inspections")
 
-    if history:
-        history_df = pd.DataFrame([
-            {
+    if not history:
+        st.info("No recorded inspection history available. Executed inspections will appear here.")
+    else:
+        records_for_table = []
+        for h in history[:6]:
+            h_stat = h.get("site_status", "Safe")
+            records_for_table.append({
                 "Inspection ID": h["id"],
-                "Date & Time": h["timestamp"],
-                "Site Image": h["image_name"],
-                "Workers": h["total_workers"],
+                "Timestamp": h["timestamp"],
+                "Source": h["image_name"],
+                "Total Workers": h["total_workers"],
                 "Compliant": h.get("compliant_count", 0),
                 "Violations": h.get("violation_count", 0),
-                "Compliance Rate": f"{h['compliance_rate']}%",
-                "Status": h["site_status"],
+                "Compliance Rate": f"{h['compliance_rate']:.1f}%",
+                "Status": h_stat.upper(),
+            })
+
+        st.dataframe(pd.DataFrame(records_for_table), use_container_width=True)
+
+        # Quick Review Selector to open any past inspection in the results workstation
+        c_sel, c_act = st.columns([4, 1])
+        with c_sel:
+            hist_options = {
+                f"{h['id']} - {h['image_name']} ({h['site_status'].upper()}, {h['compliance_rate']:.1f}% compliance)": h['id']
+                for h in history[:10]
             }
-            for h in history[:6]
-        ])
-        st.dataframe(history_df, use_container_width=True)
-    else:
-        st.info("No recorded inspection history.")
+            selected_hist_label = st.selectbox(
+                "Select Past Inspection to Review in Results Workstation:",
+                list(hist_options.keys()),
+                key="dash_hist_select",
+                label_visibility="collapsed",
+            )
+        with c_act:
+            if st.button("Review Inspection", key="dash_open_hist_btn", use_container_width=True):
+                target_id = hist_options[selected_hist_label]
+                if target_id in st.session_state.inspections_store:
+                    st.session_state.active_inspection = st.session_state.inspections_store[target_id]
+                    navigate_to("Inspection Results")
+                else:
+                    target_entry = next((item for item in history if item["id"] == target_id), None)
+                    if target_entry and target_entry.get("image_path") and os.path.exists(target_entry["image_path"]):
+                        with st.spinner("Loading inspection..."):
+                            reloaded_img = Image.open(target_entry["image_path"]).convert("RGB")
+                            req_mode = target_entry.get("settings", {}).get("required_gear", "both")
+                            conf_t = target_entry.get("settings", {}).get("conf_threshold", 0.25)
+                            detections = run_detection(reloaded_img, model=get_detector(resolve_model_path()), conf_threshold=conf_t, device="cpu")
+                            _h2 = float(np.array(reloaded_img).shape[0])
+                            evaluation = evaluate_site_compliance(
+                                detections=detections,
+                                required_gear=req_mode,
+                                image_height=_h2,
+                                strict_hardhat=st.session_state.strict_hardhat,
+                            )
+                            ann_img = annotate_image(
+                                image=reloaded_img,
+                                workers=evaluation["workers"],
+                                unassigned_gear=evaluation["unassigned_gear"],
+                                show_gear_boxes=True,
+                                show_zones=False,
+                            )
+                            ann_bytes = encode_image_bytes(ann_img, format_ext="JPEG")
+                            rec = {
+                                "id": target_id,
+                                "timestamp": target_entry["timestamp"],
+                                "image_name": target_entry["image_name"],
+                                "image_path": target_entry["image_path"],
+                                "image": reloaded_img,
+                                "annotated_image": ann_img,
+                                "annotated_bytes": ann_bytes,
+                                "detections": detections,
+                                "workers": evaluation["workers"],
+                                "summary": evaluation["summary"],
+                                "unassigned_gear": evaluation["unassigned_gear"],
+                                "settings": target_entry.get("settings", {}),
+                            }
+                            st.session_state.active_inspection = rec
+                            st.session_state.inspections_store[target_id] = rec
+                            navigate_to("Inspection Results")
 
 
 # ============================================================================
