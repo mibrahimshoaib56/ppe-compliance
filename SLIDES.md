@@ -209,8 +209,8 @@ $$\text{IoG} = \frac{\text{Area}(\text{Gear Box} \cap \text{Anatomical Zone})}{\
 
 ### Documented Failure Cases
 1. **Overhead Angles (`sample_images/ppe10.jpg`):** Base detections yield Person confidences 0.268 and 0.148, both dropped by the `CONF_PERSON = 0.30` gate $\to$ 0 detected workers.
-2. **Material Occlusion (`eval/test_photos/photo03.jpg`):** [GROUP TO ADD: what is visible in the photo]. True counts: 10 compliant, 0 violations; predicted: 3 compliant, 0 violations, 3 Needs Review (1 small, 1 upright, 1 conflict).
-3. **Clothing without Reflectors (`eval/test_photos/photo06.jpg`):** [GROUP TO ADD: what is visible in the photo]. True counts: 3 compliant, 2 violations; predicted: 1 compliant, 3 violations, 1 Needs Review (conflict).
+2. **Material Occlusion (`eval/test_photos/photo03.jpg`):** Workers on rebar deck with bags/scaffolding causing partial torso occlusion. True counts: 10 compliant, 0 violations; predicted: 3 compliant, 0 violations, 3 Needs Review (1 small, 1 upright, 1 conflict).
+3. **Clothing without Reflectors (`eval/test_photos/photo06.jpg`):** Roadway workers wearing solid fluorescent tops without silver retroreflective tape. True counts: 3 compliant, 2 violations; predicted: 1 compliant, 3 violations, 1 Needs Review (conflict).
 
 > **Speaker Note:** Explain the slider trade-off: at 0.15 review count is high, while at 0.40 missing gear detections raise violation counts under strict enforcement.
 

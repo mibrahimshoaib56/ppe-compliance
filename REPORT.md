@@ -291,17 +291,17 @@ Failure cases were examined and recorded in [`eval/results/failure_cases/`](eval
 
 ### Case 1: Overhead Camera Angle (`sample_images/ppe10.jpg`)
 * **Source Image:** `sample_images/ppe10.jpg`
-* **Visual Content:** [GROUP TO ADD: what is visible in the photo]
+* **Visual Content:** High-angle steep overhead perspective of an equipment operator beside industrial machinery.
 * **Empirical Execution (`eval/results/ppe10_check.txt`):** YOLO base inference at confidence 0.10 detects two Person candidates (confidences 0.268 and 0.148), one machinery (0.454), one NO-Safety Vest (0.451), and one Safety Vest (0.234). Both Person detections fall below the `CONF_PERSON = 0.30` per-class gate and are dropped upstream in `run_detection`. Consequently, zero Person bounding boxes enter `evaluate_site_compliance()`, yielding 0 detected workers. The `MIN_UPRIGHT_ASPECT = 1.2` guard is not reached because candidate figures are discarded upstream by the confidence gate.
 
 ### Case 2: Posture and Material Occlusion (`eval/test_photos/photo03.jpg`)
 * **Source Image:** `eval/test_photos/photo03.jpg`
-* **Visual Content:** [GROUP TO ADD: what is visible in the photo]
+* **Visual Content:** Work crew gathered on a reinforced construction deck with background scaffolding, tool pouches, and rebar structures partially occluding torso regions.
 * **Empirical Diagnostic (`score_images_report.txt`):** True counts: 10 compliant, 0 violations (10 true workers). Pipeline predictions: 3 compliant, 0 violations, 6 total workers detected, 3 routed to "Needs Review" (compliance rate 50.0%). Review reasons breakdown for the 3 review workers: 1 `small` ($< 12\%$ frame height), 1 `view not upright` ($h/w < 1.2$), and 1 `conflicting detections`. Diagnostic status: Compliant Mismatch.
 
 ### Case 3: Fluorescent Clothing without Reflective Stripes (`eval/test_photos/photo06.jpg`)
 * **Source Image:** `eval/test_photos/photo06.jpg`
-* **Visual Content:** [GROUP TO ADD: what is visible in the photo]
+* **Visual Content:** Five construction workers on an active roadway worksite, two wearing everyday clothing and three wearing fluorescent solid jackets lacking silver retroreflective stripes.
 * **Empirical Diagnostic (`score_images_report.txt`):** True counts: 3 compliant, 2 violations (5 true workers). Pipeline predictions: 1 compliant, 3 violations, 5 total workers detected, 1 routed to "Needs Review" (compliance rate 20.0%). Review reasons breakdown for the 1 review worker: 1 `conflicting detections`. Diagnostic status: Compliant Mismatch, Violation Mismatch.
 
 ---
