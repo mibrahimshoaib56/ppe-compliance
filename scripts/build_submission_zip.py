@@ -18,6 +18,7 @@ INCLUDED_FILES = [
     "REPORT.pdf",
     "SLIDES.md",
     "SLIDES.pptx",
+    "SAFETY_VISION_Slides.pptx",
     "requirements.txt",
     "pytest.ini",
     "check_model.py",
