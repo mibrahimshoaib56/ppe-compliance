@@ -16,6 +16,7 @@ INCLUDED_FILES = [
     "README.md",
     "REPORT.md",
     "REPORT.pdf",
+    "SAFETY VISION — Technical Project Report.pdf",
     "SLIDES.md",
     "SLIDES.pptx",
     "SAFETY_VISION_Slides.pptx",
