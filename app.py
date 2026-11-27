@@ -4335,7 +4335,7 @@ def process_cctv_video_upload(
         shutil.rmtree(temp_dir, ignore_errors=True)
 
 
-def process_cctv_youtube_link(
+def process_cctv_youtube(
     youtube_url: str,
     model: Any,
     required_gear: str,
@@ -4382,6 +4382,9 @@ def process_cctv_youtube_link(
         )
     finally:
         shutil.rmtree(temp_dir, ignore_errors=True)
+
+
+process_cctv_youtube_link = process_cctv_youtube
 
 
 def execute_cctv_pipeline(

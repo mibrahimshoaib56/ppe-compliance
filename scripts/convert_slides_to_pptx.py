@@ -84,4 +84,8 @@ def markdown_slides_to_pptx(md_path: str, pptx_path: str):
 
 
 if __name__ == "__main__":
-    markdown_slides_to_pptx("SLIDES.md", "SLIDES.pptx")
+    import os
+    repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    md_path = os.path.join(repo_root, "SLIDES.md")
+    pptx_path = os.path.join(repo_root, "SLIDES.pptx")
+    markdown_slides_to_pptx(md_path, pptx_path)
